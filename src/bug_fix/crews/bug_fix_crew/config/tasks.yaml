@@ -1,0 +1,198 @@
+# Bug Fix Crew Tasks Configuration
+
+triage_task:
+  description: >
+    Triage the following bug report. Explore the codebase, reproduce the issue, and classify severity.
+
+    BUG REPORT:
+    {{task}}
+
+    Instructions:
+    1. Read the bug report carefully
+    2. Explore the codebase to find the affected area
+    3. Attempt to reproduce: run tests, check for failing cases, read error logs/stack traces
+    4. Classify severity (critical/high/medium/low)
+    5. Document findings
+
+    Reply with:
+    STATUS: done
+    REPO: /path/to/repo
+    BRANCH: bugfix-branch-name
+    SEVERITY: critical|high|medium|low
+    AFFECTED_AREA: what files/modules are affected
+    REPRODUCTION: how to reproduce the bug
+    PROBLEM_STATEMENT: clear description of what's wrong
+  expected_output: >
+    A triage report containing: repo path, branch name, severity classification,
+    affected area, reproduction steps, and clear problem statement
+  agent: triager
+
+investigate_task:
+  description: >
+    Investigate the root cause of this bug.
+
+    BUG REPORT:
+    {{task}}
+
+    REPO: {{repo}}
+    SEVERITY: {{severity}}
+    AFFECTED_AREA: {{affected_area}}
+    REPRODUCTION: {{reproduction}}
+    PROBLEM_STATEMENT: {{problem_statement}}
+
+    Instructions:
+    1. Read the code in the affected area
+    2. Trace the bug to its root cause
+    3. Document exactly what's wrong and why
+    4. Propose a fix approach
+
+    Reply with:
+    STATUS: done
+    ROOT_CAUSE: detailed explanation of the root cause
+    FIX_APPROACH: what needs to change and where
+  expected_output: >
+    A detailed root cause analysis with explanation and fix approach
+  agent: investigator
+
+setup_task:
+  description: >
+    Prepare the environment for the bugfix.
+
+    REPO: {{repo}}
+    BRANCH: {{branch}}
+
+    Instructions:
+    1. cd into the repo
+    2. Create the bugfix branch (git checkout -b {{branch}} from main)
+    3. Read package.json, CI config, test config to understand build/test setup
+    4. Ensure .gitignore exists — if missing, create one appropriate for the detected stack (must include .env, node_modules/, *.key, *.pem at minimum)
+    5. Run the build to establish a baseline
+    6. Run the tests to establish a baseline
+
+    Reply with:
+    STATUS: done
+    BUILD_CMD: <build command>
+    TEST_CMD: <test command>
+    BASELINE: <baseline status>
+  expected_output: >
+    Environment setup confirmation with build and test commands, and baseline status
+  agent: setup
+
+fix_task:
+  description: >
+    Implement the bug fix.
+
+    BUG REPORT:
+    {{task}}
+
+    REPO: {{repo}}
+    BRANCH: {{branch}}
+    BUILD_CMD: {{build_cmd}}
+    TEST_CMD: {{test_cmd}}
+    AFFECTED_AREA: {{affected_area}}
+    ROOT_CAUSE: {{root_cause}}
+    FIX_APPROACH: {{fix_approach}}
+    PROBLEM_STATEMENT: {{problem_statement}}
+
+    Instructions:
+    1. cd into the repo, checkout the branch
+    2. Implement the fix based on the root cause and fix approach
+    3. Write a regression test that would have caught this bug
+    4. Run {{build_cmd}} to verify the build passes
+    5. Run {{test_cmd}} to verify all tests pass
+    6. Commit: fix: brief description of the fix
+
+    Reply with:
+    STATUS: done
+    CHANGES: what was changed
+    REGRESSION_TEST: what test was added
+  expected_output: >
+    Implemented fix with details on changes and regression test added
+  agent: fixer
+
+verify_task:
+  description: >
+    Verify the bug fix is correct and complete.
+
+    BUG REPORT:
+    {{task}}
+
+    REPO: {{repo}}
+    BRANCH: {{branch}}
+    TEST_CMD: {{test_cmd}}
+    CHANGES: {{changes}}
+    REGRESSION_TEST: {{regression_test}}
+    ROOT_CAUSE: {{root_cause}}
+    PROBLEM_STATEMENT: {{problem_statement}}
+
+    Instructions:
+    1. Run the full test suite with {{test_cmd}}
+    2. Confirm the regression test exists and tests the right thing
+    3. Review the fix to confirm it addresses the root cause
+    4. Check for unintended side effects
+    5. Verify the regression test would fail without the fix
+
+    MANDATORY first step:
+    - Run `git diff main..{{branch}} --stat` and `git diff main..{{branch}}`
+    - If the diff is empty or only contains trivial changes, REJECT immediately
+    - Compare the diff against CHANGES claimed — if they don't match, REJECT
+
+    Bug-fix specific checks:
+    - The regression test MUST test the specific bug scenario
+    - The regression test assertions must fail if the fix were reverted
+    - The fix should be minimal and targeted
+    - The fix addresses the ROOT CAUSE, not just a symptom
+    - All changes must be to files INSIDE the repo
+
+    Reply with:
+    STATUS: done
+    VERIFIED: what was confirmed
+
+    Or if issues found:
+    STATUS: retry
+    ISSUES:
+    - What's wrong or incomplete
+  expected_output: >
+    Verification confirmation or detailed issues requiring fixes
+  agent: verifier
+
+pr_task:
+  description: >
+    Create a pull request for the bug fix.
+
+    REPO: {{repo}}
+    BRANCH: {{branch}}
+    PROBLEM_STATEMENT: {{problem_statement}}
+    SEVERITY: {{severity}}
+    ROOT_CAUSE: {{root_cause}}
+    CHANGES: {{changes}}
+    REGRESSION_TEST: {{regression_test}}
+    VERIFIED: {{verified}}
+
+    PR title format: fix: brief description of what was fixed
+
+    PR body structure:
+    ```
+    ## Bug Description
+    {{problem_statement}}
+
+    **Severity:** {{severity}}
+
+    ## Root Cause
+    {{root_cause}}
+
+    ## Fix
+    {{changes}}
+
+    ## Regression Test
+    {{regression_test}}
+
+    ## Verification
+    {{verified}}
+    ```
+
+    Use: gh pr create
+  expected_output: >
+    Created pull request with URL
+  agent: pr_creator
+  output_file: pr_report.md
