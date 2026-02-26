@@ -28,21 +28,22 @@ class BugFixFlow(Flow[BugFixState]):
         """
         print("🔍 Step 1/6: Triage - Analyzing bug report...")
 
-        inputs  = dict(repo="xeroc/xeroc",
-                      branch="main",
-                    severity = "medium",
-                    affected_area = "unknown",
-                    reproduction = "N/A",
-                    problem_statement = "bug",
-                       task="fix bug",
-                       build_cmd="exit 0;",
-                       test_cmd="exit 0;",
-                       root_cause="",
-                      )
+        inputs = dict(
+            repo="xeroc/xeroc",
+            branch="main",
+            severity="medium",
+            affected_area="unknown",
+            reproduction="N/A",
+            problem_statement="bug",
+            task="fix bug",
+            build_cmd="exit 0;",
+            test_cmd="exit 0;",
+            root_cause="",
+        )
 
-        print(f"✅ Triage complete: {inputs.get("severity")} severity")
-        print(f"   Repository: {inputs.get("repo")}")
-        print(f"   Branch: {inputs.get("branch")}")
+        print(f"✅ Triage complete: {inputs.get('severity')} severity")
+        print(f"   Repository: {inputs.get('repo')}")
+        print(f"   Branch: {inputs.get('branch')}")
 
         return self.state
 
@@ -51,32 +52,29 @@ class BugFixFlow(Flow[BugFixState]):
         print("🔬 Step 2/2: Let the crew work...")
         print(triage_result)
 
-        inputs  = dict(repo="xeroc/xeroc",
-                      branch="main",
-                    severity = "medium",
-                    affected_area = "unknown",
-                    reproduction = "N/A",
-                    problem_statement = "bug",
-                       task="fix bug",
-                       build_cmd="exit 0;",
-                       test_cmd="exit 0;",
-                       root_cause="",
-                       fix_approach="",
-                       changes="",
-                       regression_test="",
-                       verified=True,
-                      )
-
-        output = (
-            BugFixCrew()
-            .crew()
-            .kickoff(inputs=inputs)
+        inputs = dict(
+            repo="xeroc/xeroc",
+            branch="main",
+            severity="medium",
+            affected_area="unknown",
+            reproduction="N/A",
+            problem_statement="bug",
+            task="fix bug",
+            build_cmd="exit 0;",
+            test_cmd="exit 0;",
+            root_cause="",
+            fix_approach="",
+            changes="",
+            regression_test="",
+            verified=True,
         )
+
+        output = BugFixCrew().crew().kickoff(inputs=inputs)
         print(output)
 
         print(f"✅ bug fixed: {self.inputs}")
 
-        return { }
+        return {}
 
 
 def kickoff():

@@ -1,0 +1,37 @@
+test_task:
+  description: >
+    Integration and E2E testing of the implementation.
+
+    TASK:
+    {{task}}
+
+    REPO: {{repo}}
+    BRANCH: {{branch}}
+    CHANGES: {{changes}}
+    BUILD_CMD: {{build_cmd}}
+    TEST_CMD: {{test_cmd}}
+
+    Your job (integration/E2E testing — unit tests were already written per-story):
+    1. Run the full test suite ({{test_cmd}}) to confirm everything passes together
+    2. Look for integration issues between stories
+    3. If this is a UI feature, test it end-to-end
+    4. Check cross-cutting concerns: error handling, edge cases across features
+    5. Verify that overall feature works as a cohesive whole
+
+    Reply with:
+    status: done
+    results: what you tested and outcomes
+
+    or if issues found:
+    status: retry
+    failures:
+    - Specific test failures or bugs found
+  expected_output: >
+    Integration/E2E test results or identified issues
+  agent: tester
+
+generate_result:
+  description: >
+    Format the test output as a structured TestOutput.
+  expected_output: >
+    Structured test result with status and either results or failures.

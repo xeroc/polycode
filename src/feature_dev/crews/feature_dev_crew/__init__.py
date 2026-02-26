@@ -26,7 +26,7 @@ class FeatureDevCrew:
     def planner(self) -> Agent:
         """Decomposes tasks into ordered user stories."""
         return Agent(
-            config=self.agents_config['planner'],
+            config=self.agents_config["planner"],
             verbose=True,
             tools=[],
             allow_delegation=False,
@@ -36,7 +36,7 @@ class FeatureDevCrew:
     def setup(self) -> Agent:
         """Prepares environment, creates branch, establishes baseline."""
         return Agent(
-            config=self.agents_config['setup'],
+            config=self.agents_config["setup"],
             verbose=True,
             tools=[],
             allow_delegation=False,
@@ -46,7 +46,7 @@ class FeatureDevCrew:
     def developer(self) -> Agent:
         """Implements features, writes tests, creates PRs."""
         return Agent(
-            config=self.agents_config['developer'],
+            config=self.agents_config["developer"],
             verbose=True,
             tools=[],
             allow_delegation=False,
@@ -56,7 +56,7 @@ class FeatureDevCrew:
     def verifier(self) -> Agent:
         """Quick sanity check - did developer actually do the work?"""
         return Agent(
-            config=self.agents_config['verifier'],
+            config=self.agents_config["verifier"],
             verbose=True,
             tools=[],
             allow_delegation=False,
@@ -66,7 +66,7 @@ class FeatureDevCrew:
     def tester(self) -> Agent:
         """Integration and E2E testing after all stories are implemented."""
         return Agent(
-            config=self.agents_config['tester'],
+            config=self.agents_config["tester"],
             verbose=True,
             tools=[],
             allow_delegation=False,
@@ -76,7 +76,7 @@ class FeatureDevCrew:
     def reviewer(self) -> Agent:
         """Reviews PRs, requests changes or approves."""
         return Agent(
-            config=self.agents_config['reviewer'],
+            config=self.agents_config["reviewer"],
             verbose=True,
             tools=[],
             allow_delegation=False,
@@ -86,14 +86,14 @@ class FeatureDevCrew:
     def plan_task(self) -> Task:
         """Decompose the task into ordered user stories."""
         return Task(
-            config=self.tasks_config['plan_task'],
+            config=self.tasks_config["plan_task"],
         )
 
     @task
     def setup_task(self) -> Task:
         """Prepare the development environment."""
         return Task(
-            config=self.tasks_config['setup_task'],
+            config=self.tasks_config["setup_task"],
             context=[self.plan_task()],
         )
 
@@ -101,7 +101,7 @@ class FeatureDevCrew:
     def implement_task(self) -> Task:
         """Implement the first user story (simplified - would loop over all stories)."""
         return Task(
-            config=self.tasks_config['implement_task'],
+            config=self.tasks_config["implement_task"],
             context=[self.plan_task(), self.setup_task()],
         )
 
@@ -109,7 +109,7 @@ class FeatureDevCrew:
     def verify_task(self) -> Task:
         """Verify the developer's work."""
         return Task(
-            config=self.tasks_config['verify_task'],
+            config=self.tasks_config["verify_task"],
             context=[self.implement_task()],
         )
 
@@ -117,7 +117,7 @@ class FeatureDevCrew:
     def test_task(self) -> Task:
         """Integration and E2E testing."""
         return Task(
-            config=self.tasks_config['test_task'],
+            config=self.tasks_config["test_task"],
             context=[self.verify_task()],
         )
 
@@ -125,7 +125,7 @@ class FeatureDevCrew:
     def pr_task(self) -> Task:
         """Create a pull request."""
         return Task(
-            config=self.tasks_config['pr_task'],
+            config=self.tasks_config["pr_task"],
             context=[self.test_task()],
         )
 
@@ -133,7 +133,7 @@ class FeatureDevCrew:
     def review_task(self) -> Task:
         """Review the pull request."""
         return Task(
-            config=self.tasks_config['review_task'],
+            config=self.tasks_config["review_task"],
             context=[self.pr_task()],
         )
 

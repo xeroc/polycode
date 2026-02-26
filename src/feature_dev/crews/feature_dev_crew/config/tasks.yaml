@@ -46,11 +46,11 @@ setup_task:
     7. Report what you found
 
     Reply with:
-    STATUS: done
-    BUILD_CMD: <build command>
-    TEST_CMD: <test command>
-    CI_NOTES: <brief CI notes>
-    BASELINE: <baseline status>
+    status: done
+    build_cmd: <build command>
+    test_cmd: <test command>
+    ci_notes: <brief ci notes>
+    baseline: <baseline status>
   expected_output: >
     Environment setup confirmation with build and test commands, and baseline status
   agent: setup
@@ -84,9 +84,9 @@ implement_task:
     8. Update progress log with codebase patterns found
 
     Reply with:
-    STATUS: done
-    CHANGES: what you implemented
-    TESTS: what tests you wrote
+    status: done
+    changes: what you implemented
+    tests: what tests you wrote
   expected_output: >
     Implemented story with details on changes and tests added
   agent: developer
@@ -115,12 +115,12 @@ verify_task:
     6. Typecheck passes
 
     Reply with:
-    STATUS: done
-    VERIFIED: What you confirmed
+    status: done
+    verified: what you confirmed
 
     Or if incomplete:
-    STATUS: retry
-    ISSUES:
+    status: retry
+    issues:
     - What's missing or incomplete
   expected_output: >
     Verification confirmation or detailed issues requiring fixes
@@ -147,12 +147,12 @@ test_task:
     5. Verify the overall feature works as a cohesive whole
 
     Reply with:
-    STATUS: done
-    RESULTS: What you tested and the outcomes
+    status: done
+    results: what you tested and the outcomes
 
-    Or if issues found:
-    STATUS: retry
-    FAILURES:
+    or if issues found:
+    status: retry
+    failures:
     - Specific test failures or bugs found
   expected_output: >
     Integration/E2E test results or identified issues
@@ -176,6 +176,10 @@ pr_task:
     - Reference to what was tested
 
     Use: gh pr create
+
+    Reply with:
+    status: done
+    pr: <pull request url>
   expected_output: >
     Created pull request with URL
   agent: developer
@@ -204,13 +208,13 @@ review_task:
     If changes needed, add comments to the PR explaining what needs to change.
 
     Reply with:
-    STATUS: done
-    DECISION: approved
+    status: done
+    decision: approved
 
     Or if changes needed:
-    STATUS: retry
-    DECISION: changes_requested
-    FEEDBACK:
+    status: retry
+    decision: changes_requested
+    feedback:
     - What needs to change
   expected_output: >
     Review decision (approved or changes requested) with feedback

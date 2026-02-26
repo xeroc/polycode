@@ -1,0 +1,40 @@
+verify_task:
+  description: >
+    Verify the developer's work on this story.
+
+    TASK (overall):
+    {{task}}
+
+    REPO: {{repo}}
+    BRANCH: {{branch}}
+    CHANGES: {{changes}}
+    TEST_CMD: {{test_cmd}}
+
+    CURRENT STORY:
+    {{current_story}}
+
+    Check:
+    1. Code exists (not just TODOs or placeholders)
+    2. Each acceptance criterion for story is met
+    3. Tests were written for this story's functionality
+    4. Tests pass (run {{test_cmd}})
+    5. No obvious incomplete work
+    6. Typecheck passes
+
+    Reply with:
+    status: done
+    verified: what you confirmed
+
+    Or if incomplete:
+    status: retry
+    issues:
+    - What's missing or incomplete
+  expected_output: >
+    Verification confirmation or detailed issues requiring fixes
+  agent: verifier
+
+generate_result:
+  description: >
+    Format the verification output as a structured VerifyOutput.
+  expected_output: >
+    Structured verification result with status, and either verified details or issues.

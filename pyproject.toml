@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Antfarm workflows implemented with CrewAI - Multi-agent software development automation"
 readme = "README.md"
 requires-python = ">=3.10,<=3.13.12"
-dependencies = ["crewai[litellm,tools]>=0.152.0", "click>=8.0.0"]
+dependencies = [
+    "crewai[litellm,tools]>=0.152.0",
+    "click>=8.0.0",
+    "gitpython>=3.1.0",
+]
 
 [project.scripts]
 bug_fix = "bug_fix.main:kickoff"
