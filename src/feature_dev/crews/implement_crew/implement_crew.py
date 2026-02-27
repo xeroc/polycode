@@ -1,5 +1,8 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import FileWriterTool
+
+from tools import DirectoryReadTool, ExecTool, FileReadTool
 
 from ...types import ImplementOutput
 
@@ -16,6 +19,7 @@ class ImplementCrew:
         return Agent(
             config=self.agents_config["developer"],
             verbose=True,
+            tools=[FileReadTool(), FileWriterTool(), DirectoryReadTool(), ExecTool()],
         )
 
     @agent
@@ -25,7 +29,6 @@ class ImplementCrew:
             verbose=True,
         )
 
-
     @task
     def implement_task(self) -> Task:
         return Task(
@@ -34,7 +37,9 @@ class ImplementCrew:
 
     @task
     def generate_result(self) -> Task:
-        return Task(config=self.tasks_config["generate_result"], output_pydantic=ImplementOutput)
+        return Task(
+            config=self.tasks_config["generate_result"], output_pydantic=ImplementOutput
+        )
 
     @crew
     def crew(self) -> Crew:

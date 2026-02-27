@@ -24,21 +24,46 @@ class FeatureDevState(BaseModel):
     test_cmd: Optional[str] = Field(default=None, description="Test command")
     ci_notes: Optional[str] = Field(default=None, description="CI configuration notes")
     baseline: Optional[str] = Field(default=None, description="Baseline status")
-    stories: Optional[List[Story]] = Field(default=None, description="Ordered user stories")
+    stories: Optional[List[Story]] = Field(
+        default=[], description="Ordered user stories"
+    )
 
-    changes: Optional[str] = Field(default=None, description="What was implemented")
-    tests: Optional[str] = Field(default=None, description="Tests that were written")
+    changes: Optional[List[str]] = Field(default=[], description="What was implemented")
+    tests: Optional[List[str]] = Field(
+        default=[], description="Tests that were written"
+    )
 
-    current_story: Optional[str] = Field(default=None, description="Current story being implemented")
-    completed_stories: Optional[List[Story]] = Field(default=[], description="Completed stories")
-    current_story_title: Optional[str] = Field(default=None, description="Current story title")
-    current_story_id: Optional[int] = Field(default=None, description="Current story ID")
+    current_story: Optional[str] = Field(
+        default=None, description="Current story being implemented"
+    )
+    completed_stories: Optional[List[Story]] = Field(
+        default=[], description="Completed stories"
+    )
+    current_story_title: Optional[str] = Field(
+        default=None, description="Current story title"
+    )
+    current_story_id: Optional[int] = Field(
+        default=None, description="Current story ID"
+    )
 
     verified: bool = Field(default=False, description="All stories verified")
     tested: bool = Field(default=False, description="Integration tests passed")
 
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
+    pr_number: Optional[int] = Field(default=None, description="Pull request number")
     review_status: Optional[str] = Field(default=None, description="PR review status")
+    diff: Optional[str] = Field(default=None, description="code diff")
+
+    commit_title: Optional[str] = Field(
+        default=None,
+        description="Commit Message title including conventional commit prefix",
+    )
+    commit_message: Optional[str] = Field(
+        default=None, description="The body of the commit message"
+    )
+    commit_footer: Optional[str] = Field(
+        default=None, description="Commit message footer"
+    )
 
 
 class PlanOutput(BaseModel):
@@ -73,7 +98,9 @@ class VerifyOutput(BaseModel):
 
     status: str = Field(description="Status: done or retry")
     verified: Optional[str] = Field(default=None, description="What was confirmed")
-    issues: Optional[List[str]] = Field(default=None, description="Issues requiring fixes")
+    issues: Optional[List[str]] = Field(
+        default=None, description="Issues requiring fixes"
+    )
 
 
 class TestOutput(BaseModel):
@@ -90,3 +117,11 @@ class ReviewOutput(BaseModel):
     status: str = Field(description="Status: done or retry")
     decision: str = Field(description="Decision: approved or changes_requested")
     feedback: Optional[List[str]] = Field(default=None, description="Review feedback")
+
+
+class CommitMessageOutput(BaseModel):
+    title: str = Field(
+        description="Commit Message title including conventional commit prefix"
+    )
+    message: str = Field(description="The body of the commit message")
+    footer: str = Field(description="Commit message footer")

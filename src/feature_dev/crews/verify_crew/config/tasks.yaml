@@ -3,38 +3,121 @@ verify_task:
     Verify the developer's work on this story.
 
     TASK (overall):
-    {{task}}
+    {task}
 
-    REPO: {{repo}}
-    BRANCH: {{branch}}
-    CHANGES: {{changes}}
-    TEST_CMD: {{test_cmd}}
+    REPO: {repo}
+    BRANCH: {branch}
+    CHANGES: {changes}
+    TEST_CMD: {test_cmd}
 
     CURRENT STORY:
-    {{current_story}}
+    {current_story}
+
+    TOOLS:
+      * FileReadTool
+      * DirectoryReadTool
+      * ExecTool
 
     Check:
     1. Code exists (not just TODOs or placeholders)
     2. Each acceptance criterion for story is met
     3. Tests were written for this story's functionality
-    4. Tests pass (run {{test_cmd}})
+    4. Tests pass (run {test_cmd})
     5. No obvious incomplete work
     6. Typecheck passes
-
-    Reply with:
-    status: done
-    verified: what you confirmed
-
-    Or if incomplete:
-    status: retry
-    issues:
-    - What's missing or incomplete
-  expected_output: >
-    Verification confirmation or detailed issues requiring fixes
-  agent: verifier
-
-generate_result:
-  description: >
-    Format the verification output as a structured VerifyOutput.
   expected_output: >
     Structured verification result with status, and either verified details or issues.
+  agent: verifier
+
+produce_commit_message:
+  description: >
+    # Git Commit Message Agent
+
+    ## Purpose
+
+    Generate well-structured Git commit messages following the "Conventional Commits" specification, with a meaningful body derived from user stories and code change descriptions.
+
+    ---
+
+    ## Identity
+
+    You are a **Git Commit Message Agent**. Your sole responsibility is to produce a complete, conventional commit message given one or both of the following inputs:
+
+    **Stories** — user stories, ticket descriptions, acceptance criteria, or product context
+
+    {completed_stories}
+
+    **Changes** — a summary of code changes, a diff, or a list of modified files/behaviours
+
+    {changes}
+
+
+    ---
+
+    ## Additional metrics
+
+    These metrics, you need to identify based on what you know:
+
+    * `SCOPE`: the module, component, or area of the codebase affected
+    * `BREAKING`: yes | no — are there breaking changes that are not backwards compatible? defaults to no
+
+    ---
+
+    ## Result
+
+    The commit title is
+
+      <type>(<scope>)!: <subject>
+
+    The body:
+
+      <body>
+
+    And the footer, which is used to indicate breaking changes
+
+      <footer>
+
+    ### Field Rules
+
+    | Field | Rule |
+    |---|---|
+    | `type` | One of the allowed types (see below). Infer the best fit from the input. |
+    | `scope` | Optional. A short noun describing the affected area (e.g. `auth`, `api`, `ui`). Use the provided scope if given. |
+    | `!` | Include only if `BREAKING: yes`. |
+    | `subject` | Imperative mood, lowercase, no trailing period, max **72 characters**. Summarises *what* changed. |
+    | `body` | Wrapped at 72 characters. Explains *what* changed and *why*. Derived from the stories and changes. Use blank lines to separate paragraphs. |
+    | `footer` | `BREAKING CHANGE: <description>` if breaking. Issue/ticket references if identifiable from stories (e.g. `Closes #42`). Omit if neither applies. |
+
+    ---
+
+    ## Allowed Commit Types
+
+    | Type | When to use |
+    |---|---|
+    | `feat` | A new feature visible to users or consumers |
+    | `fix` | A bug fix |
+    | `docs` | Documentation changes only |
+    | `style` | Formatting, whitespace — no logic change |
+    | `refactor` | Code restructure with no feature or fix change |
+    | `perf` | Performance improvement |
+    | `test` | Adding or updating tests |
+    | `chore` | Build process, dependency updates, tooling |
+    | `ci` | CI/CD pipeline changes |
+    | `revert` | Reverts a previous commit |
+
+    ---
+
+    ## Behaviour Rules
+
+    1. **Infer the type** from the stories and changes. If a story describes a new capability → `feat`. If it describes a defect fix → `fix`. If only tests were written → `test`. When ambiguous, prefer the more specific type.
+    2. **Write the body in full sentences**, past or present tense, explaining the motivation and what was done. Do not just restate the subject line.
+    3. **Derive the body from stories first** (the *why*), then from changes (the *what*). Merge both into a coherent narrative.
+    4. **Keep scope lowercase and concise** — a single word or hyphenated phrase.
+    5. **Never fabricate ticket numbers** unless they appear explicitly in the stories input.
+    6. **If no scope is determinable**, omit the parentheses entirely.
+    7. **Breaking changes** must appear both as `!` after the type/scope and as a `BREAKING CHANGE:` footer.
+    8. **Output only the commit message** — no preamble, no explanation, no markdown fences.
+
+  expected_output: >
+    Structured commit message distinguishing title (first one) from body (rest of the message without title)
+  agent: commit_message_preparer

@@ -1,6 +1,9 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from feature_dev.types import TestOutput
+from tools import ExecTool, DirectoryReadTool, FileReadTool
+
 
 @CrewBase
 class TestCrew:
@@ -13,18 +16,13 @@ class TestCrew:
     def tester(self) -> Agent:
         return Agent(
             config=self.agents_config["tester"],
+            tools=[ExecTool(), DirectoryReadTool(), FileReadTool],
             verbose=True,
         )
 
     @task
     def test_task(self) -> Task:
-        return Task(
-            config=self.tasks_config["test_task"],
-        )
-
-    @task
-    def generate_result(self) -> Task:
-        return Task(config=self.tasks_config["generate_result"], output_pydantic=TestOutput)
+        return Task(config=self.tasks_config["test_task"], output_pydantic=TestOutput)
 
     @crew
     def crew(self) -> Crew:

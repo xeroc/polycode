@@ -1,6 +1,7 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from ...types import PlanOutput
+from tools import DirectoryReadTool, FileReadTool
 
 
 @CrewBase
@@ -14,6 +15,7 @@ class PlanCrew:
     def planner(self) -> Agent:
         return Agent(
             config=self.agents_config["planner"],
+            tools=[FileReadTool(), DirectoryReadTool()],
             verbose=True,
         )
 

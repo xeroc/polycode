@@ -1,10 +1,25 @@
 #!/usr/bin/env python
 import asyncio
-from typing import Any, Dict, List
+import os
+import git
+import github
 
+from typing import List
 from crewai.flow.flow import Flow, listen, start
+from git.exc import InvalidGitRepositoryError, NoSuchPathError
 
-from .types import FeatureDevState, PlanOutput, SetupOutput, ImplementOutput, Story, VerifyOutput, TestOutput, ReviewOutput
+from .utils import get_github_repo_from_local
+from .types import (
+    CommitMessageOutput,
+    FeatureDevState,
+    PlanOutput,
+    SetupOutput,
+    ImplementOutput,
+    Story,
+    VerifyOutput,
+    TestOutput,
+    ReviewOutput,
+)
 from .crews.plan_crew.plan_crew import PlanCrew
 from .crews.setup_crew.setup_crew import SetupCrew
 from .crews.implement_crew.implement_crew import ImplementCrew
@@ -40,6 +55,17 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
         print(f"Planned {len(output.stories)} stories")
         return output
+
+    @listen(plan_task)
+    def create_branch(self):
+        branch_name = self.state.branch
+        repo = self.state.repo
+        try:
+            git_repo = git.Repo(repo)
+            git_repo.create_head(branch_name, git_repo.branches["develop"]).checkout()
+            print(f"Created and checked out branch: {branch_name}")
+        except (InvalidGitRepositoryError, NoSuchPathError) as e:
+            raise e
 
     @listen(plan_task)
     def setup(self):
@@ -98,7 +124,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             return implement_result
 
         tasks = []
-        for story in self.state.stories:
+        for story in self.state.stories or []:
             print(f"Title: {story.title}")
             print(f"Description: {story.description}")
             # Schedule each chapter writing task
@@ -106,127 +132,146 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             tasks.append(task)
 
         # Await all chapter writing tasks concurrently
-        results : List[ImplementOutput] = await asyncio.gather(*tasks)
-        self.state.completed_stories.extend(self.state.stories)  # TODO: worthless waiting for them all
+        results: List[ImplementOutput] = await asyncio.gather(*tasks)
+        self.state.completed_stories = self.state.stories
         self.state.changes = [x.changes for x in results]
         self.state.tests = [x.tests for x in results]
-        return results 
+        return results
 
-    # @listen(implement_story)
-    # def verify(self, implement_result: ImplementOutput):
-    #     """Step 4: Verify - quick sanity check of implementation."""
-    #     print("Verifying implementation")
-    #     output = (
-    #         VerifyCrew()
-    #         .crew()
-    #         .kickoff(
-    #             inputs={
-    #                 "task": self.state.task,
-    #                 "repo": self.state.repo,
-    #                 "branch": self.state.branch,
-    #                 "changes": self.state.changes,
-    #                 "test_cmd": self.state.test_cmd,
-    #                 "current_story": self.state.current_story,
-    #             }
-    #         )
-    #     )
-    #
-    #     verify_result: VerifyOutput = output["pydantic"]
-    #     self.state.verified = verify_result.status == "done"
-    #
-    #     if verify_result.issues:
-    #         print(f"Verification issues found: {verify_result.issues}")
-    #     else:
-    #         print(f"Verification passed: {verify_result.verified}")
-    #
-    #     return verify_result
-    #
-    # @listen(verify)
-    # def test_integration(self, verify_result: VerifyOutput):
-    #     """Step 5: Test - integration and E2E testing."""
-    #     print("Running integration tests")
-    #     output = (
-    #         TestCrew()
-    #         .crew()
-    #         .kickoff(
-    #             inputs={
-    #                 "task": self.state.task,
-    #                 "repo": self.state.repo,
-    #                 "branch": self.state.branch,
-    #                 "changes": self.state.changes,
-    #                 "build_cmd": self.state.build_cmd,
-    #                 "test_cmd": self.state.test_cmd,
-    #             }
-    #         )
-    #     )
-    #
-    #     test_result: TestOutput = output["pydantic"]
-    #     self.state.tested = test_result.status == "done"
-    #
-    #     if test_result.failures:
-    #         print(f"Test failures: {test_result.failures}")
-    #     else:
-    #         print(f"Tests passed: {test_result.results}")
-    #
-    #     return test_result
-    #
-    # @listen(test_integration)
-    # def create_pr(self, test_result: TestOutput):
-    #     """Step 6: Create pull request."""
-    #     print("Creating pull request")
-    #
-    #     if not self.state.tested or test_result.failures:
-    #         print("Skipping PR creation - tests did not pass")
-    #         return None
-    #
-    #     output = (
-    #         ImplementCrew()
-    #         .crew()
-    #         .kickoff(
-    #             inputs={
-    #                 "task": self.state.task,
-    #                 "repo": self.state.repo,
-    #                 "branch": self.state.branch,
-    #                 "changes": self.state.changes,
-    #                 "results": test_result.results,
-    #             }
-    #         )
-    #     )
-    #
-    #     self.state.pr_url = output.get("pr")
-    #     print(f"PR created: {self.state.pr_url}")
-    #     return output
-    #
-    # @listen(create_pr)
-    # def review(self, pr_result: Any):
-    #     """Step 7: Review - review the pull request."""
-    #     print("Reviewing pull request")
-    #
-    #     if not self.state.pr_url:
-    #         print("No PR to review")
-    #         return None
-    #
-    #     output = (
-    #         ReviewCrew()
-    #         .crew()
-    #         .kickoff(
-    #             inputs={
-    #                 "pr": self.state.pr_url,
-    #                 "task": self.state.task,
-    #                 "changes": self.state.changes,
-    #             }
-    #         )
-    #     )
-    #
-    #     review_result: ReviewOutput = output["pydantic"]
-    #     self.state.review_status = review_result.decision
-    #
-    #     if review_result.feedback:
-    #         print(f"Review feedback: {review_result.feedback}")
-    #     else:
-    #         print(f"Review decision: {review_result.decision}")
-    #
-    #     return review_result
+    @listen(implement_story)
+    def test_integration(self):
+        """Step 5: Test - integration and E2E testing."""
+        print("Running integration tests")
+        output = (
+            TestCrew()
+            .crew()
+            .kickoff(
+                inputs={
+                    "task": self.state.task,
+                    "repo": self.state.repo,
+                    "branch": self.state.branch,
+                    "changes": self.state.changes,
+                    "build_cmd": self.state.build_cmd,
+                    "test_cmd": self.state.test_cmd,
+                }
+            )
+        )
+
+        test_result: TestOutput = output.pydantic
+        self.state.tested = test_result.status == "done"
+
+        if test_result.failures:
+            print(f"Test failures: {test_result.failures}")
+        else:
+            print(f"Tests passed: {test_result.results}")
+
+        return test_result
+
+    @listen(test_integration)
+    def verify(self):
+        """Step 4: Verify - quick sanity check of implementation."""
+        print("Verifying implementation")
+        output = (
+            VerifyCrew()
+            .crew()
+            .kickoff(
+                inputs={
+                    "task": self.state.task,
+                    "repo": self.state.repo,
+                    "branch": self.state.branch,
+                    "changes": self.state.changes,
+                    "test_cmd": self.state.test_cmd,
+                    "current_story": self.state.current_story,
+                }
+            )
+        )
+
+        verify_result: VerifyOutput = output.tasks_output[0].pydantic
+        self.state.verified = verify_result.status == "done"
+
+        if verify_result.issues:
+            print(f"Verification issues found: {verify_result.issues}")
+        else:
+            print(f"Verification passed: {verify_result.verified}")
+
+        commit_message_result: CommitMessageOutput = output.tasks_output[1].pydantic
+        self.state.commit_title = commit_message_result.title
+        self.state.commit_message = commit_message_result.message
+        self.state.commit_footer = commit_message_result.footer
+
+        return verify_result
+
+    @listen(test_integration)
+    def commit_changes(self):
+        print("Commiting changes to repo")
+
+        repo = git.Repo(self.state.repo)
+
+        # Ensure we are on branch self.state.branch
+        # TODO: Might fail
+        # OSError: Reference at 'refs/heads/feature/website' does already exist, pointing to '0a93764ff08becf54b27076515d3d487d605f196', requested was '9d194ac1c2605550570f43ac74fb0da3a7c000c3'
+        repo.heads[self.state.branch].checkout()
+
+        # commit all changes to the repo
+        repo.git.add("-A")
+        commit_message = f"{self.state.commit_title}\n\n{self.state.commit_message}\n\n{self.state.commit_footer}"
+        repo.index.commit(commit_message)
+        print(f"Committed changes: {commit_message}")
+
+        merge_base = repo.merge_base("develop", self.state.branch)[0]
+        self.state.diff = repo.git.diff(merge_base, self.state.branch)
+
+    @listen(commit_changes)
+    def create_pr(self):
+        """Step 6: Create pull request."""
+        print("Creating pull request")
+
+        repo, g = get_github_repo_from_local(self.state.repo)
+        pr = g.create_pull(
+            title=self.state.commit_title or self.state.task,
+            body=f"{self.state.commit_message}\n\n{self.state.commit_footer}",
+            head=self.state.branch,
+            base="develop",
+        )
+        # Get diff between two branches
+        self.state.diff = repo.git.diff("develop", self.state.branch, patch=True)
+        self.state.pr_url = pr.html_url
+        self.state.pr_number = pr.number
+        print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
+
+        repo = git.Repo(self.state.repo)
+        merge_base = repo.merge_base("develop", self.state.branch)[0]
+        self.state.diff = repo.git.diff(merge_base, self.state.branch)
+
+    @listen(commit_changes)
+    def review(self):
+        """Step 7: Review - review the pull request."""
+        print("Reviewing pull request")
+
+        if not self.state.diff:
+            print("No diff to review")
+            return None
+
+        output = (
+            ReviewCrew()
+            .crew()
+            .kickoff(
+                inputs={
+                    "diff": self.state.diff,
+                    "task": self.state.task,
+                    "changes": self.state.changes,
+                }
+            )
+        )
+        review_result: ReviewOutput = output.pydantic
+        self.state.review_status = review_result.decision
+
+        if review_result.feedback:
+            print(f"Review feedback: {review_result.feedback}")
+        else:
+            print(f"Review decision: {review_result.decision}")
+
+        return review_result
 
 
 def kickoff():

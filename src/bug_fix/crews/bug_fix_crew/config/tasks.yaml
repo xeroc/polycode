@@ -5,7 +5,7 @@ triage_task:
     Triage the following bug report. Explore the codebase, reproduce the issue, and classify severity.
 
     BUG REPORT:
-    {{task}}
+    {task}
 
     Instructions:
     1. Read the bug report carefully
@@ -32,13 +32,13 @@ investigate_task:
     Investigate the root cause of this bug.
 
     BUG REPORT:
-    {{task}}
+    {task}
 
-    REPO: {{repo}}
-    SEVERITY: {{severity}}
-    AFFECTED_AREA: {{affected_area}}
-    REPRODUCTION: {{reproduction}}
-    PROBLEM_STATEMENT: {{problem_statement}}
+    REPO: {repo}
+    SEVERITY: {severity}
+    AFFECTED_AREA: {affected_area}
+    REPRODUCTION: {reproduction}
+    PROBLEM_STATEMENT: {problem_statement}
 
     Instructions:
     1. Read the code in the affected area
@@ -58,12 +58,12 @@ setup_task:
   description: >
     Prepare the environment for the bugfix.
 
-    REPO: {{repo}}
-    BRANCH: {{branch}}
+    REPO: {repo}
+    BRANCH: {branch}
 
     Instructions:
     1. cd into the repo
-    2. Create the bugfix branch (git checkout -b {{branch}} from main)
+    2. Create the bugfix branch (git checkout -b {branch} from main)
     3. Read package.json, CI config, test config to understand build/test setup
     4. Ensure .gitignore exists — if missing, create one appropriate for the detected stack (must include .env, node_modules/, *.key, *.pem at minimum)
     5. Run the build to establish a baseline
@@ -83,23 +83,23 @@ fix_task:
     Implement the bug fix.
 
     BUG REPORT:
-    {{task}}
+    {task}
 
-    REPO: {{repo}}
-    BRANCH: {{branch}}
-    BUILD_CMD: {{build_cmd}}
-    TEST_CMD: {{test_cmd}}
-    AFFECTED_AREA: {{affected_area}}
-    ROOT_CAUSE: {{root_cause}}
-    FIX_APPROACH: {{fix_approach}}
-    PROBLEM_STATEMENT: {{problem_statement}}
+    REPO: {repo}
+    BRANCH: {branch}
+    BUILD_CMD: {build_cmd}
+    TEST_CMD: {test_cmd}
+    AFFECTED_AREA: {affected_area}
+    ROOT_CAUSE: {root_cause}
+    FIX_APPROACH: {fix_approach}
+    PROBLEM_STATEMENT: {problem_statement}
 
     Instructions:
     1. cd into the repo, checkout the branch
     2. Implement the fix based on the root cause and fix approach
     3. Write a regression test that would have caught this bug
-    4. Run {{build_cmd}} to verify the build passes
-    5. Run {{test_cmd}} to verify all tests pass
+    4. Run {build_cmd} to verify the build passes
+    5. Run {test_cmd} to verify all tests pass
     6. Commit: fix: brief description of the fix
 
     Reply with:
@@ -115,25 +115,25 @@ verify_task:
     Verify the bug fix is correct and complete.
 
     BUG REPORT:
-    {{task}}
+    {task}
 
-    REPO: {{repo}}
-    BRANCH: {{branch}}
-    TEST_CMD: {{test_cmd}}
-    CHANGES: {{changes}}
-    REGRESSION_TEST: {{regression_test}}
-    ROOT_CAUSE: {{root_cause}}
-    PROBLEM_STATEMENT: {{problem_statement}}
+    REPO: {repo}
+    BRANCH: {branch}
+    TEST_CMD: {test_cmd}
+    CHANGES: {changes}
+    REGRESSION_TEST: {regression_test}
+    ROOT_CAUSE: {root_cause}
+    PROBLEM_STATEMENT: {problem_statement}
 
     Instructions:
-    1. Run the full test suite with {{test_cmd}}
+    1. Run the full test suite with {test_cmd}
     2. Confirm the regression test exists and tests the right thing
     3. Review the fix to confirm it addresses the root cause
     4. Check for unintended side effects
     5. Verify the regression test would fail without the fix
 
     MANDATORY first step:
-    - Run `git diff main..{{branch}} --stat` and `git diff main..{{branch}}`
+    - Run `git diff main..{branch} --stat` and `git diff main..{branch}`
     - If the diff is empty or only contains trivial changes, REJECT immediately
     - Compare the diff against CHANGES claimed — if they don't match, REJECT
 
@@ -160,35 +160,35 @@ pr_task:
   description: >
     Create a pull request for the bug fix.
 
-    REPO: {{repo}}
-    BRANCH: {{branch}}
-    PROBLEM_STATEMENT: {{problem_statement}}
-    SEVERITY: {{severity}}
-    ROOT_CAUSE: {{root_cause}}
-    CHANGES: {{changes}}
-    REGRESSION_TEST: {{regression_test}}
-    VERIFIED: {{verified}}
+    REPO: {repo}
+    BRANCH: {branch}
+    PROBLEM_STATEMENT: {problem_statement}
+    SEVERITY: {severity}
+    ROOT_CAUSE: {root_cause}
+    CHANGES: {changes}
+    REGRESSION_TEST: {regression_test}
+    VERIFIED: {verified}
 
     PR title format: fix: brief description of what was fixed
 
     PR body structure:
     ```
     ## Bug Description
-    {{problem_statement}}
+    {problem_statement}
 
-    **Severity:** {{severity}}
+    **Severity:** {severity}
 
     ## Root Cause
-    {{root_cause}}
+    {root_cause}
 
     ## Fix
-    {{changes}}
+    {changes}
 
     ## Regression Test
-    {{regression_test}}
+    {regression_test}
 
     ## Verification
-    {{verified}}
+    {verified}
     ```
 
     Use: gh pr create

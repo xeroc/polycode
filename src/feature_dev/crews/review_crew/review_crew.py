@@ -1,6 +1,8 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from feature_dev.types import ReviewOutput
+
 
 @CrewBase
 class ReviewCrew:
@@ -18,13 +20,7 @@ class ReviewCrew:
 
     @task
     def review_task(self) -> Task:
-        return Task(
-            config=self.tasks_config["review_task"],
-        )
-
-    @task
-    def generate_result(self) -> Task:
-        return Task(config=self.tasks_config["generate_result"], output_pydantic=ReviewOutput)
+        return Task(config=self.tasks_config["review_task"], output=ReviewOutput)
 
     @crew
     def crew(self) -> Crew:

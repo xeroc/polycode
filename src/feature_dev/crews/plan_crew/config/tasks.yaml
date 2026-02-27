@@ -3,10 +3,13 @@ plan_task:
     Decompose the following task into ordered user stories for autonomous execution.
 
     TASK:
-    {{task}}
+    {task}
+
+    REPO:
+    {repo}
 
     Instructions:
-    1. Explore the codebase to understand the stack, conventions, and patterns
+    1. Explore the codebase under {repo} to understand the stack, conventions, and patterns
     2. Break the task into small user stories (max 20)
     3. Order by dependency: schema/DB first, backend, frontend, integration
     4. Each story must fit in one developer session (one context window)

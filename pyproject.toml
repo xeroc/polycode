@@ -8,6 +8,8 @@ dependencies = [
     "crewai[litellm,tools]>=0.152.0",
     "click>=8.0.0",
     "gitpython>=3.1.0",
+    "pygithub>=2.8.1",
+    "pathspec>=0.12.0",
 ]
 
 [project.scripts]
@@ -24,7 +26,9 @@ build-backend = "hatchling.build"
 packages = ["src/bug_fix"]
 
 [dependency-groups]
-dev = []
+dev = [
+    "ruff>=0.15.4",
+]
 
 [tool.ruff]
 line-length = 120

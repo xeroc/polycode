@@ -3,25 +3,30 @@ implement_task:
     Implement the following user story.
 
     TASK (overall):
-    {{task}}
+    {task}
 
-    REPO: {{repo}}
-    BRANCH: {{branch}}
-    BUILD_CMD: {{build_cmd}}
-    TEST_CMD: {{test_cmd}}
+    REPO: {repo}
+    BRANCH: {branch}
+    BUILD_CMD: {build_cmd}
+    TEST_CMD: {test_cmd}
 
     CURRENT STORY:
-    {{current_story}}
+    {current_story}
+
+    TOOLS:
+      * FileReadTool
+      * FileWriterTool
+      * DirectoryReadTool
+      * ExecTool
 
     Instructions:
     1. Read progress log to understand codebase patterns
-    2. Pull latest on the branch
-    3. Implement this story only
-    4. Write tests for this story's functionality
-    5. Run typecheck / build
-    6. Run tests to confirm they pass
-    7. Commit: feat: {{current_story_id}} - {{current_story_title}}
-    8. Update progress log with codebase patterns found
+    2. Implement this story only
+    3. Write tests for this story's functionality
+    4. Run typecheck / build
+    5. Run tests to confirm they pass
+    6. Commit: feat: {current_story_id} - {current_story_title}
+    7. Update progress log with codebase patterns found
   expected_output: >
     Implemented story with details on changes and tests added
   agent: developer

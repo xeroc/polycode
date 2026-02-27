@@ -1,6 +1,10 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from feature_dev.types import VerifyOutput, CommitMessageOutput
+
+from tools import ExecTool, DirectoryReadTool, FileReadTool
+
 
 @CrewBase
 class VerifyCrew:
@@ -13,18 +17,29 @@ class VerifyCrew:
     def verifier(self) -> Agent:
         return Agent(
             config=self.agents_config["verifier"],
+            tools=[ExecTool(), DirectoryReadTool(), FileReadTool()],
+            verbose=True,
+        )
+
+    @agent
+    def commit_message_preparer(self) -> Agent:
+        return Agent(
+            config=self.agents_config["commit_message_preparer"],
             verbose=True,
         )
 
     @task
     def verify_task(self) -> Task:
         return Task(
-            config=self.tasks_config["verify_task"],
+            config=self.tasks_config["verify_task"], output_pydantic=VerifyOutput
         )
 
     @task
-    def generate_result(self) -> Task:
-        return Task(config=self.tasks_config["generate_result"], output_pydantic=VerifyOutput)
+    def produce_commit_message(self) -> Task:
+        return Task(
+            config=self.tasks_config["produce_commit_message"],
+            output=CommitMessageOutput,
+        )
 
     @crew
     def crew(self) -> Crew:

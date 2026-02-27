@@ -1,7 +1,6 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from feature_dev.types import SetupOutput
-from tools import GitTool
 from crewai_tools import FileWriterTool
 
 
@@ -14,7 +13,9 @@ class SetupCrew:
 
     @agent
     def setup(self) -> Agent:
-        return Agent(config=self.agents_config["setup"], verbose=True, tools=[GitTool(), FileWriterTool()])
+        return Agent(
+            config=self.agents_config["setup"], verbose=True, tools=[FileWriterTool()]
+        )
 
     @agent
     def consolidator(self) -> Agent:
@@ -28,7 +29,9 @@ class SetupCrew:
 
     @task
     def generate_result(self) -> Task:
-        return Task(config=self.tasks_config["generate_result"], output_pydantic=SetupOutput)
+        return Task(
+            config=self.tasks_config["generate_result"], output_pydantic=SetupOutput
+        )
 
     @crew
     def crew(self) -> Crew:
