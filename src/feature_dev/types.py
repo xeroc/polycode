@@ -15,9 +15,8 @@ class Story(BaseModel):
 class FeatureDevState(BaseModel):
     """State for feature development workflow."""
 
-    issue_id: int = Field(description="issue id on github")
+    issue_id: int = Field(default=0, description="issue id on github")
     task: str = Field(default="", description="Feature development task")
-
     repo: str = Field(default="", description="Path to repository")
     branch: str = Field(default="", description="Feature branch name")
 

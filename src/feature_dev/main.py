@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import asyncio
 import os
+import uuid
 import git
 import github
 
@@ -26,6 +27,9 @@ from .crews.implement_crew.implement_crew import ImplementCrew
 from .crews.verify_crew.verify_crew import VerifyCrew
 from .crews.test_crew.test_crew import TestCrew
 from .crews.review_crew.review_crew import ReviewCrew
+from .db import init_db
+from .persistence import save_state_snapshot
+from .webhooks import trigger_webhooks
 
 
 class FeatureDevFlow(Flow[FeatureDevState]):
@@ -33,21 +37,23 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     Feature development workflow with consecutive flows.
     """
 
-    # model = "gpt-4o-mini"
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        init_db()
+        self._flow_id = str(uuid.uuid4())[:8]
+
+    def _persist_and_notify(self, phase: str):
+        state_json = self.state.model_dump_json()
+        save_state_snapshot(self._flow_id, phase, state_json)
+        trigger_webhooks(phase, self.state.model_dump())
 
     @start()
     def setup(self):
         print("Setting up development environment")
-        issue_id = 1
-        inputs = dict(
-            issue_id=issue_id,
-            task="create a simple html based website with tailwinds (from CDN) that says hello world",
-            repo="/home/xeroc/projects/chaoscraft/demo",
-        )
-        inputs["branch"] = f"{issue_id}-feature-branch"
-
-        for k, v in inputs.items():
-            setattr(self.state, k, v)
+        self.state.issue_id = 1
+        self.state.task = "create a simple html based website with tailwinds (from CDN) that says hello world"
+        self.state.repo = "/home/xeroc/projects/chaoscraft/demo"
+        self.state.branch = f"{self.state.issue_id}-feature-branch"
 
         result = (
             SetupCrew()
@@ -71,6 +77,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
         print(f"Build cmd: {output.build_cmd}")
         print(f"Test cmd: {output.test_cmd}")
+        self._persist_and_notify("setup")
         return output
 
     @listen(setup)
@@ -225,9 +232,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         if branch_name in repo.heads:
             branch = repo.heads[branch_name]
         else:
-            branch = repo.create_head(
-                branch_name, repo.heads["develop"].commit
-            )  # creates from current HEAD
+            branch = repo.create_head(branch_name, repo.heads["develop"].commit)  # creates from current HEAD
         branch.checkout()
 
         # commit all changes to the repo
