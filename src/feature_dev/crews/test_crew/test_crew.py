@@ -16,7 +16,7 @@ class TestCrew:
     def tester(self) -> Agent:
         return Agent(
             config=self.agents_config["tester"],
-            tools=[ExecTool(), DirectoryReadTool(), FileReadTool],
+            tools=[ExecTool(), DirectoryReadTool(), FileReadTool()],
             verbose=True,
         )
 

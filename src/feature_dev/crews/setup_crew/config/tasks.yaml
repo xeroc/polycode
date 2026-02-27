@@ -14,7 +14,8 @@ setup_task:
     3. Ensure .gitignore exists — if missing, create one appropriate for detected stack (must include .env, node_modules/, *.key, *.pem at minimum)
     4. Run the build to establish a baseline
     5. Run the tests to establish a baseline
-    6. Report what you found
+    6. Report what you found and what can be reused
+    7. Understand the stack, conventions, and patterns
   expected_output: >
     Environment setup confirmation with build and test commands, and baseline status
   agent: setup
@@ -23,5 +24,5 @@ generate_result:
   description: >
     Format the setup output as a structured SetupOutput.
   expected_output: >
-    Structured setup result with status, build_cmd, test_cmd, ci_notes, and baseline.
+    Structured setup result with status, build_cmd, test_cmd, ci_notes, findings, and baseline.
   agent: consolidator

@@ -36,41 +36,19 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     # model = "gpt-4o-mini"
 
     @start()
-    def plan_task(self):
-        """Step 1: Plan - decompose task into user stories."""
-        print("Planning feature into user stories")
-
+    def setup(self):
+        print("Setting up development environment")
+        issue_id = 1
         inputs = dict(
+            issue_id=issue_id,
             task="create a simple html based website with tailwinds (from CDN) that says hello world",
             repo="/home/xeroc/projects/chaoscraft/demo",
-            branch="feature/website",
         )
+        inputs["branch"] = f"{issue_id}-feature-branch"
+
         for k, v in inputs.items():
             setattr(self.state, k, v)
 
-        result = PlanCrew().crew().kickoff(inputs=inputs)
-        output: PlanOutput = result.pydantic
-
-        self.state.stories = output.stories
-
-        print(f"Planned {len(output.stories)} stories")
-        return output
-
-    @listen(plan_task)
-    def create_branch(self):
-        branch_name = self.state.branch
-        repo = self.state.repo
-        try:
-            git_repo = git.Repo(repo)
-            git_repo.create_head(branch_name, git_repo.branches["develop"]).checkout()
-            print(f"Created and checked out branch: {branch_name}")
-        except (InvalidGitRepositoryError, NoSuchPathError) as e:
-            raise e
-
-    @listen(plan_task)
-    def setup(self):
-        """Step 2: Setup - prepare development environment."""
-        print("Setting up development environment")
         result = (
             SetupCrew()
             .crew()
@@ -89,10 +67,45 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.test_cmd = output.test_cmd
         self.state.ci_notes = output.ci_notes
         self.state.baseline = output.baseline
+        self.state.findings = output.findings
 
         print(f"Build cmd: {output.build_cmd}")
         print(f"Test cmd: {output.test_cmd}")
         return output
+
+    @listen(setup)
+    def plan_task(self):
+        """Step 1: Plan - decompose task into user stories."""
+        print("Planning feature into user stories")
+
+        result = (
+            PlanCrew()
+            .crew()
+            .kickoff(
+                inputs=dict(
+                    task=self.state.task,
+                    repo=self.state.repo,
+                    branch=self.state.branch,
+                )
+            )
+        )
+        output: PlanOutput = result.pydantic
+
+        self.state.stories = output.stories
+
+        print(f"Planned {len(output.stories)} stories")
+        return output
+
+    @listen(plan_task)
+    def create_branch(self):
+        branch_name = self.state.branch
+        repo = self.state.repo
+        try:
+            git_repo = git.Repo(repo)
+            git_repo.create_head(branch_name, git_repo.branches["develop"]).checkout()
+            print(f"Created and checked out branch: {branch_name}")
+        except (InvalidGitRepositoryError, NoSuchPathError) as e:
+            raise e
 
     @listen(setup)
     async def implement_story(self):
@@ -205,12 +218,17 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     def commit_changes(self):
         print("Commiting changes to repo")
 
+        branch_name = self.state.branch_name
         repo = git.Repo(self.state.repo)
 
         # Ensure we are on branch self.state.branch
-        # TODO: Might fail
-        # OSError: Reference at 'refs/heads/feature/website' does already exist, pointing to '0a93764ff08becf54b27076515d3d487d605f196', requested was '9d194ac1c2605550570f43ac74fb0da3a7c000c3'
-        repo.heads[self.state.branch].checkout()
+        if branch_name in repo.heads:
+            branch = repo.heads[branch_name]
+        else:
+            branch = repo.create_head(
+                branch_name, repo.heads["develop"].commit
+            )  # creates from current HEAD
+        branch.checkout()
 
         # commit all changes to the repo
         repo.git.add("-A")

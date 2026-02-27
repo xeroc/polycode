@@ -15,6 +15,7 @@ class Story(BaseModel):
 class FeatureDevState(BaseModel):
     """State for feature development workflow."""
 
+    issue_id: int = Field(description="issue id on github")
     task: str = Field(default="", description="Feature development task")
 
     repo: str = Field(default="", description="Path to repository")
@@ -24,6 +25,9 @@ class FeatureDevState(BaseModel):
     test_cmd: Optional[str] = Field(default=None, description="Test command")
     ci_notes: Optional[str] = Field(default=None, description="CI configuration notes")
     baseline: Optional[str] = Field(default=None, description="Baseline status")
+    findings: Optional[str] = Field(
+        default=None, description="Findings around stack, conventions and used patterns"
+    )
     stories: Optional[List[Story]] = Field(
         default=[], description="Ordered user stories"
     )
@@ -83,6 +87,9 @@ class SetupOutput(BaseModel):
     test_cmd: str = Field(description="Test command")
     ci_notes: Optional[str] = Field(default=None, description="CI configuration notes")
     baseline: str = Field(description="Baseline status")
+    findings: str = Field(
+        description="Findings around stack, conventions and used patterns"
+    )
 
 
 class ImplementOutput(BaseModel):
