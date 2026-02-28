@@ -23,9 +23,7 @@ class PlanCrew:
 
     @task
     def plan_task(self) -> Task:
-        return Task(
-            config=self.tasks_config["plan_task"], output_pydantic=PlanOutput
-        )
+        return Task(config=self.tasks_config["plan_task"], output_pydantic=PlanOutput)
 
     @crew
     def crew(self) -> Crew:

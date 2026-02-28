@@ -2,7 +2,6 @@ review_task:
   description: >
     Review the pull request.
 
-    PR: {pr}
     TASK: {task}
     CHANGES: {changes}
 

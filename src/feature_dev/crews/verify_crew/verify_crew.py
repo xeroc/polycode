@@ -38,7 +38,7 @@ class VerifyCrew:
     def produce_commit_message(self) -> Task:
         return Task(
             config=self.tasks_config["produce_commit_message"],
-            output=CommitMessageOutput,
+            output_pydantic=CommitMessageOutput,
         )
 
     @crew

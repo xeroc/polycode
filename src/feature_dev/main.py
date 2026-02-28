@@ -4,6 +4,7 @@ import os
 import uuid
 from typing import List
 
+from crewai.project import after_kickoff, before_kickoff
 import git
 from crewai.flow.flow import Flow, listen, start
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
@@ -14,12 +15,7 @@ from .crews.review_crew.review_crew import ReviewCrew
 from .crews.setup_crew.setup_crew import SetupCrew
 from .crews.test_crew.test_crew import TestCrew
 from .crews.verify_crew.verify_crew import VerifyCrew
-from .persistence import (
-    get_or_create_flow,
-    save_state_snapshot,
-    update_flow_state,
-    init_db,
-)
+from crewai.flow.persistence import persist
 from .types import (
     CommitMessageOutput,
     FeatureDevState,
@@ -32,33 +28,53 @@ from .types import (
     VerifyOutput,
 )
 from .utils import get_github_repo_from_local
-from .webhooks import trigger_webhooks
 
 
+@persist(verbose=True)
 class FeatureDevFlow(Flow[FeatureDevState]):
     """
     Feature development workflow with consecutive flows.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        init_db()
-        self._flow_id = str(uuid.uuid4())[:8]
+    @start()
+    def prepare_work_tree(self):
+        branch_name = self.state.branch
+        root_repo = self.state.path
+        git_repo = git.Repo(root_repo)
 
-    def _persist_and_notify(self, phase: str):
-        state_dict = self.state.model_dump()
-        get_or_create_flow(self._flow_id, state_dict)
-        update_flow_state(self._flow_id, state_dict, phase)
-        save_state_snapshot(self._flow_id, phase, state_dict)
-        trigger_webhooks(phase, state_dict)
+        if branch_name not in [b.name for b in git_repo.branches]:
+            develop_branch = git_repo.branches["develop"]
+            git_repo.create_head(branch_name, develop_branch.name)
+            print(f"Created branch: {branch_name}")
+
+        worktrees_dir = os.path.join(root_repo, ".git", ".worktrees")
+        os.makedirs(worktrees_dir, exist_ok=True)
+        worktree_path = os.path.join(worktrees_dir, branch_name)
+
+        if os.path.exists(worktree_path):
+            git_repo.git.worktree("remove", worktree_path, "--force")
+            print(f"Removed existing worktree at: {worktree_path}")
+
+        git_repo.git.worktree("add", worktree_path, branch_name)
+        print(f"Created worktree at: {worktree_path}")
+
+        dependencies = ["node_modules", ".venv", ".env"]
+        for dep in dependencies:
+            source = os.path.join(root_repo, dep)
+            target = os.path.join(worktree_path, dep)
+            if os.path.exists(source) and not os.path.exists(target):
+                os.symlink(source, target)
+                print(f"Linked {dep} from main repo to worktree")
+
+        # Update inputs
+        self.state.repo = worktree_path
 
     @start()
     def setup(self):
         print("Setting up development environment")
-        self.state.issue_id = 1
-        self.state.task = "create a simple html based website with tailwinds (from CDN) that says hello world"
-        self.state.repo = "/home/xeroc/projects/chaoscraft/demo"
-        self.state.branch = f"{self.state.issue_id}-feature-branch"
+
+        if self.state.findings and self.state.baseline:
+            return
 
         result = (
             SetupCrew()
@@ -82,13 +98,15 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
         print(f"Build cmd: {output.build_cmd}")
         print(f"Test cmd: {output.test_cmd}")
-        self._persist_and_notify("setup")
         return output
 
     @listen(setup)
     def plan_task(self):
         """Step 1: Plan - decompose task into user stories."""
         print("Planning feature into user stories")
+
+        if self.state.stories:
+            return
 
         result = (
             PlanCrew()
@@ -108,58 +126,25 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.stories = output.stories
 
         print(f"Planned {len(output.stories)} stories")
-        self._persist_and_notify("plan_task")
         return output
 
-    @listen(plan_task)
-    def create_branch(self):
-        branch_name = self.state.branch
-        repo = self.state.repo
-        try:
-            git_repo = git.Repo(repo)
-
-            if branch_name not in [b.name for b in git_repo.branches]:
-                develop_branch = git_repo.branches["develop"]
-                git_repo.create_head(branch_name, develop_branch.name)
-                print(f"Created branch: {branch_name}")
-
-            worktrees_dir = os.path.join(repo, ".worktrees")
-            os.makedirs(worktrees_dir, exist_ok=True)
-            worktree_path = os.path.join(worktrees_dir, branch_name)
-
-            git_repo.git.worktree("add", worktree_path, branch_name)
-            print(f"Created worktree at: {worktree_path}")
-
-            self.state.worktree_path = worktree_path
-
-            dependencies = ["node_modules", ".venv", ".env"]
-            for dep in dependencies:
-                source = os.path.join(repo, dep)
-                target = os.path.join(worktree_path, dep)
-                if os.path.exists(source) and not os.path.exists(target):
-                    os.symlink(source, target)
-                    print(f"Linked {dep} from main repo to worktree")
-
-            self._persist_and_notify("create_branch")
-        except (InvalidGitRepositoryError, NoSuchPathError) as e:
-            raise e
-
     @listen(setup)
-    async def implement_story(self):
+    def implement_story(self):
         """Step 3: Implement - implement user story."""
         print("Implementing user story")
         tasks = []
 
-        async def implement_single_story(self, current_story: Story):
-            repo_path = self.state.worktree_path or self.state.repo
+        if len(self.state.completed_stories) == len(self.state.stories):
+            return
 
+        def implement_single_story(current_story: Story):
             output = (
                 ImplementCrew()
                 .crew()
                 .kickoff(
                     inputs={
                         "task": self.state.task,
-                        "repo": repo_path,
+                        "repo": self.state.repo,
                         "branch": self.state.branch,
                         "build_cmd": self.state.build_cmd,
                         "test_cmd": self.state.test_cmd,
@@ -174,34 +159,40 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             implement_result: ImplementOutput = output.pydantic
             return implement_result
 
-        tasks = []
-        for story in self.state.stories or []:
+        # FIXME: need a more robust way of comparing completed with missing!
+        missing_stories = [
+            x
+            for x in self.state.stories or []
+            if self.state.completed_stories and x not in self.state.completed_stories
+        ]
+
+        self.state.completed_stories = []
+        self.state.changes = []
+        self.state.tests = []
+
+        for story in missing_stories or []:
             print(f"Title: {story.title}")
             print(f"Description: {story.description}")
             # Schedule each chapter writing task
-            task = asyncio.create_task(implement_single_story(self, story))
-            tasks.append(task)
-
-        # Await all chapter writing tasks concurrently
-        results: List[ImplementOutput] = await asyncio.gather(*tasks)
-        self.state.completed_stories = self.state.stories
-        self.state.changes = [x.changes for x in results]
-        self.state.tests = [x.tests for x in results]
-        self._persist_and_notify("implement_story")
-        return results
+            result = implement_single_story(story)
+            self.state.completed_stories.append(story)
+            self.state.changes.append(result.changes)
+            self.state.tests.append(result.tests)
 
     @listen(implement_story)
     def test_integration(self):
         """Step 5: Test - integration and E2E testing."""
         print("Running integration tests")
-        repo_path = self.state.worktree_path or self.state.repo
+        if self.state.tested:
+            return
+
         output = (
             TestCrew()
             .crew()
             .kickoff(
                 inputs={
                     "task": self.state.task,
-                    "repo": repo_path,
+                    "repo": self.state.repo,
                     "branch": self.state.branch,
                     "changes": self.state.changes,
                     "build_cmd": self.state.build_cmd,
@@ -218,29 +209,35 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Tests passed: {test_result.results}")
 
-        self._persist_and_notify("test_integration")
         return test_result
 
     @listen(test_integration)
     def verify(self):
         """Step 4: Verify - quick sanity check of implementation."""
         print("Verifying implementation")
-        repo_path = self.state.worktree_path or self.state.repo
+        if self.state.verified:
+            return
+
         output = (
             VerifyCrew()
             .crew()
             .kickoff(
                 inputs={
                     "task": self.state.task,
-                    "repo": repo_path,
+                    "repo": self.state.repo,
                     "branch": self.state.branch,
                     "changes": self.state.changes,
                     "test_cmd": self.state.test_cmd,
                     "current_story": self.state.current_story,
+                    "completed_stories": [
+                        x.description for x in self.state.completed_stories or []
+                    ],
                 }
             )
         )
 
+        print(output)
+        print(output.tasks_output)
         verify_result: VerifyOutput = output.tasks_output[0].pydantic
         self.state.verified = verify_result.status == "done"
 
@@ -249,28 +246,30 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Verification passed: {verify_result.verified}")
 
-        commit_message_result: CommitMessageOutput = output.tasks_output[
-            1
-        ].pydantic
+        commit_message_result: CommitMessageOutput = output.tasks_output[1].pydantic
         self.state.commit_title = commit_message_result.title
         self.state.commit_message = commit_message_result.message
         self.state.commit_footer = commit_message_result.footer
+        print(f"Commit title: {self.state.commit_title}")
+        print(f"Commit message: {self.state.commit_message}")
+        print(f"Commit footer: {self.state.commit_footer}")
 
-        self._persist_and_notify("verify")
         return verify_result
 
-    @listen(test_integration)
+    @listen(verify)
     def commit_changes(self):
         print("Commiting changes to repo")
 
-        repo_path = self.state.worktree_path or self.state.repo
-        repo = git.Repo(repo_path)
+        if self.state.diff:
+            return
+
+        repo = git.Repo(self.state.repo)
 
         # Ensure we are on branch self.state.branch
         branch_name = repo.active_branch.name
         if branch_name != self.state.branch:
             raise ValueError(
-                f"Wrong branch in the working directory. Current branch '{branch_name}'. Excected '{self.state.branch}'"
+                f"Wrong branch in the working directory ({self.state.repo}). Current branch '{branch_name}'. Excected '{self.state.branch}'"
             )
 
         # commit all changes to the repo
@@ -281,53 +280,38 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
         merge_base = repo.merge_base("develop", self.state.branch)[0]
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
-        self._persist_and_notify("commit_changes")
-
-    def cleanup_worktree(self):
-        if self.state.worktree_path:
-            try:
-                git_repo = git.Repo(self.state.repo)
-                git_repo.git.worktree("remove", self.state.worktree_path)
-                print(f"Removed worktree: {self.state.worktree_path}")
-
-                parent_dir = os.path.dirname(self.state.worktree_path)
-                if os.path.exists(parent_dir):
-                    os.rmdir(parent_dir)
-                print(f"Cleaned up worktree parent directory")
-            except Exception as e:
-                print(f"Warning: Failed to cleanup worktree: {e}")
 
     @listen(commit_changes)
     def create_pr(self):
         """Step 6: Create pull request."""
         print("Creating pull request")
+        if self.state.pr_number:
+            return
 
-        repo, g = get_github_repo_from_local(self.state.repo)
-        pr = g.create_pull(
+        repo, github_repo, _ = get_github_repo_from_local(self.state.repo)
+
+        # Push
+        repo.git.push("origin", self.state.branch)
+
+        # PR
+        pr = github_repo.create_pull(
             title=self.state.commit_title or self.state.task,
             body=f"{self.state.commit_message}\n\n{self.state.commit_footer}",
             head=self.state.branch,
             base="develop",
         )
+
         # Get diff between two branches
-        self.state.diff = repo.git.diff(
-            "develop", self.state.branch, patch=True
-        )
         self.state.pr_url = pr.html_url
         self.state.pr_number = pr.number
         print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
-
-        repo = git.Repo(self.state.repo)
-        merge_base = repo.merge_base("develop", self.state.branch)[0]
-        self.state.diff = repo.git.diff(merge_base, self.state.branch)
-        self._persist_and_notify("create_pr")
-
-        self.cleanup_worktree()
 
     @listen(commit_changes)
     def review(self):
         """Step 7: Review - review the pull request."""
         print("Reviewing pull request")
+        if self.state.review_status:
+            return
 
         if not self.state.diff:
             print("No diff to review")
@@ -338,12 +322,15 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             .crew()
             .kickoff(
                 inputs={
-                    "diff": self.state.diff,
                     "task": self.state.task,
-                    "changes": self.state.changes,
+                    "diff": str(self.state.diff),
+                    "changes": str(self.state.changes),
                 }
             )
         )
+        print("Output: ")
+        print(output)
+        print("=" * 80)
         review_result: ReviewOutput = output.pydantic
         self.state.review_status = review_result.decision
 
@@ -352,8 +339,18 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Review decision: {review_result.decision}")
 
-        self._persist_and_notify("review")
         return review_result
+
+    @listen(review)
+    def delete_repo(self):
+        git_repo = git.Repo(self.state.repo)
+        git_repo.git.worktree("remove", self.state.repo)
+        print(f"Removed worktree: {self.state.repo}")
+
+        parent_dir = os.path.dirname(self.state.repo)
+        if os.path.exists(parent_dir):
+            os.rmdir(parent_dir)
+        print(f"Cleaned up worktree parent directory")
 
 
 def kickoff():
@@ -361,7 +358,16 @@ def kickoff():
     Run the flow.
     """
     feature_dev_flow = FeatureDevFlow()
-    feature_dev_flow.kickoff()
+    issue_id = 4
+    feature_dev_flow.kickoff(
+        inputs=dict(
+            id=str(uuid.UUID("f7491704-26da-4735-9073-3fd7ad3c2807")),
+            issue_id=issue_id,
+            task="create a simple html based website with tailwinds (from CDN) that says hello world",
+            path="/home/xeroc/projects/chaoscraft/demo",
+            branch=f"{issue_id}-feature-branch",
+        )
+    )
 
 
 def plot():

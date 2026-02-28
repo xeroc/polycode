@@ -21,7 +21,7 @@ class ReviewCrew:
     @task
     def review_task(self) -> Task:
         return Task(
-            config=self.tasks_config["review_task"], output=ReviewOutput
+            config=self.tasks_config["review_task"], output_pydantic=ReviewOutput
         )
 
     @crew

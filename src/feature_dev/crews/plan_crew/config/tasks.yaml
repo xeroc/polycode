@@ -20,6 +20,7 @@ plan_task:
     3. Order by dependency: schema/DB first, backend, frontend, integration
     4. Each story must fit in one developer session (one context window)
     5. Every acceptance criterion must be mechanically verifiable
+  TMP: >
     6. Always include "Typecheck passes" as the last criterion in every story
     7. Every story MUST include test criteria — "Tests for [feature] pass"
     8. The developer is expected to write tests as part of each story

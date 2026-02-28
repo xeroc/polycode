@@ -22,7 +22,7 @@ class SetupCrew:
 
     @agent
     def consolidator(self) -> Agent:
-        return Agent(config=self.agents_config["consolidator"], verbose=False)
+        return Agent(config=self.agents_config["consolidator"], verbose=True)
 
     @task
     def setup_task(self) -> Task:
