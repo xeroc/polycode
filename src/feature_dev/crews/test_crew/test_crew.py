@@ -2,7 +2,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
 from feature_dev.types import TestOutput
-from tools import ExecTool, DirectoryReadTool, FileReadTool
+from tools import DirectoryReadTool, ExecTool, FileReadTool
 
 
 @CrewBase
@@ -22,7 +22,9 @@ class TestCrew:
 
     @task
     def test_task(self) -> Task:
-        return Task(config=self.tasks_config["test_task"], output_pydantic=TestOutput)
+        return Task(
+            config=self.tasks_config["test_task"], output_pydantic=TestOutput
+        )
 
     @crew
     def crew(self) -> Crew:

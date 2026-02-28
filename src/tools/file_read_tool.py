@@ -7,12 +7,15 @@ from pydantic import BaseModel, Field
 class FileReadToolSchema(BaseModel):
     """Input for FileReadTool."""
 
-    file_path: str = Field(..., description="Mandatory file full path to read the file")
+    file_path: str = Field(
+        ..., description="Mandatory file full path to read the file"
+    )
     start_line: int | None = Field(
         1, description="Line number to start reading from (1-indexed)"
     )
     line_count: int | None = Field(
-        None, description="Number of lines to read. If None, reads the entire file"
+        None,
+        description="Number of lines to read. If None, reads the entire file",
     )
 
 
@@ -43,9 +46,7 @@ class FileReadTool(BaseTool):
     """
 
     name: str = "Read a file's content"
-    description: str = (
-        "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read."
-    )
+    description: str = "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read."
     args_schema: type[BaseModel] = FileReadToolSchema
     file_path: str | None = None
 

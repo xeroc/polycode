@@ -9,7 +9,6 @@ from typing import Any, Optional
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-
 DEFAULT_BLOCKED_PATTERNS = [
     "sudo ",
     "su ",
@@ -194,14 +193,18 @@ class ExecTool(BaseTool):
                 return "", []
             return parts[0], parts
         except ValueError:
-            return command.split()[0] if command.split() else "", command.split()
+            return command.split()[
+                0
+            ] if command.split() else "", command.split()
 
     def _check_blocked_patterns(self, command: str) -> Optional[str]:
         """Check if command contains blocked patterns."""
         cmd_lower = command.lower()
         for pattern in self.blocked_patterns:
             if pattern.lower() in cmd_lower:
-                return f"Blocked: command contains forbidden pattern '{pattern}'"
+                return (
+                    f"Blocked: command contains forbidden pattern '{pattern}'"
+                )
         return None
 
     def _check_allowed_command(self, binary: str) -> Optional[str]:
@@ -235,7 +238,9 @@ class ExecTool(BaseTool):
 
         has_recursive = any(arg in dangerous_flags for arg in args)
         targets_root = any(
-            arg in protected_paths or arg.startswith("/") and not arg.startswith("/tmp")
+            arg in protected_paths
+            or arg.startswith("/")
+            and not arg.startswith("/tmp")
             for arg in args
             if not arg.startswith("-")
         )
@@ -245,7 +250,9 @@ class ExecTool(BaseTool):
 
         return None
 
-    def is_command_safe(self, command: str, cwd: Optional[str] = None) -> tuple[bool, str]:
+    def is_command_safe(
+        self, command: str, cwd: Optional[str] = None
+    ) -> tuple[bool, str]:
         """Check if command is safe to execute.
 
         Returns:
@@ -320,9 +327,13 @@ class ExecTool(BaseTool):
             stderr = result.stderr[: self.max_output_size]
 
             if len(result.stdout) > self.max_output_size:
-                stderr += f"\n[Output truncated - {len(result.stdout)} bytes total]"
+                stderr += (
+                    f"\n[Output truncated - {len(result.stdout)} bytes total]"
+                )
             if len(result.stderr) > self.max_output_size:
-                stderr += f"\n[Stderr truncated - {len(result.stderr)} bytes total]"
+                stderr += (
+                    f"\n[Stderr truncated - {len(result.stderr)} bytes total]"
+                )
 
             return {
                 "success": result.returncode == 0,

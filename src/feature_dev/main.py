@@ -2,33 +2,36 @@
 import asyncio
 import os
 import uuid
-import git
-import github
-
 from typing import List
+
+import git
 from crewai.flow.flow import Flow, listen, start
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 
-from .utils import get_github_repo_from_local
+from .crews.implement_crew.implement_crew import ImplementCrew
+from .crews.plan_crew.plan_crew import PlanCrew
+from .crews.review_crew.review_crew import ReviewCrew
+from .crews.setup_crew.setup_crew import SetupCrew
+from .crews.test_crew.test_crew import TestCrew
+from .crews.verify_crew.verify_crew import VerifyCrew
+from .persistence import (
+    get_or_create_flow,
+    save_state_snapshot,
+    update_flow_state,
+    init_db,
+)
 from .types import (
     CommitMessageOutput,
     FeatureDevState,
-    PlanOutput,
-    SetupOutput,
     ImplementOutput,
-    Story,
-    VerifyOutput,
-    TestOutput,
+    PlanOutput,
     ReviewOutput,
+    SetupOutput,
+    Story,
+    TestOutput,
+    VerifyOutput,
 )
-from .crews.plan_crew.plan_crew import PlanCrew
-from .crews.setup_crew.setup_crew import SetupCrew
-from .crews.implement_crew.implement_crew import ImplementCrew
-from .crews.verify_crew.verify_crew import VerifyCrew
-from .crews.test_crew.test_crew import TestCrew
-from .crews.review_crew.review_crew import ReviewCrew
-from .db import init_db
-from .persistence import save_state_snapshot
+from .utils import get_github_repo_from_local
 from .webhooks import trigger_webhooks
 
 
@@ -43,9 +46,11 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self._flow_id = str(uuid.uuid4())[:8]
 
     def _persist_and_notify(self, phase: str):
-        state_json = self.state.model_dump_json()
-        save_state_snapshot(self._flow_id, phase, state_json)
-        trigger_webhooks(phase, self.state.model_dump())
+        state_dict = self.state.model_dump()
+        get_or_create_flow(self._flow_id, state_dict)
+        update_flow_state(self._flow_id, state_dict, phase)
+        save_state_snapshot(self._flow_id, phase, state_dict)
+        trigger_webhooks(phase, state_dict)
 
     @start()
     def setup(self):
@@ -93,6 +98,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                     task=self.state.task,
                     repo=self.state.repo,
                     branch=self.state.branch,
+                    baseline=self.state.baseline,
+                    findings=self.state.findings,
                 )
             )
         )
@@ -101,6 +108,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.stories = output.stories
 
         print(f"Planned {len(output.stories)} stories")
+        self._persist_and_notify("plan_task")
         return output
 
     @listen(plan_task)
@@ -109,8 +117,30 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         repo = self.state.repo
         try:
             git_repo = git.Repo(repo)
-            git_repo.create_head(branch_name, git_repo.branches["develop"]).checkout()
-            print(f"Created and checked out branch: {branch_name}")
+
+            if branch_name not in [b.name for b in git_repo.branches]:
+                develop_branch = git_repo.branches["develop"]
+                git_repo.create_head(branch_name, develop_branch.name)
+                print(f"Created branch: {branch_name}")
+
+            worktrees_dir = os.path.join(repo, ".worktrees")
+            os.makedirs(worktrees_dir, exist_ok=True)
+            worktree_path = os.path.join(worktrees_dir, branch_name)
+
+            git_repo.git.worktree("add", worktree_path, branch_name)
+            print(f"Created worktree at: {worktree_path}")
+
+            self.state.worktree_path = worktree_path
+
+            dependencies = ["node_modules", ".venv", ".env"]
+            for dep in dependencies:
+                source = os.path.join(repo, dep)
+                target = os.path.join(worktree_path, dep)
+                if os.path.exists(source) and not os.path.exists(target):
+                    os.symlink(source, target)
+                    print(f"Linked {dep} from main repo to worktree")
+
+            self._persist_and_notify("create_branch")
         except (InvalidGitRepositoryError, NoSuchPathError) as e:
             raise e
 
@@ -121,6 +151,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         tasks = []
 
         async def implement_single_story(self, current_story: Story):
+            repo_path = self.state.worktree_path or self.state.repo
 
             output = (
                 ImplementCrew()
@@ -128,7 +159,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                 .kickoff(
                     inputs={
                         "task": self.state.task,
-                        "repo": self.state.repo,
+                        "repo": repo_path,
                         "branch": self.state.branch,
                         "build_cmd": self.state.build_cmd,
                         "test_cmd": self.state.test_cmd,
@@ -156,19 +187,21 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.completed_stories = self.state.stories
         self.state.changes = [x.changes for x in results]
         self.state.tests = [x.tests for x in results]
+        self._persist_and_notify("implement_story")
         return results
 
     @listen(implement_story)
     def test_integration(self):
         """Step 5: Test - integration and E2E testing."""
         print("Running integration tests")
+        repo_path = self.state.worktree_path or self.state.repo
         output = (
             TestCrew()
             .crew()
             .kickoff(
                 inputs={
                     "task": self.state.task,
-                    "repo": self.state.repo,
+                    "repo": repo_path,
                     "branch": self.state.branch,
                     "changes": self.state.changes,
                     "build_cmd": self.state.build_cmd,
@@ -185,19 +218,21 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Tests passed: {test_result.results}")
 
+        self._persist_and_notify("test_integration")
         return test_result
 
     @listen(test_integration)
     def verify(self):
         """Step 4: Verify - quick sanity check of implementation."""
         print("Verifying implementation")
+        repo_path = self.state.worktree_path or self.state.repo
         output = (
             VerifyCrew()
             .crew()
             .kickoff(
                 inputs={
                     "task": self.state.task,
-                    "repo": self.state.repo,
+                    "repo": repo_path,
                     "branch": self.state.branch,
                     "changes": self.state.changes,
                     "test_cmd": self.state.test_cmd,
@@ -214,26 +249,29 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Verification passed: {verify_result.verified}")
 
-        commit_message_result: CommitMessageOutput = output.tasks_output[1].pydantic
+        commit_message_result: CommitMessageOutput = output.tasks_output[
+            1
+        ].pydantic
         self.state.commit_title = commit_message_result.title
         self.state.commit_message = commit_message_result.message
         self.state.commit_footer = commit_message_result.footer
 
+        self._persist_and_notify("verify")
         return verify_result
 
     @listen(test_integration)
     def commit_changes(self):
         print("Commiting changes to repo")
 
-        branch_name = self.state.branch_name
-        repo = git.Repo(self.state.repo)
+        repo_path = self.state.worktree_path or self.state.repo
+        repo = git.Repo(repo_path)
 
         # Ensure we are on branch self.state.branch
-        if branch_name in repo.heads:
-            branch = repo.heads[branch_name]
-        else:
-            branch = repo.create_head(branch_name, repo.heads["develop"].commit)  # creates from current HEAD
-        branch.checkout()
+        branch_name = repo.active_branch.name
+        if branch_name != self.state.branch:
+            raise ValueError(
+                f"Wrong branch in the working directory. Current branch '{branch_name}'. Excected '{self.state.branch}'"
+            )
 
         # commit all changes to the repo
         repo.git.add("-A")
@@ -243,6 +281,21 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
         merge_base = repo.merge_base("develop", self.state.branch)[0]
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
+        self._persist_and_notify("commit_changes")
+
+    def cleanup_worktree(self):
+        if self.state.worktree_path:
+            try:
+                git_repo = git.Repo(self.state.repo)
+                git_repo.git.worktree("remove", self.state.worktree_path)
+                print(f"Removed worktree: {self.state.worktree_path}")
+
+                parent_dir = os.path.dirname(self.state.worktree_path)
+                if os.path.exists(parent_dir):
+                    os.rmdir(parent_dir)
+                print(f"Cleaned up worktree parent directory")
+            except Exception as e:
+                print(f"Warning: Failed to cleanup worktree: {e}")
 
     @listen(commit_changes)
     def create_pr(self):
@@ -257,7 +310,9 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             base="develop",
         )
         # Get diff between two branches
-        self.state.diff = repo.git.diff("develop", self.state.branch, patch=True)
+        self.state.diff = repo.git.diff(
+            "develop", self.state.branch, patch=True
+        )
         self.state.pr_url = pr.html_url
         self.state.pr_number = pr.number
         print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
@@ -265,6 +320,9 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         repo = git.Repo(self.state.repo)
         merge_base = repo.merge_base("develop", self.state.branch)[0]
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
+        self._persist_and_notify("create_pr")
+
+        self.cleanup_worktree()
 
     @listen(commit_changes)
     def review(self):
@@ -294,6 +352,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Review decision: {review_result.decision}")
 
+        self._persist_and_notify("review")
         return review_result
 
 

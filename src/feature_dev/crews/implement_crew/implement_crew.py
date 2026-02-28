@@ -19,7 +19,12 @@ class ImplementCrew:
         return Agent(
             config=self.agents_config["developer"],
             verbose=True,
-            tools=[FileReadTool(), FileWriterTool(), DirectoryReadTool(), ExecTool()],
+            tools=[
+                FileReadTool(),
+                FileWriterTool(),
+                DirectoryReadTool(),
+                ExecTool(),
+            ],
         )
 
     @agent
@@ -38,7 +43,8 @@ class ImplementCrew:
     @task
     def generate_result(self) -> Task:
         return Task(
-            config=self.tasks_config["generate_result"], output_pydantic=ImplementOutput
+            config=self.tasks_config["generate_result"],
+            output_pydantic=ImplementOutput,
         )
 
     @crew

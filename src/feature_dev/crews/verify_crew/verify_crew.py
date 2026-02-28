@@ -1,9 +1,8 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-from feature_dev.types import VerifyOutput, CommitMessageOutput
-
-from tools import ExecTool, DirectoryReadTool, FileReadTool
+from feature_dev.types import CommitMessageOutput, VerifyOutput
+from tools import DirectoryReadTool, ExecTool, FileReadTool
 
 
 @CrewBase
@@ -31,7 +30,8 @@ class VerifyCrew:
     @task
     def verify_task(self) -> Task:
         return Task(
-            config=self.tasks_config["verify_task"], output_pydantic=VerifyOutput
+            config=self.tasks_config["verify_task"],
+            output_pydantic=VerifyOutput,
         )
 
     @task

@@ -15,7 +15,9 @@ class FixedDirectoryReadToolSchema(BaseModel):
 class DirectoryReadToolSchema(FixedDirectoryReadToolSchema):
     """Input for DirectoryReadTool."""
 
-    directory: str = Field(..., description="Mandatory directory to list content")
+    directory: str = Field(
+        ..., description="Mandatory directory to list content"
+    )
 
 
 class DirectoryReadTool(BaseTool):
@@ -30,7 +32,9 @@ class DirectoryReadTool(BaseTool):
         super().__init__(**kwargs)
         if directory is not None:
             self.directory = directory
-            self.description = f"A tool that can be used to list {directory}'s content."
+            self.description = (
+                f"A tool that can be used to list {directory}'s content."
+            )
             self.args_schema = FixedDirectoryReadToolSchema
             self._generate_description()
 

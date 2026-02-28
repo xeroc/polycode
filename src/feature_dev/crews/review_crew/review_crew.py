@@ -20,7 +20,9 @@ class ReviewCrew:
 
     @task
     def review_task(self) -> Task:
-        return Task(config=self.tasks_config["review_task"], output=ReviewOutput)
+        return Task(
+            config=self.tasks_config["review_task"], output=ReviewOutput
+        )
 
     @crew
     def crew(self) -> Crew:

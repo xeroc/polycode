@@ -54,3 +54,5 @@ htmlcov/
 
 # uv
 .python-version
+
+feature_dev.db
