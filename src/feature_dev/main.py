@@ -8,6 +8,7 @@ from crewai.project import after_kickoff, before_kickoff
 import git
 from crewai.flow.flow import Flow, listen, start
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
+from pydantic import BaseModel
 
 from .crews.implement_crew.implement_crew import ImplementCrew
 from .crews.plan_crew.plan_crew import PlanCrew
@@ -20,6 +21,7 @@ from .types import (
     CommitMessageOutput,
     FeatureDevState,
     ImplementOutput,
+    KickoffIssue,
     PlanOutput,
     ReviewOutput,
     SetupOutput,
@@ -27,7 +29,8 @@ from .types import (
     TestOutput,
     VerifyOutput,
 )
-from .utils import get_github_repo_from_local
+from .github_status import ProjectStatusManager
+from .utils import get_github_repo_from_local, sanitize_branch_name
 
 
 @persist(verbose=True)
@@ -163,7 +166,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         missing_stories = [
             x
             for x in self.state.stories or []
-            if self.state.completed_stories and x not in self.state.completed_stories
+            if self.state.completed_stories
+            and x not in self.state.completed_stories
         ]
 
         self.state.completed_stories = []
@@ -230,7 +234,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                     "test_cmd": self.state.test_cmd,
                     "current_story": self.state.current_story,
                     "completed_stories": [
-                        x.description for x in self.state.completed_stories or []
+                        x.description
+                        for x in self.state.completed_stories or []
                     ],
                 }
             )
@@ -246,7 +251,9 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Verification passed: {verify_result.verified}")
 
-        commit_message_result: CommitMessageOutput = output.tasks_output[1].pydantic
+        commit_message_result: CommitMessageOutput = output.tasks_output[
+            1
+        ].pydantic
         self.state.commit_title = commit_message_result.title
         self.state.commit_message = commit_message_result.message
         self.state.commit_footer = commit_message_result.footer
@@ -317,6 +324,20 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             print("No diff to review")
             return None
 
+        if not self.state.project_status_updated:
+            try:
+                status_manager = ProjectStatusManager()
+                status_manager.update_status(self.state.issue_id, "Reviewing")
+                status_manager.add_comment(
+                    self.state.issue_id,
+                    f"## 🔍 Review Started\n\n"
+                    f"Pull request #{self.state.pr_number} is now under review.\n"
+                    f"[View PR]({self.state.pr_url})",
+                )
+                self.state.project_status_updated = True
+            except Exception as e:
+                print(f"Failed to update project status: {e}")
+
         output = (
             ReviewCrew()
             .crew()
@@ -342,7 +363,14 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         return review_result
 
     @listen(review)
-    def delete_repo(self):
+    def finish(self):
+        """Step 8: Update project status and cleanup worktree."""
+        try:
+            status_manager = ProjectStatusManager()
+            status_manager.update_status(self.state.issue_id, "Done")
+        except Exception as e:
+            print(f"Failed to update project status to Done: {e}")
+
         git_repo = git.Repo(self.state.repo)
         git_repo.git.worktree("remove", self.state.repo)
         print(f"Removed worktree: {self.state.repo}")
@@ -353,19 +381,18 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         print(f"Cleaned up worktree parent directory")
 
 
-def kickoff():
+def kickoff(issue: KickoffIssue):
     """
     Run the flow.
     """
     feature_dev_flow = FeatureDevFlow()
-    issue_id = 4
     feature_dev_flow.kickoff(
         inputs=dict(
-            id=str(uuid.UUID("f7491704-26da-4735-9073-3fd7ad3c2807")),
-            issue_id=issue_id,
-            task="create a simple html based website with tailwinds (from CDN) that says hello world",
+            id=str(uuid.uuid4()),
+            issue_id=issue.id,
+            task=f"{issue.title}\n\n{issue.body}",
             path="/home/xeroc/projects/chaoscraft/demo",
-            branch=f"{issue_id}-feature-branch",
+            branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
         )
     )
 
@@ -379,4 +406,4 @@ def plot():
 
 
 if __name__ == "__main__":
-    kickoff()
+    print("Cannot run manually, requires issue data!")

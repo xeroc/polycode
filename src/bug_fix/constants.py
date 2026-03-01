@@ -1,3 +1,0 @@
-"""
-Bug Fix Flow constants.
-"""
