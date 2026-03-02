@@ -13,7 +13,7 @@ except ImportError:
     KickoffIssue = None
     feature_dev_kickoff = None
 
-from project_manager import GitHubProjectManager, FlowRunner
+from project_manager import GitHubProjectManager
 from project_manager.types import ProjectConfig, ProjectItem
 
 logging.basicConfig(
@@ -38,9 +38,7 @@ def create_kickoff_callback() -> Callable[[ProjectItem], None] | None:
         if not feature_dev_kickoff or not KickoffIssue:
             return
 
-        log.info(
-            f"Starting feature development for issue #{item.issue_number}"
-        )
+        log.info(f"Starting feature development for issue #{item.issue_number}")
         log.info(f"Title: {item.title}")
         log.info(f"Description: {item.body or '(no description)'}")
 

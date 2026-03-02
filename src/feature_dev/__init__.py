@@ -12,7 +12,6 @@ from crewai.flow.flow import Flow, listen, start
 from .crews.implement_crew.implement_crew import ImplementCrew
 from .crews.plan_crew.plan_crew import PlanCrew
 from .crews.review_crew.review_crew import ReviewCrew
-from .crews.setup_crew.setup_crew import SetupCrew
 from .crews.test_crew.test_crew import TestCrew
 from .crews.verify_crew.verify_crew import VerifyCrew
 from crewai.flow.persistence import persist
@@ -24,7 +23,6 @@ from .types import (
     KickoffIssue,
     PlanOutput,
     ReviewOutput,
-    SetupOutput,
     Story,
     TestOutput,
     VerifyOutput,
@@ -83,37 +81,6 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
     @start()
     def setup(self):
-        print("Setting up development environment")
-
-        if self.state.findings and self.state.baseline:
-            return
-
-        result = (
-            SetupCrew()
-            .crew()
-            .kickoff(
-                inputs=dict(
-                    task=self.state.task,
-                    repo=self.state.repo,
-                    branch=self.state.branch,
-                )
-            )
-        )
-
-        output: SetupOutput = result.pydantic  # type: ignore  # or cast
-
-        self.state.build_cmd = output.build_cmd
-        self.state.test_cmd = output.test_cmd
-        self.state.ci_notes = output.ci_notes
-        self.state.baseline = output.baseline
-        self.state.findings = output.findings
-
-        print(f"Build cmd: {output.build_cmd}")
-        print(f"Test cmd: {output.test_cmd}")
-        return output
-
-    @listen(setup)
-    def plan_task(self):
         """Step 1: Plan - decompose task into user stories."""
         print("Planning feature into user stories")
 
@@ -128,8 +95,6 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                     task=self.state.task,
                     repo=self.state.repo,
                     branch=self.state.branch,
-                    baseline=self.state.baseline,
-                    findings=self.state.findings,
                 )
             )
         )
@@ -300,6 +265,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         repo, github_repo, _ = get_github_repo_from_local(self.state.repo)
 
         # Push
+        print("Pushing repo ...")
         repo.git.push("origin", self.state.branch)
 
         # PR
@@ -373,14 +339,14 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         except Exception as e:
             print(f"Failed to update project status to Done: {e}")
 
-        git_repo = git.Repo(self.state.repo)
-        git_repo.git.worktree("remove", self.state.repo)
-        print(f"Removed worktree: {self.state.repo}")
-
-        parent_dir = os.path.dirname(self.state.repo)
-        if os.path.exists(parent_dir):
-            os.rmdir(parent_dir)
-        print(f"Cleaned up worktree parent directory")
+        # git_repo = git.Repo(self.state.repo)
+        # git_repo.git.worktree("remove", self.state.repo)
+        # print(f"Removed worktree: {self.state.repo}")
+        #
+        # parent_dir = os.path.dirname(self.state.repo)
+        # if os.path.exists(parent_dir):
+        #     os.rmdir(parent_dir)
+        # print(f"Cleaned up worktree parent directory")
 
 
 def kickoff(issue: KickoffIssue):
@@ -405,6 +371,19 @@ def plot():
     """
     feature_dev_flow = FeatureDevFlow()
     feature_dev_flow.plot()
+
+
+def example():
+    feature_dev_flow = FeatureDevFlow()
+    feature_dev_flow.kickoff(
+        inputs=dict(
+            id=str(uuid.uuid4()),
+            issue_id=7,
+            task=f"Implement a contact form. Ask for full name, email, subject, and body.",
+            path="/home/xeroc/projects/chaoscraft/demo",
+            branch=f"email-form",
+        )
+    )
 
 
 if __name__ == "__main__":

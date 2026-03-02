@@ -1,6 +1,6 @@
 test_task:
   description: >
-    Integration and E2E testing of the implementation.
+    Integration and unit testing of the implementation.
 
     TASK:
     {task}
@@ -16,13 +16,13 @@ test_task:
       * DirectoryReadTool
       * ExecTool
 
-    Your job (integration/E2E testing — unit tests were already written per-story):
+    Your job (integration/unit testing — unit tests were already written per-story):
     1. Run the full test suite ({test_cmd}) to confirm everything passes together
     2. Look for integration issues between stories
     3. If this is a UI feature, test it end-to-end
     4. Check cross-cutting concerns: error handling, edge cases across features
     5. Verify that overall feature works as a cohesive whole
   expected_output: >
-    Structured test result with Integration/E2E test results or identified issues.
+    Structured test result with Integration/unit test results or identified issues.
     In any case, we need structured output, only.
   agent: tester

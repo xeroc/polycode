@@ -6,9 +6,8 @@ from typing import Any
 
 from celery import current_task
 from datetime import datetime, timezone
-from feature_dev import FeatureDevFlow
+from feature_dev import kickoff as feature_dev_kickoff
 from feature_dev import KickoffIssue
-from persistence import PostgresFlowPersistence
 from persistence.celery_tasks import CeleryTask
 from persistence.celery_tasks import CeleryTaskTracker
 from persistence.postgres import Base
@@ -104,6 +103,8 @@ def kickoff_feature_dev_task(self, issue_number: int) -> dict[str, Any]:
         manager = GitHubProjectManager(config)
         project_item = manager.find_project_item(issue_number)
 
+        print(project_item)
+
         if not project_item:
             log.warning(f"Issue #{issue_number} not found in project")
             update_status_task(issue_number, "Ready")
@@ -120,11 +121,7 @@ def kickoff_feature_dev_task(self, issue_number: int) -> dict[str, Any]:
 
         log.info(f"Kicking off feature dev for: {kickoff_issue.title}")
 
-        connection_string = os.environ.get("DATABASE_URL", "sqlite:///flow_state.db")
-        persistence = PostgresFlowPersistence(connection_string)
-
-        feature_flow = FeatureDevFlow(kickoff_issue, persistence=persistence)
-        feature_flow.kickoff()
+        feature_dev_kickoff(kickoff_issue)
 
         log.info(f"Feature dev flow completed for issue #{issue_number}")
         update_status_task(issue_number, "Reviewing")
@@ -471,11 +468,9 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
                     f"Label '{GITHUB_LABEL_FOR_WORKFLOW_START}' added to issue #{issue_number}"
                 )
 
-                added = add_issue_to_project_task(issue_obj)
-                if added:
-                    log.info(f"Added issue #{issue_number} to project")
-
+                add_issue_to_project_task(issue_obj)
                 updated = update_status_task(issue_number, "Ready")
+
                 if updated:
                     log.info(f"Updated issue #{issue_number} to Ready status")
                 else:
@@ -493,29 +488,9 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
                     "label": label_name,
                     "message": f"Issue #{issue_number} moved to Ready and flow triggered",
                 }
-            else:
-                added = add_issue_to_project_task(issue_obj)
-                if added:
-                    log.info(f"Added issue #{issue_number} to project")
-                else:
-                    log.info(
-                        f"Issue #{issue_number} already in project or failed to add"
-                    )
 
-                update_task_completed(task_id, "Issue added to project")
-                return {
-                    "status": "success",
-                    "issue_number": issue_number,
-                    "action": action,
-                    "label": label_name,
-                    "message": f"Issue #{issue_number} added to project",
-                }
-
-        added = add_issue_to_project_task(issue_obj)
-        if added:
-            log.info(f"Added issue #{issue_number} to project")
         else:
-            log.info(f"Issue #{issue_number} already in project or failed to add")
+            log.info(f"Unhandled event for issue #{issue_number}: {action}")
 
         update_task_completed(task_id, "Webhook processed")
 
