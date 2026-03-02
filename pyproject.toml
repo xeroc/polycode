@@ -16,10 +16,6 @@ dependencies = [
 ]
 
 [project.scripts]
-bug_fix = "bug_fix.main:kickoff"
-bug_fix_plot = "bug_fix.main:plot"
-feature_dev = "feature_dev.main:kickoff"
-feature_dev_plot = "feature_dev.main:plot"
 github = "github_issues.main:main"
 
 [build-system]

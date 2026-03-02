@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from .github_project import GitHubProjectsClient, ProjectItem
 
 try:
-    from feature_dev.main import kickoff as feature_dev_kickoff
+    from feature_dev import kickoff as feature_dev_kickoff
     from feature_dev.types import KickoffIssue
 except ImportError:
     KickoffIssue = None
