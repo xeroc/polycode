@@ -1,0 +1,132 @@
+"""CLI tools for project management."""
+
+import logging
+import os
+
+import click
+
+from .github import GitHubProjectManager
+from .types import ProjectConfig, StatusMapping
+from .watcher import RepoWatcher
+
+log = logging.getLogger(__name__)
+
+
+def setup_logging(verbose: bool = False) -> None:
+    """Configure logging."""
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+
+def create_manager_from_env() -> GitHubProjectManager:
+    """Create project manager from environment variables.
+
+    Required environment variables:
+        PROJECT_PROVIDER: Provider type (e.g., "github")
+        REPO_OWNER: Repository owner
+        REPO_NAME: Repository name
+        PROJECT_IDENTIFIER: Project number/ID
+        GITHUB_TOKEN: GitHub access token (for GitHub provider)
+
+    Optional environment variables:
+        STATUS_TODO: Custom "Todo" status name
+        STATUS_READY: Custom "Ready" status name
+        STATUS_IN_PROGRESS: Custom "In progress" status name
+        STATUS_REVIEWING: Custom "Reviewing" status name
+        STATUS_DONE: Custom "Done" status name
+        STATUS_BLOCKED: Custom "Blocked" status name
+
+    Returns:
+        Configured project manager
+    """
+    provider = os.environ.get("PROJECT_PROVIDER", "github")
+    repo_owner = os.environ.get("REPO_OWNER")
+    repo_name = os.environ.get("REPO_NAME")
+    project_identifier = os.environ.get("PROJECT_IDENTIFIER")
+
+    if not repo_owner or not repo_name or not project_identifier:
+        raise ValueError(
+            "Missing required environment variables: REPO_OWNER, REPO_NAME, PROJECT_IDENTIFIER"
+        )
+
+    status_mapping = StatusMapping(
+        todo=os.environ.get("STATUS_TODO", "Todo"),
+        ready=os.environ.get("STATUS_READY", "Ready"),
+        in_progress=os.environ.get("STATUS_IN_PROGRESS", "In progress"),
+        reviewing=os.environ.get("STATUS_REVIEWING", "Reviewing"),
+        done=os.environ.get("STATUS_DONE", "Done"),
+        blocked=os.environ.get("STATUS_BLOCKED", "Blocked"),
+    )
+
+    config = ProjectConfig(
+        provider=provider,
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+        project_identifier=project_identifier,
+        status_mapping=status_mapping,
+    )
+
+    if provider == "github":
+        return GitHubProjectManager(config)
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
+
+
+@click.group()
+def cli() -> None:
+    """Project management CLI tools."""
+    pass
+
+
+@cli.command()
+@click.option("--once", is_flag=True, help="Run one cycle and exit")
+@click.option("--interval", default=300, help="Polling interval in seconds")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
+def watch(once: bool, interval: int, verbose: bool) -> None:
+    """Watch repository for issues to process.
+
+    Polls the repository at the specified interval and processes issues
+    that are in "Ready" status.
+    """
+    setup_logging(verbose)
+
+    manager = create_manager_from_env()
+    watcher = RepoWatcher(manager, poll_interval=interval)
+
+    watcher.start(run_once=once)
+
+
+@cli.command()
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
+def sync(verbose: bool) -> None:
+    """Sync all open issues to the project."""
+    setup_logging(verbose)
+
+    manager = create_manager_from_env()
+    added = manager.sync_issues_to_project()
+
+    if added > 0:
+        click.echo(f"Added {added} issues to project")
+    else:
+        click.echo("All issues already in project")
+
+
+@cli.command("list")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
+def list_items(verbose: bool) -> None:
+    """List all project items."""
+    setup_logging(verbose)
+
+    manager = create_manager_from_env()
+    items = manager.get_project_items()
+
+    for item in items:
+        status = item.status or "No status"
+        click.echo(f"#{item.issue_number:4d} [{status:12s}] {item.title}")
+
+
+if __name__ == "__main__":
+    cli()
