@@ -1,0 +1,45 @@
+---
+repos:
+  ######################################
+  # Hooks for all projects
+  ######################################
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude_types:
+          - javascript
+          - ts
+      - id: check-executables-have-shebangs
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.13.9
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  - repo: https://github.com/ljnsn/cz-conventional-gitmoji
+    rev: v0.7.0
+    hooks:
+      - id: conventional-gitmoji
+
+  ######################################
+  # docs and other markdown files
+  ######################################
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.47.0
+    hooks:
+      - id: markdownlint
+        files: ".*.md"
+        # MD013: line too long
+        # MD033: no inline HTML
+        # MD041: first line in a file should be a top-level heading
+        args: [--fix, --disable, MD013, MD033, MD041, MD046, MD040, "--"]
+
+  - repo: https://github.com/ComPWA/pyright-pre-commit
+    rev: "v1.1.407"
+    hooks:
+      - id: pyright
+        additional_dependencies: []
+        language: system
+        entry: uv run pyright

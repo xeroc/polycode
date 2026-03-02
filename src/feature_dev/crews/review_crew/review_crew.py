@@ -14,21 +14,21 @@ class ReviewCrew:
     @agent
     def reviewer(self) -> Agent:
         return Agent(
-            config=self.agents_config["reviewer"],
+            config=self.agents_config["reviewer"],  # type: ignore
             verbose=True,
         )
 
     @task
     def review_task(self) -> Task:
         return Task(
-            config=self.tasks_config["review_task"], output_pydantic=ReviewOutput
+            config=self.tasks_config["review_task"], output_pydantic=ReviewOutput  # type: ignore
         )
 
     @crew
     def crew(self) -> Crew:
         return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
+            agents=self.agents,  # type: ignore
+            tasks=self.tasks,  # type: ignore
             process=Process.sequential,
             verbose=True,
         )

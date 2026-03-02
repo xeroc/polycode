@@ -16,6 +16,9 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "sqlalchemy>=2.0.0",
+    "celery>=5.4.0",
+    "redis>=5.2.0",
+    "flower>=2.0.1",
 ]
 
 [project.scripts]
@@ -34,6 +37,7 @@ packages = [
     "src/github_issues",
     "src/project_manager",
     "src/persistence",
+    "src/celery_tasks",
 ]
 
 [dependency-groups]

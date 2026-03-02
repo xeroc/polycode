@@ -17,7 +17,7 @@ class ImplementCrew:
     @agent
     def developer(self) -> Agent:
         return Agent(
-            config=self.agents_config["developer"],
+            config=self.agents_config["developer"],  # type: ignore
             verbose=True,
             tools=[
                 FileReadTool(),
@@ -30,28 +30,28 @@ class ImplementCrew:
     @agent
     def consolidator(self) -> Agent:
         return Agent(
-            config=self.agents_config["consolidator"],
+            config=self.agents_config["consolidator"],  # type: ignore
             verbose=True,
         )
 
     @task
     def implement_task(self) -> Task:
         return Task(
-            config=self.tasks_config["implement_task"],
+            config=self.tasks_config["implement_task"],  # type: ignore
         )
 
     @task
     def generate_result(self) -> Task:
         return Task(
-            config=self.tasks_config["generate_result"],
+            config=self.tasks_config["generate_result"],  # type: ignore
             output_pydantic=ImplementOutput,
         )
 
     @crew
     def crew(self) -> Crew:
         return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
+            agents=self.agents,  # type: ignore
+            tasks=self.tasks,  # type: ignore
             process=Process.sequential,
             verbose=True,
         )

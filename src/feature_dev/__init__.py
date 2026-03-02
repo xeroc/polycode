@@ -5,6 +5,7 @@ Feature Development Flow module.
 import os
 import uuid
 
+from crewai import CrewOutput
 import git
 from crewai.flow.flow import Flow, listen, start
 
@@ -32,8 +33,8 @@ from .github_status import ProjectStatusManager
 from .utils import get_github_repo_from_local, sanitize_branch_name
 from persistence import PostgresFlowPersistence
 
-DB_URL = os.environ.get("DB_URL")
-if DB_URL and DB_URL.startswith("postgres:"):
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres:"):
     persistence = PostgresFlowPersistence(
         connection_string="postgresql://user:pass@localhost/dbname"
     )
@@ -99,7 +100,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             )
         )
 
-        output: SetupOutput = result.pydantic
+        output: SetupOutput = result.pydantic  # type: ignore  # or cast
 
         self.state.build_cmd = output.build_cmd
         self.state.test_cmd = output.test_cmd
@@ -132,7 +133,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                 )
             )
         )
-        output: PlanOutput = result.pydantic
+        output: PlanOutput = result.pydantic  # type: ignore  # or cast
 
         self.state.stories = output.stories
 
@@ -143,9 +144,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     def implement_story(self):
         """Step 3: Implement - implement user story."""
         print("Implementing user story")
-        tasks = []
 
-        if len(self.state.completed_stories) == len(self.state.stories):
+        if len(self.state.completed_stories or []) == len(self.state.stories or []):
             return
 
         def implement_single_story(current_story: Story):
@@ -167,7 +167,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                 )
             )
 
-            implement_result: ImplementOutput = output.pydantic
+            implement_result: ImplementOutput = output.pydantic  # type: ignore  # or cast
             return implement_result
 
         # FIXME: need a more robust way of comparing completed with missing!
@@ -212,7 +212,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             )
         )
 
-        test_result: TestOutput = output.pydantic
+        test_result: TestOutput = output.pydantic  # type: ignore  # or cast
         self.state.tested = test_result.status == "done"
 
         if test_result.failures:
@@ -247,9 +247,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             )
         )
 
-        print(output)
-        print(output.tasks_output)
-        verify_result: VerifyOutput = output.tasks_output[0].pydantic
+        verify_result: VerifyOutput = output.tasks_output[0].pydantic  # type: ignore  # or cast
         self.state.verified = verify_result.status == "done"
 
         if verify_result.issues:
@@ -257,7 +255,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Verification passed: {verify_result.verified}")
 
-        commit_message_result: CommitMessageOutput = output.tasks_output[1].pydantic
+        commit_message_result: CommitMessageOutput = output.tasks_output[1].pydantic  # type: ignore  # or cast
         self.state.commit_title = commit_message_result.title
         self.state.commit_message = commit_message_result.message
         self.state.commit_footer = commit_message_result.footer
@@ -353,10 +351,10 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                 }
             )
         )
-        print("Output: ")
-        print(output)
-        print("=" * 80)
-        review_result: ReviewOutput = output.pydantic
+        if not isinstance(output, CrewOutput):
+            raise ValueError()
+
+        review_result: ReviewOutput = output.pydantic  # type: ignore  # or cast
         self.state.review_status = review_result.decision
 
         if review_result.feedback:

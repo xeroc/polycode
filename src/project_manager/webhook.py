@@ -6,7 +6,8 @@ import json
 import logging
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from celery_tasks.tasks import process_github_webhook_task
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from .flow_runner import FlowRunner
@@ -108,99 +109,6 @@ class GitHubWebhookHandler:
             "events": payload.hook.get("events", []) if payload.hook else [],
         }
 
-    def handle_issue_event(self, payload: GitHubWebhookPayload) -> dict[str, Any]:
-        """Handle GitHub issue event.
-
-        Args:
-            payload: Webhook payload
-
-        Returns:
-            Response dict with status
-        """
-        if not payload.issue:
-            return {"status": "ignored", "reason": "no issue in payload"}
-
-        if not payload.action:
-            return {"status": "ignored", "reason": "no action in payload"}
-
-        if payload.action not in ["opened", "reopened", "labeled"]:
-            return {
-                "status": "ignored",
-                "reason": f"action '{payload.action}' not handled",
-            }
-
-        issue_data = payload.issue
-        issue_number = issue_data.get("number")
-
-        log.info(f"Received issue #{issue_number} - {payload.action}")
-        log.info(f"Title: {issue_data.get('title')}")
-        log.info(f"Repository: {payload.repository.get('full_name')}")
-
-        if not issue_number:
-            return {"status": "error", "reason": "no issue number in payload"}
-
-        issue = Issue(
-            id=issue_number,
-            number=issue_number,
-            title=issue_data.get("title", ""),
-            body=issue_data.get("body"),
-            node_id=issue_data.get("node_id"),
-            url=issue_data.get("html_url"),
-            labels=[label.get("name", "") for label in issue_data.get("labels", [])],
-        )
-
-        if payload.action == "labeled":
-            label_name = payload.label.get("name") if payload.label else None
-            if label_name == MOVE_TO_READY_STATE_LABEL:
-                log.info(
-                    f"Label '{ MOVE_TO_READY_STATE_LABEL }' added to issue #{issue_number}"
-                )
-                updated = self.flow_runner.manager.update_issue_status(
-                    issue_number, "Ready"
-                )
-                if updated:
-                    log.info(f"Updated issue #{issue_number} to Ready status")
-                    return {
-                        "status": "updated",
-                        "issue_number": issue_number,
-                        "message": f"Moved issue #{issue_number} to Ready",
-                    }
-                else:
-                    log.warning(f"Failed to update issue #{issue_number} to Ready")
-                    return {
-                        "status": "error",
-                        "issue_number": issue_number,
-                        "message": f"Failed to update issue #{issue_number} to Ready",
-                    }
-
-        added = self.flow_runner.manager.add_issue_to_project(issue)
-        if added:
-            log.info(f"Added issue #{issue_number} to project")
-        else:
-            log.info(f"Issue #{issue_number} already in project or failed to add")
-
-        triggered = self.flow_runner.trigger_flow()
-        if triggered:
-            return {
-                "status": "triggered",
-                "issue_number": issue_number,
-                "message": f"Started processing issue #{issue_number}",
-            }
-        else:
-            running = self.flow_runner.get_running_flow()
-            if running:
-                return {
-                    "status": "queued",
-                    "issue_number": issue_number,
-                    "message": f"Flow already running for issue #{running.issue_number}, queued for later",
-                }
-            else:
-                return {
-                    "status": "queued",
-                    "issue_number": issue_number,
-                    "message": f"Issue #{issue_number} added to project, not in ready state",
-                }
-
 
 def create_webhook_app(
     flow_runner: FlowRunner,
@@ -231,7 +139,6 @@ def create_webhook_app(
     @app.post("/webhook/github")
     async def github_webhook(
         request: Request,
-        background_tasks: BackgroundTasks,
     ):
         """Handle GitHub webhook events.
 
@@ -273,15 +180,20 @@ def create_webhook_app(
             }
 
         elif event_type == "issues":
-
-            def process_event():
-                try:
-                    result = handler.handle_issue_event(payload)
-                    log.info(f"Event processed: {result}")
-                except Exception as e:
-                    log.error(f"Error processing event: {e}", exc_info=True)
-
-            background_tasks.add_task(process_event)
+            try:
+                task_result = process_github_webhook_task.apply_async(  # type: ignore
+                    args=[payload.model_dump()]
+                )
+                log.info(f"Queued webhook for Celery processing: {task_result.id}")
+                return {
+                    "status": "queued",
+                    "event": event_type,
+                    "delivery_id": delivery_id,
+                    "task_id": task_result.id,
+                }
+            except Exception as e:
+                log.error(f"Failed to queue Celery task: {e}")
+                log.warning("Falling back to background task processing")
 
             return {
                 "status": "received",
@@ -299,7 +211,6 @@ def create_webhook_app(
 
     @app.post("/trigger")
     async def manual_trigger(
-        background_tasks: BackgroundTasks,
         issue_number: int | None = None,
     ):
         """Manually trigger a flow.
@@ -317,14 +228,6 @@ def create_webhook_app(
                     else "Flow already running"
                 ),
             }
-
-        def trigger():
-            try:
-                flow_runner.trigger_flow(issue_number)
-            except Exception as e:
-                log.error(f"Error triggering flow: {e}", exc_info=True)
-
-        background_tasks.add_task(trigger)
 
         return {
             "status": "triggered",

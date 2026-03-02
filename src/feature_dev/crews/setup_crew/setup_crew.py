@@ -15,33 +15,33 @@ class SetupCrew:
     @agent
     def setup(self) -> Agent:
         return Agent(
-            config=self.agents_config["setup"],
+            config=self.agents_config["setup"],  # type: ignore
             verbose=True,
             tools=[FileWriterTool()],
         )
 
     @agent
     def consolidator(self) -> Agent:
-        return Agent(config=self.agents_config["consolidator"], verbose=True)
+        return Agent(config=self.agents_config["consolidator"], verbose=True)  # type: ignore
 
     @task
     def setup_task(self) -> Task:
         return Task(
-            config=self.tasks_config["setup_task"],
+            config=self.tasks_config["setup_task"],  # type: ignore
         )
 
     @task
     def generate_result(self) -> Task:
         return Task(
-            config=self.tasks_config["generate_result"],
+            config=self.tasks_config["generate_result"],  # type: ignore
             output_pydantic=SetupOutput,
         )
 
     @crew
     def crew(self) -> Crew:
         return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
+            agents=self.agents,  # type: ignore
+            tasks=self.tasks,  # type: ignore
             process=Process.sequential,
             verbose=True,
         )

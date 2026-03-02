@@ -36,10 +36,8 @@ class FlowRunner:
             True if a flow is running, False otherwise
         """
         items = self.manager.get_project_items()
-        in_progress_status = (
-            self.manager.config.status_mapping.to_provider_status(
-                IssueStatus.IN_PROGRESS
-            )
+        in_progress_status = self.manager.config.status_mapping.to_provider_status(
+            IssueStatus.IN_PROGRESS
         )
 
         in_progress_items = [
@@ -54,10 +52,8 @@ class FlowRunner:
             ProjectItem if a flow is running, None otherwise
         """
         items = self.manager.get_project_items()
-        in_progress_status = (
-            self.manager.config.status_mapping.to_provider_status(
-                IssueStatus.IN_PROGRESS
-            )
+        in_progress_status = self.manager.config.status_mapping.to_provider_status(
+            IssueStatus.IN_PROGRESS
         )
 
         for item in items:
@@ -65,24 +61,25 @@ class FlowRunner:
                 return item
         return None
 
-    def trigger_flow(self, issue_number: int | None = None) -> bool:
+    def trigger_flow(self, issue_number: int | None = None) -> bool | str:
         """Trigger a flow for an issue.
 
         If issue_number is provided, processes that specific issue.
         Otherwise, finds the next ready issue.
 
+        When Celery is available, returns task ID for async processing.
+        When Celery is not available, returns bool for sync processing.
+
         Args:
             issue_number: Optional specific issue to process
 
         Returns:
-            True if flow was triggered, False if already running or no issue found
+            True/task_id if flow was triggered, False if already running or no issue found
         """
         if self.is_flow_running():
             current = self.get_running_flow()
             if current:
-                log.info(
-                    f"Flow already running for issue #{current.issue_number}"
-                )
+                log.info(f"Flow already running for issue #{current.issue_number}")
             return False
 
         if issue_number:
@@ -90,14 +87,14 @@ class FlowRunner:
         else:
             return self._process_next_ready_issue()
 
-    def _process_specific_issue(self, issue_number: int) -> bool:
+    def _process_specific_issue(self, issue_number: int) -> bool | str:
         """Process a specific issue.
 
         Args:
             issue_number: Issue number to process
 
         Returns:
-            True if flow was triggered, False otherwise
+            True/task_id if flow was triggered, False otherwise
         """
         item = self.manager.find_project_item(issue_number)
         if not item:
@@ -107,10 +104,8 @@ class FlowRunner:
         ready_status = self.manager.config.status_mapping.to_provider_status(
             IssueStatus.READY
         )
-        in_progress_status = (
-            self.manager.config.status_mapping.to_provider_status(
-                IssueStatus.IN_PROGRESS
-            )
+        in_progress_status = self.manager.config.status_mapping.to_provider_status(
+            IssueStatus.IN_PROGRESS
         )
 
         if item.status != ready_status:
@@ -119,16 +114,22 @@ class FlowRunner:
             )
             return False
 
-        success = self.manager.update_issue_status(
-            issue_number, in_progress_status
-        )
+        success = self.manager.update_issue_status(issue_number, in_progress_status)
         if not success:
-            log.error(
-                f"Failed to move issue #{issue_number} to {in_progress_status}"
-            )
+            log.error(f"Failed to move issue #{issue_number} to {in_progress_status}")
             return False
 
         log.info(f"Started flow for issue #{issue_number}: {item.title}")
+
+        try:
+            from celery_tasks.tasks import kickoff_feature_dev_task
+
+            task_result = kickoff_feature_dev_task.apply_async(args=[issue_number])  # type: ignore
+            log.info(f"Queued Celery task for issue #{issue_number}: {task_result.id}")
+            return task_result.id
+        except Exception as e:
+            log.error(f"Failed to queue Celery task: {e}")
+            log.warning("Falling back to synchronous processing")
 
         if self.on_issue_ready:
             try:
@@ -158,4 +159,4 @@ class FlowRunner:
             return False
 
         top_item = ready_items[0]
-        return self._process_specific_issue(top_item.issue_number)
+        return bool(self._process_specific_issue(top_item.issue_number))

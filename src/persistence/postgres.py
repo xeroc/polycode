@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from sqlalchemy.types import String, DateTime, Integer
+from sqlalchemy.types import JSON, TypeDecorator
 
 from crewai.flow.persistence import FlowPersistence
 from crewai.flow.async_feedback.types import PendingFeedbackContext
@@ -19,20 +20,28 @@ class Base(DeclarativeBase):
     pass
 
 
+class JSONType(TypeDecorator):
+    """Platform-independent JSON type. Uses JSONB for PostgreSQL, JSON for others."""
+
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(JSONB())
+        return dialect.type_descriptor(JSON())
+
+
 class FlowState(Base):
     """Flow state table model."""
 
     __tablename__ = "flow_states"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     flow_uuid: Mapped[str] = mapped_column(String(255), nullable=False)
     method_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    state_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
 
     __table_args__ = (Index("idx_flow_states_uuid", "flow_uuid"),)
 
@@ -42,14 +51,10 @@ class PendingFeedback(Base):
 
     __tablename__ = "pending_feedback"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
-    flow_uuid: Mapped[str] = mapped_column(
-        String(255), nullable=False, unique=True
-    )
-    context_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    state_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    flow_uuid: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    context_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
+    state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -230,9 +235,7 @@ class PostgresFlowPersistence(FlowPersistence):
             ).delete()
             session.commit()
 
-    def _to_dict(
-        self, state_data: dict[str, Any] | BaseModel
-    ) -> dict[str, Any]:
+    def _to_dict(self, state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to dict.
 
         Args:
