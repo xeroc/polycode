@@ -3,6 +3,7 @@
 import logging
 import os
 import time
+import click
 
 from github import Github
 from pydantic import BaseModel
@@ -62,7 +63,9 @@ def in_progress_issue(issue: ProjectItem) -> None:
     feature_dev_kickoff(kickoff_issue)
 
 
-def get_all_issues(github_client: Github) -> list[IssueData]:
+def get_all_issues(
+    github_client: Github, repo_owner: str, repo_name: str
+) -> list[IssueData]:
     """Get all open issues from the repository.
 
     Args:
@@ -71,7 +74,7 @@ def get_all_issues(github_client: Github) -> list[IssueData]:
     Returns:
         List of issue data dictionaries.
     """
-    repo = github_client.get_repo(f"{REPO_OWNER}/{REPO_NAME}")
+    repo = github_client.get_repo(f"{repo_owner}/{repo_name}")
     issues: list[IssueData] = []
 
     for issue in repo.get_issues(state="open"):
@@ -87,7 +90,7 @@ def get_all_issues(github_client: Github) -> list[IssueData]:
     return issues
 
 
-def run_cycle() -> None:
+def run_cycle(repo_owner: str, repo_name: str) -> None:
     """Run one cycle of the daemon.
 
     This function:
@@ -101,16 +104,16 @@ def run_cycle() -> None:
         return
 
     github_client = Github(GITHUB_TOKEN)
-    projects_client = GitHubProjectsClient(GITHUB_TOKEN, REPO_NAME)
+    projects_client = GitHubProjectsClient(GITHUB_TOKEN, repo_name)
 
     log.info("Starting cycle")
 
     # Get project ID
-    project_id = projects_client.get_project_id(REPO_OWNER, PROJECT_NUMBER)
+    project_id = projects_client.get_project_id(repo_owner, PROJECT_NUMBER)
     log.info(f"Project ID: {project_id}")
 
     # Get all issues from repo
-    all_issues = get_all_issues(github_client)
+    all_issues = get_all_issues(github_client, repo_owner, repo_name)
     log.info(f"Found {len(all_issues)} open issues in repository")
 
     # Get current project items
@@ -135,20 +138,14 @@ def run_cycle() -> None:
         project_items = projects_client.get_project_items(project_id)
 
     # Get status field info
-    status_field_id, status_options = projects_client.get_status_field_id(
-        project_id
-    )
+    status_field_id, status_options = projects_client.get_status_field_id(project_id)
     log.info(f"Status options: {list(status_options.keys())}")
 
     # Find items by status
     ready_items = [item for item in project_items if item.status == "Ready"]
-    in_progress_items = [
-        item for item in project_items if item.status == "In progress"
-    ]
+    in_progress_items = [item for item in project_items if item.status == "In progress"]
 
-    log.info(
-        f"Ready: {len(ready_items)}, In progress: {len(in_progress_items)}"
-    )
+    log.info(f"Ready: {len(ready_items)}, In progress: {len(in_progress_items)}")
 
     # If no in progress, move top ready to in progress
     if not in_progress_items and ready_items:
@@ -179,20 +176,23 @@ def run_cycle() -> None:
     log.info("Cycle complete")
 
 
-def main() -> None:
+@click.command
+@click.argument("repo", type=str)
+def main(repo: str) -> None:
     """Main daemon loop.
 
     Runs the daemon cycle immediately on startup, then repeats every
     INTERVAL_SECONDS (5 minutes).
     """
+    repo_owner, repo_name = repo.split("/")
     log.info("Starting GitHub Issues Daemon")
-    log.info(f"Repository: {REPO_OWNER}/{REPO_NAME}")
+    log.info(f"Repository: {repo_owner}/{repo_name}")
     log.info(f"Project: {PROJECT_NUMBER}")
     log.info(f"Interval: {INTERVAL_SECONDS} seconds")
 
     # Run immediately on startup
     try:
-        run_cycle()
+        run_cycle(repo_owner, repo_name)
     except Exception as e:
         log.error(f"Error in initial cycle: {e}")
 
@@ -200,7 +200,7 @@ def main() -> None:
     while True:
         time.sleep(INTERVAL_SECONDS)
         try:
-            run_cycle()
+            run_cycle(repo_owner, repo_name)
         except Exception as e:
             log.error(f"Error in cycle: {e}")
 

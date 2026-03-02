@@ -1,14 +1,9 @@
 #!/usr/bin/env python
-import asyncio
 import os
 import uuid
-from typing import List
 
-from crewai.project import after_kickoff, before_kickoff
 import git
 from crewai.flow.flow import Flow, listen, start
-from git.exc import InvalidGitRepositoryError, NoSuchPathError
-from pydantic import BaseModel
 
 from .crews.implement_crew.implement_crew import ImplementCrew
 from .crews.plan_crew.plan_crew import PlanCrew
@@ -17,6 +12,7 @@ from .crews.setup_crew.setup_crew import SetupCrew
 from .crews.test_crew.test_crew import TestCrew
 from .crews.verify_crew.verify_crew import VerifyCrew
 from crewai.flow.persistence import persist
+from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from .types import (
     CommitMessageOutput,
     FeatureDevState,
@@ -31,6 +27,15 @@ from .types import (
 )
 from .github_status import ProjectStatusManager
 from .utils import get_github_repo_from_local, sanitize_branch_name
+from persistence import PostgresFlowPersistence
+
+DB_URL = os.environ.get("DB_URL")
+if DB_URL and DB_URL.startswith("postgres:"):
+    persistence = PostgresFlowPersistence(
+        connection_string="postgresql://user:pass@localhost/dbname"
+    )
+else:
+    persistence = SQLiteFlowPersistence()
 
 
 @persist(verbose=True)
@@ -166,8 +171,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         missing_stories = [
             x
             for x in self.state.stories or []
-            if self.state.completed_stories
-            and x not in self.state.completed_stories
+            if self.state.completed_stories and x not in self.state.completed_stories
         ]
 
         self.state.completed_stories = []
@@ -234,8 +238,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                     "test_cmd": self.state.test_cmd,
                     "current_story": self.state.current_story,
                     "completed_stories": [
-                        x.description
-                        for x in self.state.completed_stories or []
+                        x.description for x in self.state.completed_stories or []
                     ],
                 }
             )
@@ -251,9 +254,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Verification passed: {verify_result.verified}")
 
-        commit_message_result: CommitMessageOutput = output.tasks_output[
-            1
-        ].pydantic
+        commit_message_result: CommitMessageOutput = output.tasks_output[1].pydantic
         self.state.commit_title = commit_message_result.title
         self.state.commit_message = commit_message_result.message
         self.state.commit_footer = commit_message_result.footer
