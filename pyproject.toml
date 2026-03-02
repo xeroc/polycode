@@ -13,17 +13,28 @@ dependencies = [
     "sqlmodel>=0.0.22",
     "psycopg2-binary>=2.9.9",
     "httpx>=0.27.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy>=2.0.0",
 ]
 
 [project.scripts]
 github = "github_issues.main:main"
+daemon = "github_issues.main:main"
+watch-repo = "project_manager.cli:cli"
+webhook-server = "project_manager.cli:cli"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/bug_fix", "src/github_issues"]
+packages = [
+    "src/bug_fix",
+    "src/github_issues",
+    "src/project_manager",
+    "src/persistence",
+]
 
 [dependency-groups]
 dev = ["ruff>=0.15.4"]

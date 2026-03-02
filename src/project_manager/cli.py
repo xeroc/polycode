@@ -4,10 +4,13 @@ import logging
 import os
 
 import click
+import uvicorn
 
+from .flow_runner import FlowRunner
 from .github import GitHubProjectManager
-from .types import ProjectConfig, StatusMapping
+from .types import IssueStatus, ProjectConfig, StatusMapping
 from .watcher import RepoWatcher
+from .webhook import create_webhook_app
 
 log = logging.getLogger(__name__)
 
@@ -126,6 +129,74 @@ def list_items(verbose: bool) -> None:
     for item in items:
         status = item.status or "No status"
         click.echo(f"#{item.issue_number:4d} [{status:12s}] {item.title}")
+
+
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Webhook server host")
+@click.option("--port", default=8000, help="Webhook server port")
+@click.option("--secret", help="Webhook secret for signature validation")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
+def webhook(host: str, port: int, secret: str | None, verbose: bool) -> None:
+    """Start webhook server for GitHub events.
+
+    Listens for GitHub webhook events and triggers flows automatically.
+    """
+    setup_logging(verbose)
+
+    webhook_secret = secret or os.environ.get("GITHUB_WEBHOOK_SECRET")
+    manager = create_manager_from_env()
+
+    flow_runner = FlowRunner(manager=manager)
+
+    app = create_webhook_app(flow_runner, webhook_secret)
+
+    click.echo(f"Starting webhook server on {host}:{port}")
+    click.echo(
+        f"Repository: {manager.config.repo_owner}/{manager.config.repo_name}"
+    )
+    click.echo(f"Project: {manager.config.project_identifier}")
+    click.echo(f"Webhook endpoint: http://{host}:{port}/webhook/github")
+    click.echo(f"Health check: http://{host}:{port}/health")
+    click.echo(f"Manual trigger: POST http://{host}:{port}/trigger")
+
+    uvicorn.run(
+        app, host=host, port=port, log_level="info" if verbose else "warning"
+    )
+
+
+@cli.command()
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
+def status(verbose: bool) -> None:
+    """Show current flow status from GitHub Project."""
+    setup_logging(verbose)
+
+    manager = create_manager_from_env()
+
+    items = manager.get_project_items()
+    ready_status = manager.config.status_mapping.to_provider_status(
+        IssueStatus.READY
+    )
+    in_progress_status = manager.config.status_mapping.to_provider_status(
+        IssueStatus.IN_PROGRESS
+    )
+
+    ready = [item for item in items if item.status == ready_status]
+    in_progress = [item for item in items if item.status == in_progress_status]
+
+    if in_progress:
+        item = in_progress[0]
+        click.echo(f"✓ Flow running: Issue #{item.issue_number}")
+        click.echo(f"  Title: {item.title}")
+        click.echo(f"  Status: {item.status}")
+    else:
+        click.echo("✗ No flow currently running")
+
+    click.echo(f"\nReady: {len(ready)}, In progress: {len(in_progress)}")
+
+    if ready:
+        click.echo("\nNext ready issues:")
+        for item in ready[:5]:
+            click.echo(f"  #{item.issue_number}: {item.title}")
 
 
 if __name__ == "__main__":

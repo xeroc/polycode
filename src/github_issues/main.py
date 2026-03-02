@@ -1,4 +1,4 @@
-"""Daemon that manages GitHub issues and project status."""
+"""Daemon that manages GitHub issues using webhook-driven flow."""
 
 import logging
 import os
@@ -13,7 +13,7 @@ except ImportError:
     KickoffIssue = None
     feature_dev_kickoff = None
 
-from project_manager import GitHubProjectManager, RepoWatcher
+from project_manager import GitHubProjectManager, FlowRunner
 from project_manager.types import ProjectConfig, ProjectItem
 
 logging.basicConfig(
@@ -60,9 +60,11 @@ def create_kickoff_callback() -> Callable[[ProjectItem], None] | None:
 @click.option("--interval", default=300, help="Polling interval in seconds")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 def main(repo: str, once: bool, interval: int, verbose: bool) -> None:
-    """Watch repository for issues to process.
+    """Watch repository for issues to process (polling mode).
 
     REPO should be in the format: owner/name (e.g., xeroc/demo)
+
+    For webhook mode, use: python -m project_manager.cli webhook
     """
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -83,6 +85,8 @@ def main(repo: str, once: bool, interval: int, verbose: bool) -> None:
 
     manager = GitHubProjectManager(config)
     callback = create_kickoff_callback()
+
+    from project_manager import RepoWatcher
 
     watcher = RepoWatcher(
         manager=manager,

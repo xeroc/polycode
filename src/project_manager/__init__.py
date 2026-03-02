@@ -1,6 +1,7 @@
 """Project management abstraction layer."""
 
 from .base import ProjectManager
+from .flow_runner import FlowRunner
 from .github import GitHubProjectManager
 from .types import (
     Issue,
@@ -14,6 +15,7 @@ from .watcher import RepoWatcher
 __all__ = [
     "ProjectManager",
     "GitHubProjectManager",
+    "FlowRunner",
     "Issue",
     "IssueStatus",
     "ProjectConfig",
