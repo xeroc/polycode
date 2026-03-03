@@ -3,6 +3,7 @@ Feature Development Flow module.
 """
 
 import os
+from platform import architecture
 import uuid
 
 from crewai import LLM, CrewOutput
@@ -13,6 +14,8 @@ from crewai.rag.embeddings.providers.ollama.types import (
 )
 import git
 from crewai.flow.flow import Flow, listen, start
+
+from glm import GLMJSONLLM
 
 from .crews.implement_crew.implement_crew import ImplementCrew
 from .crews.plan_crew.plan_crew import PlanCrew
@@ -28,7 +31,7 @@ from .types import (
     KickoffIssue,
     PlanOutput,
     ReviewOutput,
-    SetupOutput,
+    # SetupOutput,
     Story,
     TestOutput,
     VerifyOutput,
@@ -51,6 +54,19 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     """
     Feature development workflow with consecutive flows.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.memory = Memory(
+            llm=GLMJSONLLM(),
+            embedder=OllamaProviderSpec(
+                provider="ollama",
+                config=OllamaProviderConfig(
+                    model_name="all-minilm:22m",
+                ),
+            ),
+        )
+        print(self.memory.tree())
 
     @start()
     def prepare_work_tree(self):
@@ -84,6 +100,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
         # Update inputs
         self.state.repo = worktree_path
+        self.state.path = worktree_path
 
     @start()
     def setup(self):
@@ -105,14 +122,10 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             )
         )
 
-        print(result)
-        print(result)
-        return
-
-        output: PlanOutput = result.tasks_output[1].pydantic  # type: ignore
+        output: PlanOutput = result.pydantic  # type: ignore
         self.state.stories = output.stories
 
-        output: SetupOutput = result.tasks_output[0].pydantic  # type: ignore
+        # output: SetupOutput = result.tasks_output[0].pydantic  # type: ignore
         self.state.build_cmd = output.build_cmd
         self.state.test_cmd = output.test_cmd
         self.state.baseline = output.baseline
@@ -162,279 +175,291 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         print(f"Stored project details to memory at scope: {scope}")
 
         print(f"Planned {len(output.stories)} stories")
+        for current_story in output.stories:
+            print(f"   🔖 user story:  {current_story.description}")
         return output
 
-    # @listen(setup)
-    # def implement_story(self):
-    #     """Step 3: Implement - implement user story."""
-    #     print("Implementing user story")
-    #
-    #     if len(self.state.completed_stories or []) == len(self.state.stories or []):
-    #         return
-    #
-    #     def implement_single_story(current_story: Story):
-    #         output = (
-    #             ImplementCrew()
-    #             .crew()
-    #             .kickoff(
-    #                 inputs=dict(
-    #                     task=self.state.task,
-    #                     repo=self.state.repo,
-    #                     branch=self.state.branch,
-    #                     build_cmd=self.state.build_cmd,
-    #                     test_cmd=self.state.test_cmd,
-    #                     current_story=current_story.model_dump_json(),
-    #                     completed_stories=self.state.completed_stories,
-    #                     current_story_id=current_story.id,
-    #                     current_story_title=current_story.title,
-    #                     architecture=self.recall("architecture"),
-    #                     configuration=self.recall("configuration"),
-    #                 )
-    #             )
-    #         )
-    #
-    #         implement_result: ImplementOutput = output.pydantic  # type: ignore  # or cast
-    #         return implement_result
-    #
-    #     # FIXME: need a more robust way of comparing completed with missing!
-    #     missing_stories = [
-    #         x
-    #         for x in self.state.stories or []
-    #         if self.state.completed_stories and x not in self.state.completed_stories
-    #     ]
-    #
-    #     self.state.completed_stories = []
-    #     self.state.changes = []
-    #     self.state.tests = []
-    #
-    #     for story in missing_stories or []:
-    #         print(f"Title: {story.title}")
-    #         print(f"Description: {story.description}")
-    #         # Schedule each chapter writing task
-    #         result = implement_single_story(story)
-    #         self.state.completed_stories.append(story)
-    #         self.state.changes.append(result.changes)
-    #         self.state.tests.append(result.tests)
-    #
-    # @listen(implement_story)
-    # def test_integration(self):
-    #     """Step 5: Test - integration and E2E testing."""
-    #     print("Running integration tests")
-    #     if self.state.tested:
-    #         return
-    #
-    #     output = (
-    #         TestCrew()
-    #         .crew()
-    #         .kickoff(
-    #             inputs={
-    #                 "task": self.state.task,
-    #                 "repo": self.state.repo,
-    #                 "branch": self.state.branch,
-    #                 "changes": self.state.changes,
-    #                 "build_cmd": self.state.build_cmd,
-    #                 "test_cmd": self.state.test_cmd,
-    #             }
-    #         )
-    #     )
-    #
-    #     test_result: TestOutput = output.pydantic  # type: ignore  # or cast
-    #     self.state.tested = test_result.status == "done"
-    #
-    #     if test_result.failures:
-    #         print(f"Test failures: {test_result.failures}")
-    #     else:
-    #         print(f"Tests passed: {test_result.results}")
-    #
-    #     return test_result
-    #
-    # @listen(test_integration)
-    # def verify(self):
-    #     """Step 4: Verify - quick sanity check of implementation."""
-    #     print("Verifying implementation")
-    #     if self.state.verified:
-    #         return
-    #
-    #     output = (
-    #         VerifyCrew()
-    #         .crew()
-    #         .kickoff(
-    #             inputs={
-    #                 "task": self.state.task,
-    #                 "repo": self.state.repo,
-    #                 "branch": self.state.branch,
-    #                 "changes": self.state.changes,
-    #                 "test_cmd": self.state.test_cmd,
-    #                 "current_story": self.state.current_story,
-    #                 "completed_stories": [
-    #                     x.description for x in self.state.completed_stories or []
-    #                 ],
-    #             }
-    #         )
-    #     )
-    #
-    #     verify_result: VerifyOutput = output.tasks_output[0].pydantic  # type: ignore  # or cast
-    #     self.state.verified = verify_result.status == "done"
-    #
-    #     if verify_result.issues:
-    #         print(f"Verification issues found: {verify_result.issues}")
-    #     else:
-    #         print(f"Verification passed: {verify_result.verified}")
-    #
-    #     commit_message_result: CommitMessageOutput = output.tasks_output[  # type: ignore
-    #         1
-    #     ].pydantic
-    #     self.state.commit_title = commit_message_result.title
-    #     self.state.commit_message = commit_message_result.message
-    #     self.state.commit_footer = commit_message_result.footer
-    #     print(f"Commit title: {self.state.commit_title}")
-    #     print(f"Commit message: {self.state.commit_message}")
-    #     print(f"Commit footer: {self.state.commit_footer}")
-    #
-    #     return verify_result
-    #
-    # @listen(verify)
-    # def commit_changes(self):
-    #     print("Commiting changes to repo")
-    #
-    #     if self.state.diff:
-    #         return
-    #
-    #     repo = git.Repo(self.state.repo)
-    #
-    #     # Ensure we are on branch self.state.branch
-    #     branch_name = repo.active_branch.name
-    #     if branch_name != self.state.branch:
-    #         raise ValueError(
-    #             f"Wrong branch in the working directory ({self.state.repo}). Current branch '{branch_name}'. Excected '{self.state.branch}'"
-    #         )
-    #
-    #     # commit all changes to the repo
-    #     repo.git.add("-A")
-    #     commit_message = f"{self.state.commit_title}\n\n{self.state.commit_message}\n\n{self.state.commit_footer}"
-    #     repo.index.commit(commit_message)
-    #     print(f"Committed changes: {commit_message}")
-    #
-    #     merge_base = repo.merge_base("develop", self.state.branch)[0]
-    #     self.state.diff = repo.git.diff(merge_base, self.state.branch)
-    #
-    # @listen(commit_changes)
-    # def create_pr(self):
-    #     """Step 6: Create pull request."""
-    #     print("Creating pull request")
-    #     if self.state.pr_number:
-    #         return
-    #
-    #     repo, github_repo, _ = get_github_repo_from_local(self.state.repo)
-    #
-    #     # Push
-    #     print("Pushing repo ...")
-    #     repo.git.push("origin", self.state.branch)
-    #
-    #     # PR
-    #     pr = github_repo.create_pull(
-    #         title=self.state.commit_title or self.state.task,
-    #         body=f"{self.state.commit_message}\n\n{self.state.commit_footer}",
-    #         head=self.state.branch,
-    #         base="develop",
-    #     )
-    #
-    #     # Get diff between two branches
-    #     self.state.pr_url = pr.html_url
-    #     self.state.pr_number = pr.number
-    #     print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
-    #
-    # @listen(commit_changes)
-    # def review(self):
-    #     """Step 7: Review - review the pull request."""
-    #     print("Reviewing pull request")
-    #     if self.state.review_status:
-    #         return
-    #
-    #     if not self.state.diff:
-    #         print("No diff to review")
-    #         return None
-    #
-    #     if not self.state.project_status_updated:
-    #         try:
-    #             status_manager = ProjectStatusManager()
-    #             status_manager.update_status(self.state.issue_id, "Reviewing")
-    #             status_manager.add_comment(
-    #                 self.state.issue_id,
-    #                 f"## 🔍 Review Started\n\n"
-    #                 f"Pull request #{self.state.pr_number} is now under review.\n"
-    #                 f"[View PR]({self.state.pr_url})",
-    #             )
-    #             self.state.project_status_updated = True
-    #         except Exception as e:
-    #             print(f"Failed to update project status: {e}")
-    #
-    #     output = (
-    #         ReviewCrew()
-    #         .crew()
-    #         .kickoff(
-    #             inputs={
-    #                 "task": self.state.task,
-    #                 "diff": str(self.state.diff),
-    #                 "changes": str(self.state.changes),
-    #             }
-    #         )
-    #     )
-    #     if not isinstance(output, CrewOutput):
-    #         raise ValueError()
-    #
-    #     review_result: ReviewOutput = output.pydantic  # type: ignore  # or cast
-    #     self.state.review_status = review_result.decision
-    #
-    #     if review_result.feedback:
-    #         print(f"Review feedback: {review_result.feedback}")
-    #     else:
-    #         print(f"Review decision: {review_result.decision}")
-    #
-    #     return review_result
-    #
-    # @listen(review)
-    # def finish(self):
-    #     """Step 8: Update project status and cleanup worktree."""
-    #     try:
-    #         status_manager = ProjectStatusManager()
-    #         status_manager.update_status(self.state.issue_id, "Done")
-    #     except Exception as e:
-    #         print(f"Failed to update project status to Done: {e}")
-    #
-    #     # git_repo = git.Repo(self.state.repo)
-    #     # git_repo.git.worktree("remove", self.state.repo)
-    #     # print(f"Removed worktree: {self.state.repo}")
-    #     #
-    #     # parent_dir = os.path.dirname(self.state.repo)
-    #     # if os.path.exists(parent_dir):
-    #     #     os.rmdir(parent_dir)
-    #     # print(f"Cleaned up worktree parent directory")
+    @listen(setup)
+    def implement_story(self):
+        """Step 3: Implement - implement user story."""
+        print("Implementing user story")
+
+        print("Stories:")
+        for current_story in self.state.stories or []:
+            print(f"   🔖 {current_story.description}")
+
+        print("Completed Stories:")
+        for current_story in self.state.completed_stories or []:
+            print(f"   ✅ {current_story.description}")
+
+        if len(self.state.completed_stories or []) == len(self.state.stories or []):
+            return
+
+        def implement_single_story(current_story: Story):
+            print(f"   🔖 user story:  {current_story.description}")
+
+            arch_recall = self.recall("architecture")
+            architecture = "\n".join(f"- {m.record.content}" for m in arch_recall)
+
+            conf_recall = self.recall("configuration")
+            configuration = "\n".join(f"- {m.record.content}" for m in conf_recall)
+
+            output = (
+                ImplementCrew()
+                .crew()
+                .kickoff(
+                    inputs=dict(
+                        task=self.state.task,
+                        repo=self.state.repo,
+                        branch=self.state.branch,
+                        build_cmd=self.state.build_cmd,
+                        test_cmd=self.state.test_cmd,
+                        current_story=current_story.model_dump_json(),
+                        completed_stories="\n- ".join(
+                            [x.description for x in self.state.completed_stories or []]
+                        ),
+                        current_story_id=current_story.id,
+                        current_story_title=current_story.title,
+                        architecture=architecture,
+                        configuration=configuration,
+                    )
+                )
+            )
+
+            implement_result: ImplementOutput = output.pydantic  # type: ignore  # or cast
+            return implement_result
+
+        # TODO:
+        completed_ids = [x.id for x in self.state.completed_stories or []]
+        missing_stories = [
+            x for x in self.state.stories or [] if x.id not in completed_ids
+        ]
+
+        self.state.completed_stories = []
+        self.state.changes = []
+        self.state.tests = []
+
+        for story in missing_stories or []:
+            print(f"Title: {story.title}")
+            print(f"Description: {story.description}")
+            # Schedule each chapter writing task
+            result = implement_single_story(story)
+            self.state.completed_stories.append(story)
+            self.state.changes.append(result.changes)
+            self.state.tests.append(result.tests)
+
+    @listen(implement_story)
+    def test_integration(self):
+        """Step 5: Test - integration and E2E testing."""
+        print("Running integration tests")
+        if self.state.tested:
+            return
+
+        output = (
+            TestCrew()
+            .crew()
+            .kickoff(
+                inputs=dict(
+                    task=self.state.task,
+                    repo=self.state.repo,
+                    branch=self.state.branch,
+                    changes=self.state.changes,
+                    build_cmd=self.state.build_cmd,
+                    test_cmd=self.state.test_cmd,
+                )
+            )
+        )
+
+        test_result: TestOutput = output.pydantic  # type: ignore  # or cast
+        self.state.tested = test_result.status == "done"
+
+        if test_result.failures:
+            print(f"Test failures: {test_result.failures}")
+        else:
+            print(f"Tests passed: {test_result.results}")
+
+        return test_result
+
+    @listen(test_integration)
+    def verify(self):
+        """Step 4: Verify - quick sanity check of implementation."""
+        print("Verifying implementation")
+        if self.state.verified:
+            return
+
+        output = (
+            VerifyCrew()
+            .crew()
+            .kickoff(
+                inputs={
+                    "task": self.state.task,
+                    "repo": self.state.repo,
+                    "branch": self.state.branch,
+                    "changes": self.state.changes,
+                    "test_cmd": self.state.test_cmd,
+                    "current_story": self.state.current_story,
+                    "completed_stories": [
+                        x.description for x in self.state.completed_stories or []
+                    ],
+                }
+            )
+        )
+
+        verify_result: VerifyOutput = output.tasks_output[0].pydantic  # type: ignore  # or cast
+        self.state.verified = verify_result.status == "done"
+
+        if verify_result.issues:
+            print(f"Verification issues found: {verify_result.issues}")
+        else:
+            print(f"Verification passed: {verify_result.verified}")
+
+        commit_message_result: CommitMessageOutput = output.tasks_output[  # type: ignore
+            1
+        ].pydantic
+        self.state.commit_title = commit_message_result.title
+        self.state.commit_message = commit_message_result.message
+        self.state.commit_footer = commit_message_result.footer
+        print(f"Commit title: {self.state.commit_title}")
+        print(f"Commit message: {self.state.commit_message}")
+        print(f"Commit footer: {self.state.commit_footer}")
+
+        return verify_result
+
+    @listen(verify)
+    def commit_changes(self):
+        print("Commiting changes to repo")
+
+        if self.state.diff:
+            return
+
+        repo = git.Repo(self.state.repo)
+
+        # Ensure we are on branch self.state.branch
+        branch_name = repo.active_branch.name
+        if branch_name != self.state.branch:
+            raise ValueError(
+                f"Wrong branch in the working directory ({self.state.repo}). Current branch '{branch_name}'. Excected '{self.state.branch}'"
+            )
+
+        # commit all changes to the repo
+        repo.git.add("-A")
+        commit_message = f"{self.state.commit_title}\n\n{self.state.commit_message}\n\n{self.state.commit_footer}"
+        repo.index.commit(commit_message)
+        print(f"Committed changes: {commit_message}")
+
+        merge_base = repo.merge_base("develop", self.state.branch)[0]
+        self.state.diff = repo.git.diff(merge_base, self.state.branch)
+
+    @listen(commit_changes)
+    def create_pr(self):
+        """Step 6: Create pull request."""
+        print("Creating pull request")
+        if self.state.pr_number:
+            return
+
+        repo, github_repo, _ = get_github_repo_from_local(self.state.repo)
+
+        # Push
+        print("Pushing repo ...")
+        repo.git.push("origin", self.state.branch)
+
+        # PR
+        pr = github_repo.create_pull(
+            title=self.state.commit_title or self.state.task,
+            body=f"{self.state.commit_message}\n\n{self.state.commit_footer}",
+            head=self.state.branch,
+            base="develop",
+        )
+
+        # Get diff between two branches
+        self.state.pr_url = pr.html_url
+        self.state.pr_number = pr.number
+        print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
+
+    @listen(commit_changes)
+    def review(self):
+        """Step 7: Review - review the pull request."""
+        print("Reviewing pull request")
+        if self.state.review_status:
+            return
+
+        if not self.state.diff:
+            print("No diff to review")
+            return None
+
+        if not self.state.project_status_updated:
+            try:
+                status_manager = ProjectStatusManager()
+                status_manager.update_status(self.state.issue_id, "Reviewing")
+                status_manager.add_comment(
+                    self.state.issue_id,
+                    f"## 🔍 Review Started\n\n"
+                    f"Pull request #{self.state.pr_number} is now under review.\n"
+                    f"[View PR]({self.state.pr_url})",
+                )
+                self.state.project_status_updated = True
+            except Exception as e:
+                print(f"Failed to update project status: {e}")
+
+        output = (
+            ReviewCrew()
+            .crew()
+            .kickoff(
+                inputs={
+                    "task": self.state.task,
+                    "diff": str(self.state.diff),
+                    "changes": str(self.state.changes),
+                }
+            )
+        )
+        if not isinstance(output, CrewOutput):
+            raise ValueError()
+
+        review_result: ReviewOutput = output.pydantic  # type: ignore  # or cast
+        self.state.review_status = review_result.decision
+
+        if review_result.feedback:
+            print(f"Review feedback: {review_result.feedback}")
+        else:
+            print(f"Review decision: {review_result.decision}")
+
+        return review_result
+
+    @listen(review)
+    def finish(self):
+        """Step 8: Update project status and cleanup worktree."""
+        try:
+            status_manager = ProjectStatusManager()
+            status_manager.update_status(self.state.issue_id, "Done")
+        except Exception as e:
+            print(f"Failed to update project status to Done: {e}")
+
+        # git_repo = git.Repo(self.state.repo)
+        # git_repo.git.worktree("remove", self.state.repo)
+        # print(f"Removed worktree: {self.state.repo}")
+        #
+        # parent_dir = os.path.dirname(self.state.repo)
+        # if os.path.exists(parent_dir):
+        #     os.rmdir(parent_dir)
+        # print(f"Cleaned up worktree parent directory")
 
 
 ############################
 # Global variables
 ############################
-memory = Memory(
-    llm=LLM(model="glm-4.5-flash", base_url="https://api.z.ai/api/coding/paas/v4"),
-    embedder=OllamaProviderSpec(
-        provider="ollama",
-        config=OllamaProviderConfig(
-            model_name="all-minilm:22m",
-        ),
-    ),
-)
-print(memory.tree())
 
 
 def kickoff(issue: KickoffIssue):
     """
     Run the flow.
     """
-    feature_dev_flow = FeatureDevFlow(memory=memory)
+    feature_dev_flow = FeatureDevFlow()
+
+    id = uuid.uuid4()
+    id = uuid.UUID("9c572241-c66e-4323-a812-ac916b9d8508")
     feature_dev_flow.kickoff(
         inputs=dict(
-            id=str(uuid.uuid4()),
+            id=str(id),
             issue_id=issue.id,
             task=f"{issue.title}\n\n{issue.body}",
             path="/home/xeroc/projects/chaoscraft/demo",
@@ -448,23 +473,18 @@ def plot():
     """
     Plot the flow.
     """
-    feature_dev_flow = FeatureDevFlow(memory=memory)
+    feature_dev_flow = FeatureDevFlow()
     feature_dev_flow.plot()
 
 
 def example():
-    feature_dev_flow = FeatureDevFlow(
-        memory=memory,
-        llm=LLM(
-            model="glm-4.5-flash",
-            base_url="https://api.z.ai/api/coding/paas/v4",
-            max_tokens=2500,
-        ),
-    )
+    id = uuid.uuid4()
+    id = "d5e1b205-ebb5-4742-9ac7-2aab0fa29300"
+    feature_dev_flow = FeatureDevFlow()
     feature_dev_flow.kickoff(
         inputs=dict(
-            id=str("505c7e90-706c-4509-8b77-6245fbfe271c"),
-            issue_id=8,
+            id=str(id),
+            issue_id=10,
             task="Add an impressum to the landing page",
             path="/home/xeroc/projects/chaoscraft/demo",
             branch="impressum",

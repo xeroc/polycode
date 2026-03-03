@@ -80,7 +80,11 @@ class FeatureDevState(BaseModel):
     )
 
 
-class SetupOutput(BaseModel):
+class PlanOutput(BaseModel):
+    """Output from planning phase."""
+
+    stories: List[Story] = Field(description="Ordered user stories")
+
     build_cmd: str = Field(description="Build command")
     test_cmd: str = Field(description="Test command")
     ci_notes: Optional[str] = Field(default=None, description="CI configuration notes")
@@ -98,30 +102,6 @@ class SetupOutput(BaseModel):
     entry_points: List[str] = Field(description="Paths to main application starts")
     configuration: List[str] = Field(description="Paths to config files")
     documentation: List[str] = Field(description="Paths to key docs")
-
-
-class PlanOutput(BaseModel):
-    """Output from planning phase."""
-
-    stories: List[Story] = Field(description="Ordered user stories")
-
-    # build_cmd: str = Field(description="Build command")
-    # test_cmd: str = Field(description="Test command")
-    # ci_notes: Optional[str] = Field(default=None, description="CI configuration notes")
-    # baseline: str = Field(description="Baseline status")
-    # findings: str = Field(
-    #     description="Findings around stack, conventions and used patterns"
-    # )
-    # purpose: str = Field(description="Short description of what the repo does")
-    # tech_stack: List[str] = Field(
-    #     description="Primary languages, Key frameworks, Main dependencies"
-    # )
-    # architecture: str = Field(
-    #     description="High-level architecture pattern and organization"
-    # )
-    # entry_points: List[str] = Field(description="Paths to main application starts")
-    # configuration: List[str] = Field(description="Paths to config files")
-    # documentation: List[str] = Field(description="Paths to key docs")
 
 
 class ImplementOutput(BaseModel):

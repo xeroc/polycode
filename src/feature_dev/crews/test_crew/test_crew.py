@@ -2,6 +2,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
 from feature_dev.types import TestOutput
+from glm import GLMJSONLLM
 from tools import DirectoryReadTool, ExecTool, FileReadTool
 
 
@@ -18,6 +19,7 @@ class TestCrew:
             config=self.agents_config["tester"],  # type: ignore
             tools=[ExecTool(), DirectoryReadTool(), FileReadTool()],
             verbose=True,
+            llm=GLMJSONLLM(),
         )
 
     @task

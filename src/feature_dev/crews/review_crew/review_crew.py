@@ -2,6 +2,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
 from feature_dev.types import ReviewOutput
+from glm import GLMJSONLLM
 
 
 @CrewBase
@@ -16,6 +17,7 @@ class ReviewCrew:
         return Agent(
             config=self.agents_config["reviewer"],  # type: ignore
             verbose=True,
+            llm=GLMJSONLLM(),
         )
 
     @task

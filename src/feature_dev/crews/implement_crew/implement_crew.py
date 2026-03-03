@@ -2,6 +2,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import FileWriterTool
 
+from glm import GLMJSONLLM
 from tools import DirectoryReadTool, ExecTool, FileReadTool
 
 from ...types import ImplementOutput
@@ -32,6 +33,7 @@ class ImplementCrew:
         return Agent(
             config=self.agents_config["consolidator"],  # type: ignore
             verbose=True,
+            llm=GLMJSONLLM(),
         )
 
     @task

@@ -1,10 +1,12 @@
+import os
 from crewai import Agent, Crew, Process, Task, Memory
 from crewai.project import CrewBase, agent, crew, task
 
+from glm import GLMJSONLLM
 from tools import DirectoryReadTool, FileReadTool
 from crewai_tools import FileWriterTool
 
-from ...types import PlanOutput, SetupOutput
+from ...types import PlanOutput
 
 
 @CrewBase
@@ -19,6 +21,7 @@ class PlanCrew:
         return Agent(
             config=self.agents_config["setup"],  # type: ignore
             verbose=True,
+            llm=GLMJSONLLM(),
             tools=[FileReadTool(), DirectoryReadTool(), FileWriterTool()],
         )
 
@@ -26,15 +29,14 @@ class PlanCrew:
     def planner(self) -> Agent:
         return Agent(
             config=self.agents_config["planner"],  # type: ignore
+            llm=GLMJSONLLM(),
             verbose=True,
-            tools=[FileReadTool(), DirectoryReadTool()],
         )
 
     @task
     def setup_task(self) -> Task:
         return Task(
             config=self.tasks_config["setup_task"],  # type: ignore
-            # output_pydantic=SetupOutput,
         )
 
     @task
