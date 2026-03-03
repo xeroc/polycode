@@ -3,7 +3,6 @@ Feature Development Flow module.
 """
 
 import os
-from platform import architecture
 import uuid
 
 from crewai import LLM, CrewOutput
@@ -132,46 +131,18 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.findings = output.findings
 
         scope = self.state.memory_prefix
-        self.remember(
-            output.findings,
-            scope=f"{scope}/findings",
-        )
-        self.remember(
-            output.baseline,
-            scope=f"{scope}/baseline",
-        )
-        self.remember(
-            output.purpose,
-            scope=f"{scope}/purpose",
-        )
-        self.remember(
-            output.tech_stack,
-            scope=f"{scope}/tech_stack",
-        )
-        self.remember(
-            output.architecture,
-            scope=f"{scope}/architecture",
-        )
-        self.remember(
-            output.entry_points,
-            scope=f"{scope}/entry_points",
-        )
-        self.remember(
-            output.configuration,
-            scope=f"{scope}/configuration",
-        )
-        self.remember(
-            output.documentation,
-            scope=f"{scope}/documentation",
-        )
-        self.remember(
-            output.build_cmd,
-            scope=f"{scope}/build_cmd",
-        )
-        self.remember(
-            output.test_cmd,
-            scope=f"{scope}/test_cmd",
-        )
+        for key in (
+            "findings",
+            "baseline",
+            "purpose" "tech_stack",
+            "architecture",
+            "entry_points",
+            "configuration",
+            "documentation",
+            "build_cmd",
+            "test_cmd",
+        ):
+            self.remember(getattr(output, key), scope=f"{scope}/key")
         print(f"Stored project details to memory at scope: {scope}")
 
         print(f"Planned {len(output.stories)} stories")
@@ -291,17 +262,17 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             VerifyCrew()
             .crew()
             .kickoff(
-                inputs={
-                    "task": self.state.task,
-                    "repo": self.state.repo,
-                    "branch": self.state.branch,
-                    "changes": self.state.changes,
-                    "test_cmd": self.state.test_cmd,
-                    "current_story": self.state.current_story,
-                    "completed_stories": [
+                inputs=dict(
+                    task=self.state.task,
+                    repo=self.state.repo,
+                    branch=self.state.branch,
+                    changes=self.state.changes,
+                    test_cmd=self.state.test_cmd,
+                    current_story=self.state.current_story,
+                    completed_stories=[
                         x.description for x in self.state.completed_stories or []
                     ],
-                }
+                )
             )
         )
 
