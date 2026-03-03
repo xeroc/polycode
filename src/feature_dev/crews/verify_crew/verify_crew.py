@@ -1,7 +1,7 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-from feature_dev.types import CommitMessageOutput, VerifyOutput
+from feature_dev.types import VerifyOutput
 from glm import GLMJSONLLM
 from tools import DirectoryReadTool, ExecTool, FileReadTool
 
@@ -22,26 +22,11 @@ class VerifyCrew:
             llm=GLMJSONLLM(),
         )
 
-    @agent
-    def commit_message_preparer(self) -> Agent:
-        return Agent(
-            config=self.agents_config["commit_message_preparer"],  # type: ignore
-            verbose=True,
-            llm=GLMJSONLLM(),
-        )
-
     @task
     def verify_task(self) -> Task:
         return Task(
             config=self.tasks_config["verify_task"],  # type: ignore
             output_pydantic=VerifyOutput,
-        )
-
-    @task
-    def produce_commit_message(self) -> Task:
-        return Task(
-            config=self.tasks_config["produce_commit_message"],  # type: ignore
-            output_pydantic=CommitMessageOutput,
         )
 
     @crew

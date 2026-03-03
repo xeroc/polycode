@@ -5,7 +5,7 @@ Feature Development Flow module.
 import os
 import uuid
 
-from crewai import LLM, CrewOutput
+from crewai import CrewOutput
 from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.providers.ollama.types import (
     OllamaProviderConfig,
@@ -24,13 +24,11 @@ from .crews.verify_crew.verify_crew import VerifyCrew
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from .types import (
-    CommitMessageOutput,
     FeatureDevState,
     ImplementOutput,
     KickoffIssue,
     PlanOutput,
     ReviewOutput,
-    # SetupOutput,
     Story,
     TestOutput,
     VerifyOutput,
@@ -53,6 +51,27 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     """
     Feature development workflow with consecutive flows.
     """
+
+    def _commit_changes(self, title: str, body="", footer=""):
+        print("Commiting changes to repo")
+        repo = git.Repo(self.state.repo)
+
+        # Ensure we are on branch self.state.branch
+        branch_name = repo.active_branch.name
+        if branch_name != self.state.branch:
+            raise ValueError(
+                f"Wrong branch in the working directory ({self.state.repo}). Current branch '{branch_name}'. Excected '{self.state.branch}'"
+            )
+
+        # commit all changes to the repo
+        repo.git.add("-A")
+        commit_message = f"{title}\n\n{body}\n\n{footer}"
+        repo.index.commit(commit_message)
+        print(f"Committed changes: {commit_message}")
+
+    def recall_as_markdown_list(self, name: str):
+        conf_recall = self.recall(name)
+        return "\n".join(f"- {m.record.content}" for m in conf_recall)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -134,7 +153,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         for key in (
             "findings",
             "baseline",
-            "purpose" "tech_stack",
+            "purpose",
+            "tech_stack",
             "architecture",
             "entry_points",
             "configuration",
@@ -169,12 +189,6 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         def implement_single_story(current_story: Story):
             print(f"   🔖 user story:  {current_story.description}")
 
-            arch_recall = self.recall("architecture")
-            architecture = "\n".join(f"- {m.record.content}" for m in arch_recall)
-
-            conf_recall = self.recall("configuration")
-            configuration = "\n".join(f"- {m.record.content}" for m in conf_recall)
-
             output = (
                 ImplementCrew()
                 .crew()
@@ -191,13 +205,20 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                         ),
                         current_story_id=current_story.id,
                         current_story_title=current_story.title,
-                        architecture=architecture,
-                        configuration=configuration,
+                        architecture=self.recall_as_markdown_list("architecture"),
+                        configuration=self.recall_as_markdown_list("configuration"),
+                        tech_stack=self.recall_as_markdown_list("tech_stack"),
                     )
                 )
             )
 
             implement_result: ImplementOutput = output.pydantic  # type: ignore  # or cast
+
+            commit_title = implement_result.title
+            commit_message = implement_result.message
+            commit_footer = implement_result.footer
+            self._commit_changes(commit_title, commit_message, commit_footer)
+
             return implement_result
 
         # TODO:
@@ -284,55 +305,22 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Verification passed: {verify_result.verified}")
 
-        commit_message_result: CommitMessageOutput = output.tasks_output[  # type: ignore
-            1
-        ].pydantic
-        self.state.commit_title = commit_message_result.title
-        self.state.commit_message = commit_message_result.message
-        self.state.commit_footer = commit_message_result.footer
-        print(f"Commit title: {self.state.commit_title}")
-        print(f"Commit message: {self.state.commit_message}")
-        print(f"Commit footer: {self.state.commit_footer}")
-
         return verify_result
 
     @listen(verify)
-    def commit_changes(self):
-        print("Commiting changes to repo")
+    def push_repo(self):
+        repo, *_ = get_github_repo_from_local(self.state.repo)
+        print("Pushing repo ...")
+        repo.git.push("origin", self.state.branch)
 
-        if self.state.diff:
-            return
-
-        repo = git.Repo(self.state.repo)
-
-        # Ensure we are on branch self.state.branch
-        branch_name = repo.active_branch.name
-        if branch_name != self.state.branch:
-            raise ValueError(
-                f"Wrong branch in the working directory ({self.state.repo}). Current branch '{branch_name}'. Excected '{self.state.branch}'"
-            )
-
-        # commit all changes to the repo
-        repo.git.add("-A")
-        commit_message = f"{self.state.commit_title}\n\n{self.state.commit_message}\n\n{self.state.commit_footer}"
-        repo.index.commit(commit_message)
-        print(f"Committed changes: {commit_message}")
-
-        merge_base = repo.merge_base("develop", self.state.branch)[0]
-        self.state.diff = repo.git.diff(merge_base, self.state.branch)
-
-    @listen(commit_changes)
+    @listen(push_repo)
     def create_pr(self):
         """Step 6: Create pull request."""
         print("Creating pull request")
         if self.state.pr_number:
             return
 
-        repo, github_repo, _ = get_github_repo_from_local(self.state.repo)
-
-        # Push
-        print("Pushing repo ...")
-        repo.git.push("origin", self.state.branch)
+        _, github_repo, _ = get_github_repo_from_local(self.state.repo)
 
         # PR
         pr = github_repo.create_pull(
@@ -347,16 +335,16 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.pr_number = pr.number
         print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
 
-    @listen(commit_changes)
+    @listen(push_repo)
     def review(self):
         """Step 7: Review - review the pull request."""
         print("Reviewing pull request")
         if self.state.review_status:
             return
 
-        if not self.state.diff:
-            print("No diff to review")
-            return None
+        repo = git.Repo(self.state.repo)
+        merge_base = repo.merge_base("develop", self.state.branch)[0]
+        self.state.diff = repo.git.diff(merge_base, self.state.branch)
 
         if not self.state.project_status_updated:
             try:
@@ -376,11 +364,11 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             ReviewCrew()
             .crew()
             .kickoff(
-                inputs={
-                    "task": self.state.task,
-                    "diff": str(self.state.diff),
-                    "changes": str(self.state.changes),
-                }
+                inputs=dict(
+                    task=self.state.task,
+                    diff=str(self.state.diff),
+                    changes=str(self.state.changes),
+                )
             )
         )
         if not isinstance(output, CrewOutput):
@@ -450,15 +438,15 @@ def plot():
 
 def example():
     id = uuid.uuid4()
-    id = "d5e1b205-ebb5-4742-9ac7-2aab0fa29300"
+    id = "d5e1b205-ebb5-4742-9ac7-2aab0fa29301"
     feature_dev_flow = FeatureDevFlow()
     feature_dev_flow.kickoff(
         inputs=dict(
             id=str(id),
-            issue_id=10,
-            task="Add an impressum to the landing page",
+            issue_id=11,
+            task="Moving Background using conic color gradient that moves linearily 45° from horizontal",
             path="/home/xeroc/projects/chaoscraft/demo",
-            branch="impressum",
+            branch="background",
             repo_owner="xeroc",
             repo_name="demo",
         )

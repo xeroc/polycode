@@ -111,6 +111,13 @@ class ImplementOutput(BaseModel):
     changes: str = Field(description="What was implemented")
     tests: str = Field(description="Tests that were written")
 
+    # For commit message
+    title: str = Field(
+        description="Commit Message title including conventional commit prefix"
+    )
+    message: str = Field(description="The body of the commit message")
+    footer: str = Field(description="Commit message footer")
+
 
 class VerifyOutput(BaseModel):
     """Output from verification phase."""
@@ -136,11 +143,3 @@ class ReviewOutput(BaseModel):
     status: str = Field(description="Status: done or retry")
     decision: str = Field(description="Decision: approved or changes_requested")
     feedback: Optional[List[str]] = Field(default=None, description="Review feedback")
-
-
-class CommitMessageOutput(BaseModel):
-    title: str = Field(
-        description="Commit Message title including conventional commit prefix"
-    )
-    message: str = Field(description="The body of the commit message")
-    footer: str = Field(description="Commit message footer")
