@@ -1,4 +1,5 @@
-from crewai import Agent, Crew, Process, Task
+import os
+from crewai import Agent, Crew, Process, Task, Memory
 from crewai.project import CrewBase, agent, crew, task
 
 from tools import DirectoryReadTool, FileReadTool
@@ -27,7 +28,7 @@ class PlanCrew:
         return Agent(
             config=self.agents_config["setup"],  # type: ignore
             verbose=True,
-            tools=[FileWriterTool()],
+            tools=[],
         )
 
     @task
@@ -38,7 +39,11 @@ class PlanCrew:
 
     @task
     def plan_task(self) -> Task:
-        return Task(config=self.tasks_config["plan_task"], context=[self.setup_task()], output_pydantic=PlanOutput)  # type: ignore
+        return Task(
+            config=self.tasks_config["plan_task"],  # type: ignore
+            context=[self.setup_task()],  # type: ignore
+            output_pydantic=PlanOutput,
+        )  # type: ignore
 
     @crew
     def crew(self) -> Crew:

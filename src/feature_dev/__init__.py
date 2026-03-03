@@ -5,7 +5,12 @@ Feature Development Flow module.
 import os
 import uuid
 
-from crewai import CrewOutput
+from crewai import LLM, CrewOutput
+from crewai.memory.unified_memory import Memory
+from crewai.rag.embeddings.providers.ollama.types import (
+    OllamaProviderConfig,
+    OllamaProviderSpec,
+)
 import git
 from crewai.flow.flow import Flow, listen, start
 
@@ -101,6 +106,53 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         output: PlanOutput = result.pydantic  # type: ignore  # or cast
 
         self.state.stories = output.stories
+        self.state.build_cmd = output.build_cmd
+        self.state.test_cmd = output.test_cmd
+        self.state.baseline = output.baseline
+        self.state.findings = output.findings
+
+        scope = self.state.memory_prefix
+        self.remember(
+            output.findings,
+            scope=f"{scope}/findings",
+        )
+        self.remember(
+            output.baseline,
+            scope=f"{scope}/baseline",
+        )
+        self.remember(
+            output.purpose,
+            scope=f"{scope}/purpose",
+        )
+        self.remember(
+            output.tech_stack,
+            scope=f"{scope}/tech_stack",
+        )
+        self.remember(
+            output.architecture,
+            scope=f"{scope}/architecture",
+        )
+        self.remember(
+            output.entry_points,
+            scope=f"{scope}/entry_points",
+        )
+        self.remember(
+            output.configuration,
+            scope=f"{scope}/configuration",
+        )
+        self.remember(
+            output.documentation,
+            scope=f"{scope}/documentation",
+        )
+        self.remember(
+            output.build_cmd,
+            scope=f"{scope}/build_cmd",
+        )
+        self.remember(
+            output.test_cmd,
+            scope=f"{scope}/test_cmd",
+        )
+        print(f"Stored project details to memory at scope: {scope}")
 
         print(f"Planned {len(output.stories)} stories")
         return output
@@ -118,17 +170,19 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                 ImplementCrew()
                 .crew()
                 .kickoff(
-                    inputs={
-                        "task": self.state.task,
-                        "repo": self.state.repo,
-                        "branch": self.state.branch,
-                        "build_cmd": self.state.build_cmd,
-                        "test_cmd": self.state.test_cmd,
-                        "current_story": current_story.model_dump_json(),
-                        "completed_stories": self.state.completed_stories,
-                        "current_story_id": current_story.id,
-                        "current_story_title": current_story.title,
-                    }
+                    inputs=dict(
+                        task=self.state.task,
+                        repo=self.state.repo,
+                        branch=self.state.branch,
+                        build_cmd=self.state.build_cmd,
+                        test_cmd=self.state.test_cmd,
+                        current_story=current_story.model_dump_json(),
+                        completed_stories=self.state.completed_stories,
+                        current_story_id=current_story.id,
+                        current_story_title=current_story.title,
+                        architecture=self.recall("architecture"),
+                        configuration=self.recall("configuration"),
+                    )
                 )
             )
 
@@ -220,7 +274,9 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         else:
             print(f"Verification passed: {verify_result.verified}")
 
-        commit_message_result: CommitMessageOutput = output.tasks_output[1].pydantic  # type: ignore  # or cast
+        commit_message_result: CommitMessageOutput = output.tasks_output[  # type: ignore
+            1
+        ].pydantic
         self.state.commit_title = commit_message_result.title
         self.state.commit_message = commit_message_result.message
         self.state.commit_footer = commit_message_result.footer
@@ -349,11 +405,25 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         # print(f"Cleaned up worktree parent directory")
 
 
+############################
+# Global variables
+############################
+memory = Memory(
+    llm=LLM(model="glm-4.5-flash", base_url="https://api.z.ai/api/coding/paas/v4"),
+    embedder=OllamaProviderSpec(
+        provider="ollama",
+        config=OllamaProviderConfig(
+            model_name="all-minilm:22m",
+        ),
+    ),
+)
+
+
 def kickoff(issue: KickoffIssue):
     """
     Run the flow.
     """
-    feature_dev_flow = FeatureDevFlow()
+    feature_dev_flow = FeatureDevFlow(memory=memory)
     feature_dev_flow.kickoff(
         inputs=dict(
             id=str(uuid.uuid4()),
@@ -361,6 +431,7 @@ def kickoff(issue: KickoffIssue):
             task=f"{issue.title}\n\n{issue.body}",
             path="/home/xeroc/projects/chaoscraft/demo",
             branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
+            memory_prefix="xeroc/demo",
         )
     )
 
@@ -369,19 +440,21 @@ def plot():
     """
     Plot the flow.
     """
-    feature_dev_flow = FeatureDevFlow()
+    feature_dev_flow = FeatureDevFlow(memory=memory)
     feature_dev_flow.plot()
 
 
 def example():
-    feature_dev_flow = FeatureDevFlow()
+    feature_dev_flow = FeatureDevFlow(memory=memory)
     feature_dev_flow.kickoff(
         inputs=dict(
             id=str(uuid.uuid4()),
-            issue_id=7,
-            task=f"Implement a contact form. Ask for full name, email, subject, and body.",
+            issue_id=8,
+            task="Add an impressum to the landing page",
             path="/home/xeroc/projects/chaoscraft/demo",
-            branch=f"email-form",
+            branch="impressum",
+            repo_owner="xeroc",
+            repo_name="demo",
         )
     )
 

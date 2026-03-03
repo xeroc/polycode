@@ -7,6 +7,7 @@ class KickoffIssue(BaseModel):
     id: int = Field(description="Issue ID")
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
+    memory_prefix: str = Field(description="prefix for memory")
 
 
 class Story(BaseModel):
@@ -27,6 +28,7 @@ class FeatureDevState(BaseModel):
     path: str = Field(default="", description="Path to repository")
     repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
+    memory_prefix: str = Field(default="", description="prefix for memory")
 
     build_cmd: Optional[str] = Field(default=None, description="Build command")
     test_cmd: Optional[str] = Field(default=None, description="Test command")

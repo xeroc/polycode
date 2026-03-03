@@ -103,8 +103,6 @@ def kickoff_feature_dev_task(self, issue_number: int) -> dict[str, Any]:
         manager = GitHubProjectManager(config)
         project_item = manager.find_project_item(issue_number)
 
-        print(project_item)
-
         if not project_item:
             log.warning(f"Issue #{issue_number} not found in project")
             update_status_task(issue_number, "Ready")
@@ -117,6 +115,7 @@ def kickoff_feature_dev_task(self, issue_number: int) -> dict[str, Any]:
             id=issue_number,
             title=project_item.title,
             body=project_item.body or "",
+            memory_prefix=f"{repo_owner}/{repo_name}",
         )
 
         log.info(f"Kicking off feature dev for: {kickoff_issue.title}")

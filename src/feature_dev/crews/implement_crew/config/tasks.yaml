@@ -13,13 +13,24 @@ implement_task:
     CURRENT STORY:
     {current_story}
 
+    ARCHITECTURE:
+    {architecture}
+
+    CONFIGURATION:
+    {configuration}
+
     TOOLS:
       * FileReadTool
       * FileWriterTool
       * DirectoryReadTool
       * ExecTool
 
-    Instructions:
+    NOTES:
+    * Stick with the existing architecture as much as possible
+    * If required update the configuration and .env.example
+    * Be concise and avoid unecessary changes like your life depends on it
+
+    INSTRUCTIONS:
     1. Read progress log to understand codebase patterns
     2. Implement this story only
     3. Write tests for this story's functionality

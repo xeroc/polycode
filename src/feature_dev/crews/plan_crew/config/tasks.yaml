@@ -9,6 +9,9 @@ setup_task:
 
     REPO: {repo} - this must be your working directory. `cd` into it!
     BRANCH: {branch}
+    TOOLS:
+      - DirectoryReadTool
+      - FileReadTool
 
     ## Core Purpose
 
