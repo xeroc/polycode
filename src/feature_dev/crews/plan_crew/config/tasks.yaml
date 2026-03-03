@@ -1,158 +1,148 @@
+# setup_task:
+#   description: >
+#     An intelligent agent designed to autonomously explore, analyze, and document unfamiliar
+#     code repositories to understand their structure, purpose, and key components.
+#     Prepare the development environment for this feature.
+#
+#     TASK:
+#     {task}
+#
+#     REPO: {repo} - this must be your working directory. `cd` into it!
+#     BRANCH: {branch}
+#     TOOLS:
+#     - DirectoryReadTool: Read the directory structure
+#     - FileReadTool: Read the content of a file
+#
+#     NOTES:
+#     * use only those tools
+#     * infere what you need from file names and file content
+#     * do not guess
+#
+#     ## Core Purpose
+#
+#     ## Exploration Methodology
+#
+#     ### Phase 1: Initial Repository Reconnaissance
+#     - Scan repository size and complexity (file count, directory structure)
+#     - Identify version control system and branch structure
+#     - Detect CI/CD configuration files and workflows
+#     - Analyze commit history patterns and contribution trends
+#     - Map top-level directory organization
+#
+#     ### Phase 2: Technology Stack Identification
+#     - Detect primary and secondary programming languages
+#     - Identify frameworks and libraries in use
+#     - Recognize build tools and package managers
+#     - Determine database systems and data storage solutions
+#     - Spot API protocols and communication patterns
+#     - Identify cloud services and infrastructure dependencies
+#
+#     ### Phase 3: Entry Point Discovery
+#     - Locate application initialization files
+#     - Identify main executable scripts or binaries
+#     - Find web server entry points (routes, controllers)
+#     - Discover CLI command implementations
+#     - Locate background job processors and workers
+#     - Identify public API endpoints and interfaces
+#
+#     ### Phase 4: Architecture Mapping
+#     - Recognize architectural patterns (MVC, microservices, monolith)
+#     - Map module dependencies and relationships
+#     - Identify core domain boundaries
+#     - Detect design patterns in use
+#     - Understand data flow through the system
+#     - Map external service integrations
+#
+#     ### Phase 5: Configuration Analysis
+#     - Locate configuration files and their formats
+#     - Identify environment-specific settings
+#     - Understand feature flag implementations
+#     - Detect secret management approaches
+#     - Map configuration inheritance patterns
+#     - Identify deployment-specific configurations
+#
+#     ### Phase 6: Testing Strategy Assessment
+#     - Determine testing frameworks in use
+#     - Identify test types (unit, integration, e2e)
+#     - Locate test fixtures and factories
+#     - Find test configuration and helpers
+#     - Assess test coverage approach
+#     - Understand mocking and stubbing patterns
+#
+#     ### Phase 7: Documentation Evaluation
+#     - Assess README completeness and clarity
+#     - Find API documentation and specifications
+#     - Locate architecture decision records (ADRs)
+#     - Identify inline documentation standards
+#     - Find usage examples and tutorials
+#     - Assess contribution guidelines
+#
+#     ### Phase 8: Development Workflow Understanding
+#     - Identify code style and formatting standards
+#     - Locate linting and pre-commit hooks
+#     - Understand code review process indicators
+#     - Find issue and PR templates
+#     - Identify release and versioning strategy
+#     - Map continuous integration pipeline
+#
+#     ## Output Artifacts
+#
+#     ### Repository Map
+#     - Visual representation of directory structure
+#     - Key file locations with descriptions
+#     - Module dependency graph
+#     - External service dependencies
+#     - Configuration hierarchy
+#
+#     ### Technical Summary
+#     - Primary technology stack with versions
+#     - Architecture overview with patterns
+#     - Entry points and execution paths
+#     - Key abstractions and their relationships
+#     - Testing strategy and coverage
+#
+#     ### Onboarding Guide
+#     - Setup and installation instructions
+#     - Development environment requirements
+#     - Common development workflows
+#     - Testing and debugging procedures
+#     - Deployment and release process
+#
+#     ### Integration Points
+#     - External APIs and services
+#     - Database schemas and connections
+#     - Message queue topics and handlers
+#     - Third-party service integrations
+#     - Internal service dependencies
+#
+#   expected_output: >
+#     Structured output with ith build_cmd, test_cmd, ci_notes, findings, baseline, repository_summary, key_locations
+#   agent: setup
+
 setup_task:
   description: >
-    An intelligent agent designed to autonomously explore, analyze, and document unfamiliar
-    code repositories to understand their structure, purpose, and key components.
     Prepare the development environment for this feature.
 
     TASK:
     {task}
 
-    REPO: {repo} - this must be your working directory. `cd` into it!
+    REPO: {repo}
     BRANCH: {branch}
     TOOLS:
-      - DirectoryReadTool
-      - FileReadTool
+    - DirectoryReadTool: Read the directory structure
+    - FileReadTool: Read the content of a file
 
-    ## Core Purpose
-
-    ## Exploration Methodology
-
-    ### Phase 1: Initial Repository Reconnaissance
-    - Scan repository size and complexity (file count, directory structure)
-    - Identify version control system and branch structure
-    - Detect CI/CD configuration files and workflows
-    - Analyze commit history patterns and contribution trends
-    - Map top-level directory organization
-
-    ### Phase 2: Technology Stack Identification
-    - Detect primary and secondary programming languages
-    - Identify frameworks and libraries in use
-    - Recognize build tools and package managers
-    - Determine database systems and data storage solutions
-    - Spot API protocols and communication patterns
-    - Identify cloud services and infrastructure dependencies
-
-    ### Phase 3: Entry Point Discovery
-    - Locate application initialization files
-    - Identify main executable scripts or binaries
-    - Find web server entry points (routes, controllers)
-    - Discover CLI command implementations
-    - Locate background job processors and workers
-    - Identify public API endpoints and interfaces
-
-    ### Phase 4: Architecture Mapping
-    - Recognize architectural patterns (MVC, microservices, monolith)
-    - Map module dependencies and relationships
-    - Identify core domain boundaries
-    - Detect design patterns in use
-    - Understand data flow through the system
-    - Map external service integrations
-
-    ### Phase 5: Configuration Analysis
-    - Locate configuration files and their formats
-    - Identify environment-specific settings
-    - Understand feature flag implementations
-    - Detect secret management approaches
-    - Map configuration inheritance patterns
-    - Identify deployment-specific configurations
-
-    ### Phase 6: Testing Strategy Assessment
-    - Determine testing frameworks in use
-    - Identify test types (unit, integration, e2e)
-    - Locate test fixtures and factories
-    - Find test configuration and helpers
-    - Assess test coverage approach
-    - Understand mocking and stubbing patterns
-
-    ### Phase 7: Documentation Evaluation
-    - Assess README completeness and clarity
-    - Find API documentation and specifications
-    - Locate architecture decision records (ADRs)
-    - Identify inline documentation standards
-    - Find usage examples and tutorials
-    - Assess contribution guidelines
-
-    ### Phase 8: Development Workflow Understanding
-    - Identify code style and formatting standards
-    - Locate linting and pre-commit hooks
-    - Understand code review process indicators
-    - Find issue and PR templates
-    - Identify release and versioning strategy
-    - Map continuous integration pipeline
-
-    ## Output Artifacts
-
-    ### Repository Map
-    - Visual representation of directory structure
-    - Key file locations with descriptions
-    - Module dependency graph
-    - External service dependencies
-    - Configuration hierarchy
-
-    ### Technical Summary
-    - Primary technology stack with versions
-    - Architecture overview with patterns
-    - Entry points and execution paths
-    - Key abstractions and their relationships
-    - Testing strategy and coverage
-
-    ### Onboarding Guide
-    - Setup and installation instructions
-    - Development environment requirements
-    - Common development workflows
-    - Testing and debugging procedures
-    - Deployment and release process
-
-    ### Integration Points
-    - External APIs and services
-    - Database schemas and connections
-    - Message queue topics and handlers
-    - Third-party service integrations
-    - Internal service dependencies
-
-    ## Quality Assurance Checks
-
-    ### Completeness Metrics
-    - Percentage of code paths explored
-    - Documentation coverage assessment
-    - Test coverage evaluation
-    - Configuration completeness check
-    - Dependency resolution verification
-
-    ### Confidence Indicators
-    - Pattern consistency scores
-    - Documentation quality ratings
-    - Test reliability metrics
-    - Build stability indicators
-    - Deployment success patterns
-
-    ## Continuous Learning
-
-    ### Pattern Recognition
-    - Build repository pattern database
-    - Identify common anti-patterns
-    - Learn from similar repositories
-    - Update discovery algorithms
-    - Refine exploration strategies
-
-    ### Knowledge Synthesis
-    - Cross-reference findings across phases
-    - Identify inconsistencies and gaps
-    - Generate actionable insights
-    - Create reusable knowledge templates
-    - Build repository fingerprints
-
-    ## Success Criteria
-    - Complete understanding of repository purpose
-    - Clear mapping of all major components
-    - Accurate identification of entry points
-    - Comprehensive dependency documentation
-    - Reliable build and test procedures
-    - Clear contribution and deployment paths
-    - Reproducible development environment
+    Instructions:
+    1. cd into the repo
+    2. Read configuration files (package.json, pyproject, etc..), CI config, test config to understand the build/test setup
+    3. Ensure .gitignore exists — if missing, create one appropriate for detected stack (must include .env, node_modules/, *.key, *.pem at minimum)
+    4. Run the build to establish a baseline
+    5. Run the tests to establish a baseline
+    6. Report what you found and what can be reused
+    7. Understand the stack, conventions, and patterns
 
   expected_output: >
-    Structured setup result with status, build_cmd, test_cmd, ci_notes, findings, baseline, repository_summary, key_locations
+    Structured information about build_cmd, test_cmd, ci_notes, baseline, findings, purpose, tech_stack, architecture, entry_points, configuration, documentation,
   agent: setup
 
 plan_task:
@@ -176,5 +166,5 @@ plan_task:
     8. The developer is expected to write tests as part of each story (except for small stories with little impact)
     9. avoid end-2-end tests, prefer small unittests
   expected_output: >
-    User stories with acceptance criteria, each fitting in one session
+    Structured user stories with acceptance criteria, each fitting in one session
   agent: planner
