@@ -62,6 +62,12 @@ class ImplementCrew:
             output_pydantic=ImplementOutput,
         )
 
+    @task
+    def retrospective(self) -> Task:
+        return Task(
+            config=self.tasks_config["retrospective"],  # type: ignore
+        )
+
     @crew
     def crew(self, agents_md_map: dict[str, str] | None = None) -> Crew:
         self.agents_md_map = agents_md_map or {}

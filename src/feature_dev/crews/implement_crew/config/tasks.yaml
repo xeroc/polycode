@@ -130,7 +130,7 @@ generate_result:
     5. **Never fabricate ticket numbers** unless they appear explicitly in the stories input.
     6. **If no scope is determinable**, omit the parentheses entirely.
     7. **Breaking changes** must appear both as `!` after the type/scope and as a `BREAKING CHANGE:` footer.
-    8. **Output only the commit message** — no preamble, no explanation, no markdown fences.
+     8. **Output only the commit message** — no preamble, no explanation, no markdown fences.
 
   expected_output: >
     Structured commit message distinguishing title (first one) from body (rest of the message without title)
@@ -140,3 +140,60 @@ generate_result:
     - implement_task
 
   agent: consolidator
+
+retrospective:
+  description: >
+    # Retrospective Analysis Task
+
+    ## Purpose
+
+    Analyze the completed implementation cycle and generate retrospective insights for long-term learning.
+
+    ## Context Available
+
+    - Implemented stories and their acceptance criteria
+    - Code changes made
+    - Tests written and their results
+    - Build and test command outcomes
+    - Any challenges encountered during implementation
+    - AGENTS.md files for context on existing patterns
+
+    ## Output Requirements
+
+    Generate concise, actionable insights in three categories:
+
+    1. **Success Patterns**: What approaches worked well?
+       - Architectural decisions that proved effective
+       - Testing strategies that caught issues early
+       - Code organization patterns that improved maintainability
+
+    2. **Gotchas**: What didn't work or caused problems?
+       - Common pitfalls encountered during implementation
+       - Configuration or setup issues
+       - Integration challenges
+       - Testing failures and their root causes
+
+    3. **Best Practices**: What patterns should be repeated?
+       - Coding standards that improved quality
+       - Documentation approaches that helped
+       - Tool and workflow optimizations
+
+    ## Guidelines
+
+    - Keep insights concise and actionable (2-4 bullet points per category)
+    - Focus on patterns that generalize, not one-off fixes
+    - Be specific about what worked vs what didn't
+    - Include technical details that future implementations can use
+
+    ## Memory Storage Instructions
+
+    Store these insights using the memory system for cross-session learning:
+    - Success patterns in "retrospective/success" scope
+    - Gotchas in "retrospective/gotchas" scope
+    - Best practices in "retrospective/practices" scope
+
+    expected_output: >
+    Retrospective insights organized by category with specific, actionable findings
+    that can be stored in memory and AGENTS.md files
+
+  agent: developer

@@ -40,6 +40,7 @@ job "polycode" {
     }
     task "app" {
       driver = "docker"
+
       config {
         image   = "ghcr.io/xeroc/polycode:${var.image_version}"
         command = "api"
@@ -85,8 +86,15 @@ job "polycode" {
     network {
       mode = "bridge"
     }
+    ephemeral_disk {
+      migrate = true
+      size    = 5000
+      sticky  = true
+    }
+
     task "app" {
       driver = "docker"
+
       config {
         image   = "ghcr.io/xeroc/polycode:${var.image_version}"
         command = "worker"
@@ -100,6 +108,7 @@ job "polycode" {
         REPO_OWNER         = "xeroc"
         REPO_NAME          = "demo"
         PROJECT_IDENTIFIER = 1
+        DATA_PATH          = "/alloc/data"
       }
       vault {
         policies    = ["polycode"]

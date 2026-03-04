@@ -134,7 +134,9 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             parent_dir = os.path.dirname(root_repo)
             if parent_dir:
                 os.makedirs(parent_dir, exist_ok=True)
-            repo_url = f"https://github.com/{self.state.repo_owner}/{self.state.repo_name}"
+            repo_url = (
+                f"https://github.com/{self.state.repo_owner}/{self.state.repo_name}"
+            )
             git.Repo.clone_from(repo_url, root_repo)
             print(f"Cloned repository from {repo_url} to {root_repo}")
 
@@ -244,9 +246,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         for current_story in self.state.completed_stories or []:
             print(f"   ✅ {current_story.description}")
 
-        if len(self.state.completed_stories or []) == len(
-            self.state.stories or []
-        ):
+        if len(self.state.completed_stories or []) == len(self.state.stories or []):
             return
 
         def implement_single_story(current_story: Story):
@@ -264,19 +264,12 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                         test_cmd=self.state.test_cmd,
                         current_story=current_story.model_dump_json(),
                         completed_stories="\n- ".join(
-                            [
-                                x.description
-                                for x in self.state.completed_stories or []
-                            ]
+                            [x.description for x in self.state.completed_stories or []]
                         ),
                         current_story_id=current_story.id,
                         current_story_title=current_story.title,
-                        architecture=self.recall_as_markdown_list(
-                            "architecture"
-                        ),
-                        configuration=self.recall_as_markdown_list(
-                            "configuration"
-                        ),
+                        architecture=self.recall_as_markdown_list("architecture"),
+                        configuration=self.recall_as_markdown_list("configuration"),
                         tech_stack=self.recall_as_markdown_list("tech_stack"),
                         agents_md=self.root_agents_md,
                     )
@@ -397,8 +390,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                     test_cmd=self.state.test_cmd,
                     current_story=self.state.current_story,
                     completed_stories=[
-                        x.description
-                        for x in self.state.completed_stories or []
+                        x.description for x in self.state.completed_stories or []
                     ],
                 )
             )
