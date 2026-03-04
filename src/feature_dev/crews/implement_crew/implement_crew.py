@@ -26,6 +26,7 @@ class ImplementCrew:
                 DirectoryReadTool(),
                 ExecTool(),
             ],
+            allow_code_execution=True,
         )
 
     @agent

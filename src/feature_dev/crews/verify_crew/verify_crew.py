@@ -20,6 +20,7 @@ class VerifyCrew:
             tools=[ExecTool(), DirectoryReadTool(), FileReadTool()],
             verbose=True,
             llm=GLMJSONLLM(),
+            allow_code_execution=True,
         )
 
     @task

@@ -23,6 +23,7 @@ class PlanCrew:
             verbose=True,
             llm=GLMJSONLLM(),
             tools=[FileReadTool(), DirectoryReadTool(), FileWriterTool()],
+            allow_code_execution=True,
         )
 
     @agent
