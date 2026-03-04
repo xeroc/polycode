@@ -507,18 +507,23 @@ def plot():
 
 
 def example():
-    id = uuid.uuid4()
-    # id = "888a8fb6-e86d-457a-a2ea-a8e858b1d3f2"
-    feature_dev_flow = FeatureDevFlow()
     repo_owner = "xeroc"
     repo_name = "demo"
+    issue_id = 12
+    task = "Update the about section and use tailwindcss more to make it stand out and eaiser to read."
+    path = f"/home/xeroc/projects/{repo_owner}/{repo_name}"
+    branch = "about"
+    flow_identifier = f"{repo_owner}/{repo_name}/{issue_id}"
+    id = uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier)
+    # id = "888a8fb6-e86d-457a-a2ea-a8e858b1d3f2"
+    feature_dev_flow = FeatureDevFlow()
     feature_dev_flow.kickoff(
         inputs=dict(
             id=str(id),
-            issue_id=12,
-            task="Update the about section and use tailwindcss more to make it stand out and eaiser to read.",
-            path=f"/home/xeroc/projects/{repo_owner}/{repo_name}",
-            branch="about",
+            issue_id=issue_id,
+            task=task,
+            path=path,
+            branch=branch,
             repo_owner=repo_owner,
             repo_name=repo_name,
         )

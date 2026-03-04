@@ -85,6 +85,9 @@ job "polycode" {
   group "worker" {
     network {
       mode = "bridge"
+      port "ollama" {
+        to = 11434
+      }
     }
     ephemeral_disk {
       migrate = true
@@ -98,6 +101,7 @@ job "polycode" {
       config {
         image   = "ghcr.io/xeroc/polycode:${var.image_version}"
         command = "worker"
+        ports   = []
         auth {
           username = "${var.registry_auth.username}"
           password = "${var.registry_auth.password}"
@@ -164,6 +168,20 @@ job "polycode" {
         memory = 4048
       }
     }
+    task "ollama" {
+      driver = "docker"
+      config {
+        image = "ollama/ollama"
+        ports = ["ollama"]
+      }
+      env {
+        OLLAMA_MODELS = "all-minilm:22m"
+      }
+      resources {
+        cpu    = 2000
+        memory = 1024
+      }
+    }
   }
 
   group "redis" {
@@ -205,6 +223,71 @@ job "polycode" {
       resources {
         memory = 64
         cpu    = 120
+      }
+    }
+  }
+
+  group "flower" {
+    network {
+      mode = "bridge"
+      port "http" {}
+    }
+    service {
+      name = "gordon-flower"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.${NOMAD_GROUP_NAME}.rule=Host(`flower-polycode.${var.domain}`)",
+        "traefik.http.routers.${NOMAD_GROUP_NAME}.tls.certresolver=letsencrypt",
+        "traefik.http.routers.${NOMAD_GROUP_NAME}.tls=true",
+        "traefik.http.routers.${NOMAD_GROUP_NAME}.middlewares=auth",
+      ]
+    }
+    ephemeral_disk {
+      size = 300
+    }
+    task "app" {
+      driver = "docker"
+      config {
+        image = "ghcr.io/xeroc/polycode:${var.image_version}"
+        auth {
+          username = "${var.registry_auth.username}"
+          password = "${var.registry_auth.password}"
+        }
+        command = "flower"
+      }
+      env {
+        APP_HOST                   = "0.0.0.0"
+        APP_PORT                   = NOMAD_PORT_http
+        APP_LOGLEVEL               = "info"
+        FLOWER_PERSISTENT          = true
+        FLOWER_STATE_SAVE_INTERVAL = 10000
+        FLOWER_DB                  = "/alloc/data/flower.db"
+      }
+      vault {
+        policies    = ["polycode"]
+        change_mode = "restart"
+      }
+      template {
+        destination = "secrets/config.env"
+        data        = <<-EOF
+          {{ with secret "secrets/data/polycode" }}
+          {{ range $k, $v := .Data.data }}
+          {{ $k }}={{ $v | replaceAll "\n" "\\n" }}
+          {{ end }}{{ end }}
+
+          {{ with service "polycode-redis" }}{{ with index . 0 }}
+          REDIS_HOST={{.Address}}
+          REDIS_PORT={{.Port}}
+          {{ end }}{{ end }}
+
+        EOF
+        env         = true
+      }
+      resources {
+        cpu    = 2000
+        memory = 512
       }
     }
   }

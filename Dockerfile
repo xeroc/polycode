@@ -9,9 +9,10 @@ RUN pip install --no-cache-dir "crewai[litellm]>=1.10.0b1" && uv sync
 
 FROM base
 WORKDIR /app
-COPY . .
 
+COPY . .
 COPY entrypooint.sh /usr/local/bin/entrypoint.sh
+
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Creates a non-root user and adds permission to access the /app folder

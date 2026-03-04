@@ -6,7 +6,8 @@ set -xe
 export APP_RUN=${APP_RUN:=api}
 export LOG_LEVEL=${APP_LOGLEVEL:=critical}
 
-echo "$SSH_KEY" >~/.ssh/id
+echo -e "$SSH_KEY" >~/.ssh/id
+chmod 0600 ~/.ssh/id
 
 # needed to allow x-forward of proto and ip so url_for in fastapi returns an https schema'd link
 export FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:="*"}
