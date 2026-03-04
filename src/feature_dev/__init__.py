@@ -129,18 +129,23 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         branch_name = self.state.branch
         root_repo = self.state.path
 
+        print("🏹 Preparing work tree ...")
+
         if not os.path.exists(root_repo):
             print(f"Repository not found at {root_repo}, cloning...")
             parent_dir = os.path.dirname(root_repo)
             if parent_dir:
                 os.makedirs(parent_dir, exist_ok=True)
-            repo_url = (
-                f"https://github.com/{self.state.repo_owner}/{self.state.repo_name}"
-            )
+            # TODO: this requires setting up a ssh alias!
+            repo_url = f"github:{self.state.repo_owner}/{self.state.repo_name}"
             git.Repo.clone_from(repo_url, root_repo)
             print(f"Cloned repository from {repo_url} to {root_repo}")
 
+        # TODO: develop branch is required currently
         git_repo = git.Repo(root_repo)
+        git_repo.git.fetch("origin")
+        git_repo.git.checkout("develop")
+        git_repo.git.reset("--hard", "origin/develop")
 
         if branch_name not in [b.name for b in git_repo.branches]:
             develop_branch = git_repo.branches["develop"]
@@ -488,7 +493,7 @@ def kickoff(issue: KickoffIssue):
             task=f"{issue.title}\n\n{issue.body}",
             path=f"{DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
             branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
-            memory_prefix="xeroc/demo",
+            memory_prefix=f"{issue.repository.owner}/{issue.repository.repository}",
             repo_owner=issue.repository.owner,
             repo_name=issue.repository.repository,
         )
@@ -507,15 +512,17 @@ def example():
     id = uuid.uuid4()
     # id = "d5e1b205-ebb5-4742-9ac7-2aab0fa29301"
     feature_dev_flow = FeatureDevFlow()
+    repo_owner = "xeroc"
+    repo_name = "demo"
     feature_dev_flow.kickoff(
         inputs=dict(
             id=str(id),
             issue_id=12,
-            task="Add an about section below the headline that explains what the project is about.",
-            path="/home/xeroc/projects/chaoscraft/demo",
-            branch="background",
-            repo_owner="xeroc",
-            repo_name="demo",
+            task="Update the about section and use tailwindcss more to make it stand out and eaiser to read.",
+            path=f"/home/xeroc/projects/{repo_owner}/{repo_name}",
+            branch="about",
+            repo_owner=repo_owner,
+            repo_name=repo_name,
         )
     )
 

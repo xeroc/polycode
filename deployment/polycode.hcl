@@ -102,6 +102,9 @@ job "polycode" {
           username = "${var.registry_auth.username}"
           password = "${var.registry_auth.password}"
         }
+        volumes = [
+          "local/ssh_config:/etc/ssh/ssh_config",
+        ]
       }
       env {
         # DATABASE_URL = "not-yet-implemented"
@@ -128,6 +131,33 @@ job "polycode" {
           {{ end }}{{ end }}
         EOF
         env         = true
+      }
+
+      template {
+        destination = "secrets/id"
+        data        = <<-EOF
+          {{ with secret "secrets/data/polycode" }}
+          {{ .Data.data.SSH_KEY }}
+          {{ end }}
+        EOF
+        env         = true
+      }
+      template {
+        destination = "local/ssh_config"
+        data        = <<-EOF
+          Include /etc/ssh/ssh_config.d/*.conf
+          Host *
+            SendEnv LANG LC_* COLORTERM NO_COLOR
+            HashKnownHosts yes
+            GSSAPIAuthentication yes
+
+          # Required for pushing via SSH
+          Host github
+            Hostname github.com
+            User git
+            IdentityFile /secrets/data/polycode
+        EOF
+        env         = false
       }
       resources {
         cpu    = 2000
