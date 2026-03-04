@@ -1,6 +1,9 @@
 .venv
 .ruff_cache
 .git
+.github
+.dockerignore
+Dockerfile
 
 # Python
 __pycache__/
@@ -60,3 +63,7 @@ htmlcov/
 
 feature_dev.db
 flow_state.db
+
+deployment
+Makefile
+

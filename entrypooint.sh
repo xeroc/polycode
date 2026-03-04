@@ -25,4 +25,9 @@ flower)
     exec uv run celery -A celery_tasks.worker.app flower --address=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
     ;;
 
+api)
+    echo "Launching API:"
+    exec uv run webhook-server webhook --host=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
+    ;;
+
 esac
