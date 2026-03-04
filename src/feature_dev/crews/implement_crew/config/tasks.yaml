@@ -10,6 +10,9 @@ implement_task:
     BUILD_CMD: {build_cmd}
     TEST_CMD: {test_cmd}
 
+    CREWAI REFERENCE GUIDE (AGENTS.md):
+    {agents_md}
+
     CURRENT STORY:
     {current_story}
 
@@ -27,6 +30,7 @@ implement_task:
       * FileWriterTool
       * DirectoryReadTool
       * ExecTool
+      * AgentsMDLoaderTool: Load AGENTS.md files from subdirectories (use when needed)
 
     NOTES:
     * Stick with the existing architecture as much as possible

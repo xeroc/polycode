@@ -7,9 +7,14 @@ setup_task:
 
     REPO: {repo}
     BRANCH: {branch}
+
+    CREWAI REFERENCE GUIDE (AGENTS.md):
+    {agents_md}
+
     TOOLS:
     - DirectoryReadTool: Read the directory structure
     - FileReadTool: Read the content of a file
+    - AgentsMDLoaderTool: Load AGENTS.md files from subdirectories (use when needed)
 
     !CRUCIAL!:
     * Do not run DirectoryReadTool outside the repositories path. There's nothing of interest there!
@@ -37,6 +42,9 @@ plan_task:
 
     REPO:
     {repo}
+
+    CREWAI REFERENCE GUIDE (AGENTS.md):
+    {agents_md}
 
     !CRUCIAL!:
     * Do not build tests for static files (html, css)

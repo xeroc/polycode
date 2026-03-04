@@ -4,6 +4,7 @@ Feature Development Flow module.
 
 import os
 import uuid
+from pathlib import Path
 
 from crewai import CrewOutput
 from crewai.memory.unified_memory import Memory
@@ -86,6 +87,41 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         )
         print(self.memory.tree())
 
+        self.agents_md_map: dict[str, str] = {}
+        self.root_agents_md: str = ""
+
+    def discover_agents_md_files(self):
+        """Discover all AGENTS.md files in the repository."""
+        self.state.repo = "/home/xeroc/projects/chaoscraft/demo"
+        repo_path = Path(self.state.repo)
+        agents_md_files = {}
+
+        for agents_file in repo_path.rglob("AGENTS.md"):
+            try:
+                relative_path = str(agents_file.relative_to(repo_path))
+                if relative_path.startswith("."):
+                    continue
+                with open(agents_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+                agents_md_files[relative_path] = content
+                print(f"📕 Discovered AGENTS.md: {relative_path}")
+            except Exception as e:
+                print(f"Error reading {agents_file}: {e}")
+
+        self.agents_md_map = agents_md_files
+
+        # Extract root AGENTS.md if it exists
+        if "AGENTS.md" in agents_md_files:
+            self.root_agents_md = agents_md_files["AGENTS.md"]
+        elif len(agents_md_files) > 0:
+            # Use the first discovered file as root if no direct AGENTS.md
+            first_path = next(iter(agents_md_files.keys()))
+            self.root_agents_md = agents_md_files[first_path]
+            print(f"📕 Using {first_path} as root AGENTS.md")
+
+        print(f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}")
+        return agents_md_files
+
     @start()
     def prepare_work_tree(self):
         branch_name = self.state.branch
@@ -125,17 +161,21 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         """Step 1: Plan - decompose task into user stories."""
         print("Planning feature into user stories")
 
+        # Discover AGENTS.md files
+        self.discover_agents_md_files()
+
         if self.state.stories:
             return
 
         result = (
             PlanCrew()
-            .crew()
+            .crew(agents_md_map=self.agents_md_map)
             .kickoff(
                 inputs=dict(
                     task=self.state.task,
                     repo=self.state.repo,
                     branch=self.state.branch,
+                    agents_md=self.root_agents_md,
                 )
             )
         )
@@ -191,7 +231,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
             output = (
                 ImplementCrew()
-                .crew()
+                .crew(agents_md_map=self.agents_md_map)
                 .kickoff(
                     inputs=dict(
                         task=self.state.task,
@@ -208,6 +248,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                         architecture=self.recall_as_markdown_list("architecture"),
                         configuration=self.recall_as_markdown_list("configuration"),
                         tech_stack=self.recall_as_markdown_list("tech_stack"),
+                        agents_md=self.root_agents_md,
                     )
                 )
             )
