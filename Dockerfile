@@ -16,4 +16,6 @@ RUN    useradd --create-home appuser \
     && chown -R appuser /app
 USER appuser
 
+VOLUME [ "/data" ]
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

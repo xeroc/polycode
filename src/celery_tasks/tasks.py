@@ -8,6 +8,7 @@ from celery import current_task
 from datetime import datetime, timezone
 from feature_dev import kickoff as feature_dev_kickoff
 from feature_dev import KickoffIssue
+from feature_dev.types import KickoffRepo
 from persistence.celery_tasks import CeleryTask
 from persistence.celery_tasks import CeleryTaskTracker
 from persistence.postgres import Base
@@ -116,6 +117,10 @@ def kickoff_feature_dev_task(self, issue_number: int) -> dict[str, Any]:
             title=project_item.title,
             body=project_item.body or "",
             memory_prefix=f"{repo_owner}/{repo_name}",
+            repository=KickoffRepo(
+                owner=manager.config.repo_owner,
+                repository=manager.config.repo_name,
+            ),
         )
 
         log.info(f"Kicking off feature dev for: {kickoff_issue.title}")

@@ -38,6 +38,7 @@ from .github_status import ProjectStatusManager
 from .utils import get_github_repo_from_local, sanitize_branch_name
 from persistence import PostgresFlowPersistence
 
+DATA_PATH = os.environ.get("DATA_PATH", "/data")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres:"):
     persistence = PostgresFlowPersistence(
@@ -94,7 +95,6 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
     def discover_agents_md_files(self):
         """Discover all AGENTS.md files in the repository."""
-        self.state.repo = "/home/xeroc/projects/chaoscraft/demo"
         repo_path = Path(self.state.repo)
         agents_md_files = {}
 
@@ -128,6 +128,16 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     def prepare_work_tree(self):
         branch_name = self.state.branch
         root_repo = self.state.path
+
+        if not os.path.exists(root_repo):
+            print(f"Repository not found at {root_repo}, cloning...")
+            parent_dir = os.path.dirname(root_repo)
+            if parent_dir:
+                os.makedirs(parent_dir, exist_ok=True)
+            repo_url = f"https://github.com/{self.state.repo_owner}/{self.state.repo_name}"
+            git.Repo.clone_from(repo_url, root_repo)
+            print(f"Cloned repository from {repo_url} to {root_repo}")
+
         git_repo = git.Repo(root_repo)
 
         if branch_name not in [b.name for b in git_repo.branches]:
@@ -234,7 +244,9 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         for current_story in self.state.completed_stories or []:
             print(f"   ✅ {current_story.description}")
 
-        if len(self.state.completed_stories or []) == len(self.state.stories or []):
+        if len(self.state.completed_stories or []) == len(
+            self.state.stories or []
+        ):
             return
 
         def implement_single_story(current_story: Story):
@@ -252,12 +264,19 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                         test_cmd=self.state.test_cmd,
                         current_story=current_story.model_dump_json(),
                         completed_stories="\n- ".join(
-                            [x.description for x in self.state.completed_stories or []]
+                            [
+                                x.description
+                                for x in self.state.completed_stories or []
+                            ]
                         ),
                         current_story_id=current_story.id,
                         current_story_title=current_story.title,
-                        architecture=self.recall_as_markdown_list("architecture"),
-                        configuration=self.recall_as_markdown_list("configuration"),
+                        architecture=self.recall_as_markdown_list(
+                            "architecture"
+                        ),
+                        configuration=self.recall_as_markdown_list(
+                            "configuration"
+                        ),
                         tech_stack=self.recall_as_markdown_list("tech_stack"),
                         agents_md=self.root_agents_md,
                     )
@@ -378,7 +397,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                     test_cmd=self.state.test_cmd,
                     current_story=self.state.current_story,
                     completed_stories=[
-                        x.description for x in self.state.completed_stories or []
+                        x.description
+                        for x in self.state.completed_stories or []
                     ],
                 )
             )
@@ -474,9 +494,11 @@ def kickoff(issue: KickoffIssue):
             id=str(id),
             issue_id=issue.id,
             task=f"{issue.title}\n\n{issue.body}",
-            path="/home/xeroc/projects/chaoscraft/demo",
+            path=f"{DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
             branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
             memory_prefix="xeroc/demo",
+            repo_owner=issue.repository.owner,
+            repo_name=issue.repository.repository,
         )
     )
 

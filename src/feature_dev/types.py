@@ -3,11 +3,17 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
+class KickoffRepo(BaseModel):
+    owner: str = Field(description="repo owner")
+    repository: str = Field(description="repository name")
+
+
 class KickoffIssue(BaseModel):
     id: int = Field(description="Issue ID")
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
     memory_prefix: str = Field(description="prefix for memory")
+    repository: KickoffRepo
 
 
 class Story(BaseModel):
@@ -26,14 +32,26 @@ class FeatureDevState(BaseModel):
     issue_id: int = Field(default=0, description="issue id on github")
     task: str = Field(default="", description="Feature development task")
     path: str = Field(default="", description="Path to repository")
-    repo: str = Field(default="", description="Path to repository in a worktree")
+    repo: str = Field(
+        default="", description="Path to repository in a worktree"
+    )
     branch: str = Field(default="", description="Feature branch name")
     memory_prefix: str = Field(default="", description="prefix for memory")
+    repo_owner: Optional[str] = Field(
+        default=None, description="GitHub repository owner"
+    )
+    repo_name: Optional[str] = Field(
+        default=None, description="GitHub repository name"
+    )
 
     build_cmd: Optional[str] = Field(default=None, description="Build command")
     test_cmd: Optional[str] = Field(default=None, description="Test command")
-    ci_notes: Optional[str] = Field(default=None, description="CI configuration notes")
-    baseline: Optional[str] = Field(default=None, description="Baseline status")
+    ci_notes: Optional[str] = Field(
+        default=None, description="CI configuration notes"
+    )
+    baseline: Optional[str] = Field(
+        default=None, description="Baseline status"
+    )
     findings: Optional[str] = Field(
         default=None,
         description="Findings around stack, conventions and used patterns",
@@ -42,7 +60,9 @@ class FeatureDevState(BaseModel):
         default=[], description="Ordered user stories"
     )
 
-    changes: Optional[List[str]] = Field(default=[], description="What was implemented")
+    changes: Optional[List[str]] = Field(
+        default=[], description="What was implemented"
+    )
     tests: Optional[List[str]] = Field(
         default=[], description="Tests that were written"
     )
@@ -61,8 +81,12 @@ class FeatureDevState(BaseModel):
     verified: bool = Field(default=False, description="All stories verified")
     tested: bool = Field(default=False, description="Integration tests passed")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
-    pr_number: Optional[int] = Field(default=None, description="Pull request number")
-    review_status: Optional[str] = Field(default=None, description="PR review status")
+    pr_number: Optional[int] = Field(
+        default=None, description="Pull request number"
+    )
+    review_status: Optional[str] = Field(
+        default=None, description="PR review status"
+    )
     diff: Optional[str] = Field(default=None, description="code diff")
     commit_title: Optional[str] = Field(
         default=None,
@@ -83,7 +107,9 @@ class PlanOutput(BaseModel):
 
     build_cmd: str = Field(description="Build command")
     test_cmd: str = Field(description="Test command")
-    ci_notes: Optional[str] = Field(default=None, description="CI configuration notes")
+    ci_notes: Optional[str] = Field(
+        default=None, description="CI configuration notes"
+    )
     baseline: str = Field(description="Baseline status")
     findings: str = Field(
         description="Findings around stack, conventions and used patterns"
@@ -95,7 +121,9 @@ class PlanOutput(BaseModel):
     architecture: str = Field(
         description="High-level architecture pattern and organization"
     )
-    entry_points: List[str] = Field(description="Paths to main application starts")
+    entry_points: List[str] = Field(
+        description="Paths to main application starts"
+    )
     configuration: List[str] = Field(description="Paths to config files")
     documentation: List[str] = Field(description="Paths to key docs")
 
@@ -119,7 +147,9 @@ class VerifyOutput(BaseModel):
     """Output from verification phase."""
 
     status: str = Field(description="Status: done or retry")
-    verified: Optional[str] = Field(default=None, description="What was confirmed")
+    verified: Optional[str] = Field(
+        default=None, description="What was confirmed"
+    )
     issues: Optional[List[str]] = Field(
         default=None, description="Issues requiring fixes"
     )
@@ -130,12 +160,18 @@ class TestOutput(BaseModel):
 
     status: str = Field(description="Status: done or retry")
     results: Optional[str] = Field(default=None, description="Test results")
-    failures: Optional[List[str]] = Field(default=None, description="Test failures")
+    failures: Optional[List[str]] = Field(
+        default=None, description="Test failures"
+    )
 
 
 class ReviewOutput(BaseModel):
     """Output from review phase."""
 
     status: str = Field(description="Status: done or retry")
-    decision: str = Field(description="Decision: approved or changes_requested")
-    feedback: Optional[List[str]] = Field(default=None, description="Review feedback")
+    decision: str = Field(
+        description="Decision: approved or changes_requested"
+    )
+    feedback: Optional[List[str]] = Field(
+        default=None, description="Review feedback"
+    )

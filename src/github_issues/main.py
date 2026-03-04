@@ -7,7 +7,7 @@ from typing import Callable
 import click
 
 from feature_dev import kickoff as feature_dev_kickoff
-from feature_dev.types import KickoffIssue
+from feature_dev.types import KickoffIssue, KickoffRepo
 
 from project_manager import GitHubProjectManager
 from project_manager.types import ProjectConfig, ProjectItem
@@ -27,15 +27,9 @@ def create_kickoff_callback(
     Returns:
         Callback function or None if feature_dev not available
     """
-    if not feature_dev_kickoff:
-        log.warning("feature_dev module not available, skipping kickoff")
-        return None
 
     def on_issue_ready(item: ProjectItem) -> None:
         """Callback when an issue is ready to process."""
-        if not feature_dev_kickoff:
-            return
-
         log.info(f"Starting feature development for issue #{item.issue_number}")
         log.info(f"Title: {item.title}")
         log.info(f"Description: {item.body or '(no description)'}")
@@ -44,6 +38,10 @@ def create_kickoff_callback(
             id=item.issue_number,
             title=item.title,
             body=item.body or "",
+            repository=KickoffRepo(
+                owner=manager.config.repo_owner,
+                repository=manager.config.repo_name,
+            ),
             memory_prefix=f"{manager.config.repo_owner}/{manager.config.repo_name}",
         )
         feature_dev_kickoff(kickoff_issue)
