@@ -65,7 +65,7 @@ job "polycode" {
         data        = <<-EOF
           {{ with secret "secrets/data/polycode" }}
           {{ range $k, $v := .Data.data }}
-          {{ $k }}={{ $v }}
+          {{ $k }}={{ $v | replaceAll "\n" "\\n" }}
           {{ end }}{{ end }}
 
           {{ with service "polycode-redis" }}{{ with index . 0 }}
@@ -122,26 +122,26 @@ job "polycode" {
         data        = <<-EOF
           {{ with secret "secrets/data/polycode" }}
           {{ range $k, $v := .Data.data }}
-          {{ $k }}={{ $v }}
+          {{ $k }}={{ $v | replaceAll "\n" "\\n" }}
           {{ end }}{{ end }}
 
           {{ with service "polycode-redis" }}{{ with index . 0 }}
           REDIS_HOST={{.Address}}
           REDIS_PORT={{.Port}}
           {{ end }}{{ end }}
+
         EOF
         env         = true
       }
 
-      template {
-        destination = "secrets/id"
-        data        = <<-EOF
-          {{ with secret "secrets/data/polycode" }}
-          {{ .Data.data.SSH_KEY }}
-          {{ end }}
-        EOF
-        env         = true
-      }
+      # template {
+      #   destination = "secrets/id"
+      #   perms       = "0600"
+      #   uid         = 1000
+      #   gid         = 1000
+      #   data        = "{{ with secret \"secrets/data/polycode\" }}{{ .Data.data.SSH_KEY }}{{ end }}"
+      # }
+
       template {
         destination = "local/ssh_config"
         data        = <<-EOF
@@ -155,7 +155,7 @@ job "polycode" {
           Host github
             Hostname github.com
             User git
-            IdentityFile /secrets/data/polycode
+            IdentityFile ~/.ssh/id
         EOF
         env         = false
       }

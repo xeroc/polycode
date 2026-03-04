@@ -1,5 +1,6 @@
 """Daemon that manages GitHub issues using webhook-driven flow."""
 
+import uuid
 import logging
 import os
 from typing import Callable
@@ -34,8 +35,10 @@ def create_kickoff_callback(
         log.info(f"Title: {item.title}")
         log.info(f"Description: {item.body or '(no description)'}")
 
+        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}/{item.issue_number}"
         kickoff_issue = KickoffIssue(
             id=item.issue_number,
+            flow_id=uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier),
             title=item.title,
             body=item.body or "",
             repository=KickoffRepo(

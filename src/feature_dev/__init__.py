@@ -57,7 +57,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     status_manager: ProjectStatusManager
 
     def _commit_changes(self, title: str, body="", footer=""):
-        print("Commiting changes to repo")
+        print("🏹 Commiting changes to repo")
         repo = git.Repo(self.state.repo)
 
         # Ensure we are on branch self.state.branch
@@ -71,7 +71,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         repo.git.add("-A")
         commit_message = f"{title}\n\n{body}\n\n{footer}"
         repo.index.commit(commit_message)
-        print(f"Committed changes: {commit_message}")
+        print(f"🏹 Committed changes: {commit_message.split('\n')[0]} ...")
 
     def recall_as_markdown_list(self, name: str):
         conf_recall = self.recall(name)
@@ -88,6 +88,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                 ),
             ),
         )
+        print("💾 Memory:")
         print(self.memory.tree())
 
         self.agents_md_map: dict[str, str] = {}
@@ -108,7 +109,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
                 agents_md_files[relative_path] = content
                 print(f"📕 Discovered AGENTS.md: {relative_path}")
             except Exception as e:
-                print(f"Error reading {agents_file}: {e}")
+                print(f"🚨 Error reading {agents_file}: {e}")
 
         self.agents_md_map = agents_md_files
 
@@ -132,14 +133,14 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         print("🏹 Preparing work tree ...")
 
         if not os.path.exists(root_repo):
-            print(f"Repository not found at {root_repo}, cloning...")
+            print(f"🚨 Repository not found at {root_repo}, cloning...")
             parent_dir = os.path.dirname(root_repo)
             if parent_dir:
                 os.makedirs(parent_dir, exist_ok=True)
             # TODO: this requires setting up a ssh alias!
             repo_url = f"github:{self.state.repo_owner}/{self.state.repo_name}"
             git.Repo.clone_from(repo_url, root_repo)
-            print(f"Cloned repository from {repo_url} to {root_repo}")
+            print(f"🏹 Cloned repository from {repo_url} to {root_repo}")
 
         # TODO: develop branch is required currently
         git_repo = git.Repo(root_repo)
@@ -150,7 +151,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         if branch_name not in [b.name for b in git_repo.branches]:
             develop_branch = git_repo.branches["develop"]
             git_repo.create_head(branch_name, develop_branch.name)
-            print(f"Created branch: {branch_name}")
+            print(f"🏹 Created branch: {branch_name}")
 
         worktrees_dir = os.path.join(root_repo, ".git", ".worktrees")
         os.makedirs(worktrees_dir, exist_ok=True)
@@ -158,10 +159,10 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
         if os.path.exists(worktree_path):
             git_repo.git.worktree("remove", worktree_path, "--force")
-            print(f"Removed existing worktree at: {worktree_path}")
+            print(f"🏹 Removed existing worktree at: {worktree_path}")
 
         git_repo.git.worktree("add", worktree_path, branch_name)
-        print(f"Created worktree at: {worktree_path}")
+        print(f"🏹 Created worktree at: {worktree_path}")
 
         dependencies = ["node_modules", ".venv", ".env"]
         for dep in dependencies:
@@ -169,7 +170,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             target = os.path.join(worktree_path, dep)
             if os.path.exists(source) and not os.path.exists(target):
                 os.symlink(source, target)
-                print(f"Linked {dep} from main repo to worktree")
+                print(f"🔗 Linked {dep} from main repo to worktree")
 
         # Update inputs
         self.state.repo = worktree_path
@@ -178,12 +179,14 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     @start()
     def setup(self):
         """Step 1: Plan - decompose task into user stories."""
-        print("Planning feature into user stories")
+        print("📑 Planning feature into user stories")
 
         # Discover AGENTS.md files
         self.discover_agents_md_files()
 
-        self.status_manager = ProjectStatusManager()
+        self.status_manager = ProjectStatusManager(
+            self.state.repo_owner, self.state.repo_name
+        )
 
         if self.state.stories:
             return
@@ -224,11 +227,11 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             "test_cmd",
         ):
             self.remember(getattr(output, key), scope=f"{scope}/key")
-        print(f"Stored project details to memory at scope: {scope}")
+        print(f"🔖 Stored project details to memory at scope: {scope}")
 
-        print(f"Planned {len(output.stories)} stories")
+        print(f"🔖 Planned {len(output.stories)} stories")
         for current_story in output.stories:
-            print(f"   🔖 user story:  {current_story.description}")
+            print(f"  |- 🔖 {current_story.description}")
 
         self.status_manager.add_comment(
             self.state.issue_id,
@@ -241,21 +244,19 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     @listen(setup)
     def implement_story(self):
         """Step 3: Implement - implement user story."""
-        print("Implementing user story")
-
-        print("Stories:")
+        print("🏭 Implementing user story")
         for current_story in self.state.stories or []:
-            print(f"   🔖 {current_story.description}")
+            print(f"  |- 🔖 {current_story.description}")
 
         print("Completed Stories:")
         for current_story in self.state.completed_stories or []:
-            print(f"   ✅ {current_story.description}")
+            print(f"  |- ✅ {current_story.description}")
 
         if len(self.state.completed_stories or []) == len(self.state.stories or []):
             return
 
         def implement_single_story(current_story: Story):
-            print(f"   🔖 user story:  {current_story.description}")
+            print(f"   |-⏳ user story:  {current_story.description}")
 
             output = (
                 ImplementCrew()
@@ -301,8 +302,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.tests = []
 
         for story in missing_stories or []:
-            print(f"Title: {story.title}")
-            print(f"Description: {story.description}")
+            print(f"  |- Title: {story.title}")
+            print(f"  |- Description: {story.description}")
             # Schedule each chapter writing task
             result = implement_single_story(story)
             self.state.completed_stories.append(story)
@@ -312,13 +313,13 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     @listen(implement_story)
     def push_repo(self):
         repo, *_ = get_github_repo_from_local(self.state.repo)
-        print("Pushing repo ...")
+        print("🏹 Pushing repo ...")
         repo.git.push("origin", self.state.branch)
 
     @listen(push_repo)
     def create_pr(self):
         """Step 6: Create pull request."""
-        print("Creating pull request")
+        print("🏹 Creating pull request")
         if self.state.pr_number:
             return
 
@@ -335,7 +336,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         # Get diff between two branches
         self.state.pr_url = pr.html_url
         self.state.pr_number = pr.number
-        print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
+        print(f"🏹 PR {self.state.pr_number} created: {self.state.pr_url}")
 
         self.status_manager.add_comment(
             self.state.issue_id,
@@ -347,7 +348,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     @listen(implement_story)
     def test_integration(self):
         """Step 5: Test - integration and E2E testing."""
-        print("Running integration tests")
+        print("🏃 Running integration tests")
         if self.state.tested:
             return
 
@@ -370,16 +371,16 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.tested = test_result.status == "done"
 
         if test_result.failures:
-            print(f"Test failures: {test_result.failures}")
+            print(f"🚨 Test failures: {test_result.failures}")
         else:
-            print(f"Tests passed: {test_result.results}")
+            print(f"✅ Tests passed: {test_result.results}")
 
         return test_result
 
     @listen(test_integration)
     def verify(self):
         """Step 4: Verify - quick sanity check of implementation."""
-        print("Verifying implementation")
+        print("🏁 Verifying implementation")
         if self.state.verified:
             return
 
@@ -405,16 +406,16 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.verified = verify_result.status == "done"
 
         if verify_result.issues:
-            print(f"Verification issues found: {verify_result.issues}")
+            print(f"🚨 Verification issues found: {verify_result.issues}")
         else:
-            print(f"Verification passed: {verify_result.verified}")
+            print(f"✅ Verification passed: {verify_result.verified}")
 
         return verify_result
 
     @listen(create_pr)
     def review(self):
         """Step 7: Review - review the pull request."""
-        print("Reviewing pull request")
+        print("🔍 Reviewing pull request")
         if self.state.review_status:
             return
 
@@ -425,7 +426,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         try:
             self.status_manager.update_status(self.state.issue_id, "Reviewing")
         except Exception as e:
-            print(f"Failed to update project status: {e}")
+            print(f"🚨 Failed to update project status: {e}")
 
         output = (
             ReviewCrew()
@@ -445,9 +446,9 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         self.state.review_status = review_result.decision
 
         if review_result.feedback:
-            print(f"Review feedback: {review_result.feedback}")
+            print(f"🫡 Review feedback: {review_result.feedback}")
         else:
-            print(f"Review decision: {review_result.decision}")
+            print(f"✅ Review decision: {review_result.decision}")
 
         return review_result
 
@@ -458,16 +459,16 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         try:
             self.status_manager.update_status(self.state.issue_id, "Done")
         except Exception as e:
-            print(f"Failed to update project status to Done: {e}")
+            print(f"🚨 Failed to update project status to Done: {e}")
 
         git_repo = git.Repo(self.state.repo)
         git_repo.git.worktree("remove", self.state.repo)
-        print(f"Removed worktree: {self.state.repo}")
+        print(f"🏹 Removed worktree: {self.state.repo}")
 
         parent_dir = os.path.dirname(self.state.repo)
         if os.path.exists(parent_dir):
             os.rmdir(parent_dir)
-        print(f"Cleaned up worktree parent directory")
+        print(f"🏹 Cleaned up worktree parent directory")
 
         if self.state.pr_number:
             self.status_manager.merge_pull_request(self.state.pr_number)
@@ -483,12 +484,9 @@ def kickoff(issue: KickoffIssue):
     Run the flow.
     """
     feature_dev_flow = FeatureDevFlow()
-
-    id = uuid.uuid4()
-    id = uuid.UUID("9c572241-c66e-4323-a812-ac916b9d8508")
     feature_dev_flow.kickoff(
         inputs=dict(
-            id=str(id),
+            id=str(issue.flow_id),
             issue_id=issue.id,
             task=f"{issue.title}\n\n{issue.body}",
             path=f"{DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
@@ -510,7 +508,7 @@ def plot():
 
 def example():
     id = uuid.uuid4()
-    # id = "d5e1b205-ebb5-4742-9ac7-2aab0fa29301"
+    # id = "888a8fb6-e86d-457a-a2ea-a8e858b1d3f2"
     feature_dev_flow = FeatureDevFlow()
     repo_owner = "xeroc"
     repo_name = "demo"
@@ -528,4 +526,4 @@ def example():
 
 
 if __name__ == "__main__":
-    print("Cannot run manually, requires issue data!")
+    print("🚨 Cannot run manually, requires issue data!")

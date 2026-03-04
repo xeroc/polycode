@@ -2,6 +2,7 @@
 
 import logging
 import os
+import uuid
 from typing import Any
 
 from celery import current_task
@@ -112,8 +113,10 @@ def kickoff_feature_dev_task(self, issue_number: int) -> dict[str, Any]:
                 "message": f"Issue #{issue_number} not found in project",
             }
 
+        flow_identifier = f"{repo_owner}/{repo_name}/{issue_number}"
         kickoff_issue = KickoffIssue(
             id=issue_number,
+            flow_id=uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier),
             title=project_item.title,
             body=project_item.body or "",
             memory_prefix=f"{repo_owner}/{repo_name}",

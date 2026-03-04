@@ -1,4 +1,3 @@
-.venv
 .ruff_cache
 .git
 .github
@@ -31,7 +30,7 @@ wheels/
 venv/
 env/
 ENV/
-.venv
+.venv/
 
 # IDEs
 .vscode/
@@ -66,4 +65,5 @@ flow_state.db
 
 deployment
 Makefile
-
+.gitignore
+tests

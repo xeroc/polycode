@@ -192,7 +192,7 @@ retrospective:
     - Gotchas in "retrospective/gotchas" scope
     - Best practices in "retrospective/practices" scope
 
-    expected_output: >
+  expected_output: >
     Retrospective insights organized by category with specific, actionable findings
     that can be stored in memory and AGENTS.md files
 

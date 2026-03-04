@@ -28,7 +28,7 @@ class PlanCrew:
             verbose=False,
             llm=GLMJSONLLM(),
             tools=tools,
-            allow_code_execution=True,
+            allow_code_execution=False,
         )
 
     @agent

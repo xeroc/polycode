@@ -32,7 +32,7 @@ class ImplementCrew:
             config=self.agents_config["developer"],  # type: ignore
             verbose=False,
             tools=tools,
-            allow_code_execution=True,
+            allow_code_execution=False,
         )
 
     @agent
@@ -56,16 +56,16 @@ class ImplementCrew:
         )
 
     @task
+    def retrospective(self) -> Task:
+        return Task(
+            config=self.tasks_config["retrospective"],  # type: ignore
+        )
+
+    @task
     def generate_result(self) -> Task:
         return Task(
             config=self.tasks_config["generate_result"],  # type: ignore
             output_pydantic=ImplementOutput,
-        )
-
-    @task
-    def retrospective(self) -> Task:
-        return Task(
-            config=self.tasks_config["retrospective"],  # type: ignore
         )
 
     @crew

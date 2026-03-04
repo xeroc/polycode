@@ -20,7 +20,7 @@ class TestCrew:
             tools=[ExecTool(), DirectoryReadTool(), FileReadTool()],
             verbose=False,
             llm=GLMJSONLLM(),
-            allow_code_execution=True,
+            allow_code_execution=False,
         )
 
     @task
