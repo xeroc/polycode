@@ -17,12 +17,12 @@ fi
 case "$COMMAND" in
 worker)
     echo "Launching Worker:"
-    exec poetry run celery -A celery_tasks.worker.app worker -Ofair --task-events --queues celery,default --loglevel=info $*
+    exec uv run celery -A celery_tasks.worker.app worker -Ofair --task-events --queues celery,default --loglevel=info $*
     ;;
 
 flower)
     echo "Launching Flower:"
-    exec poetry run celery -A celery_tasks.worker.app flower --address=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
+    exec uv run celery -A celery_tasks.worker.app flower --address=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
     ;;
 
 esac

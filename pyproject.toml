@@ -5,7 +5,8 @@ description = "Antfarm workflows implemented with CrewAI - Multi-agent software 
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "crewai[anthropic,litellm]>=1.10.0b1",
+    "crewai[litellm]>=1.10.0b1",
+    "crewai-tools>=0.76.0",
     "click>=8.0.0",
     "gitpython>=3.1.0",
     "pygithub>=2.8.1",
@@ -20,7 +21,6 @@ dependencies = [
     "redis>=5.2.0",
     "flower>=2.0.1",
     "ollama>=0.6.1",
-    "crewai-tools>=0.76.0",
 ]
 
 [project.scripts]

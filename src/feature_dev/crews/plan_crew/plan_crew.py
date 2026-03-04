@@ -43,7 +43,6 @@ class PlanCrew:
     def plan_task(self) -> Task:
         return Task(
             config=self.tasks_config["plan_task"],  # type: ignore
-            context=[self.setup_task()],  # type: ignore
             output_pydantic=PlanOutput,
         )
 

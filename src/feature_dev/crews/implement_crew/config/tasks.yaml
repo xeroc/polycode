@@ -62,11 +62,6 @@ generate_result:
 
     {completed_stories}
 
-    **Changes** — a summary of code changes, a diff, or a list of modified files/behaviours
-
-    {changes}
-
-
     ---
 
     ## Additional metrics
@@ -136,5 +131,8 @@ generate_result:
   expected_output: >
     Structured commit message distinguishing title (first one) from body (rest of the message without title)
     Also, Structured implementation result with status, changes, and tests.
+
+  context:
+    - implement_task
 
   agent: consolidator
