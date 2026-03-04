@@ -18,7 +18,7 @@ class VerifyCrew:
         return Agent(
             config=self.agents_config["verifier"],  # type: ignore
             tools=[ExecTool(), DirectoryReadTool(), FileReadTool()],
-            verbose=True,
+            verbose=False,
             llm=GLMJSONLLM(),
             allow_code_execution=True,
         )
@@ -36,5 +36,5 @@ class VerifyCrew:
             agents=self.agents,  # type: ignore
             tasks=self.tasks,  # type: ignore
             process=Process.sequential,
-            verbose=True,
+            verbose=False,
         )

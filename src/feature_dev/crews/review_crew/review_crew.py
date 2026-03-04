@@ -16,7 +16,7 @@ class ReviewCrew:
     def reviewer(self) -> Agent:
         return Agent(
             config=self.agents_config["reviewer"],  # type: ignore
-            verbose=True,
+            verbose=False,
             llm=GLMJSONLLM(),
         )
 
@@ -32,5 +32,5 @@ class ReviewCrew:
             agents=self.agents,  # type: ignore
             tasks=self.tasks,  # type: ignore
             process=Process.sequential,
-            verbose=True,
+            verbose=False,
         )

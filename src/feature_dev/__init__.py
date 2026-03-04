@@ -48,7 +48,7 @@ else:
     persistence = SQLiteFlowPersistence()
 
 
-@persist(verbose=True)
+@persist(verbose=False)
 class FeatureDevFlow(Flow[FeatureDevState]):
     """
     Feature development workflow with consecutive flows.

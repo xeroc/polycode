@@ -30,7 +30,7 @@ class ImplementCrew:
 
         return Agent(
             config=self.agents_config["developer"],  # type: ignore
-            verbose=True,
+            verbose=False,
             tools=tools,
             allow_code_execution=True,
         )
@@ -44,7 +44,7 @@ class ImplementCrew:
 
         return Agent(
             config=self.agents_config["consolidator"],  # type: ignore
-            verbose=True,
+            verbose=False,
             llm=GLMJSONLLM(),
             tools=tools,
         )
@@ -76,6 +76,6 @@ class ImplementCrew:
             agents=self.agents,  # type: ignore
             tasks=self.tasks,  # type: ignore
             process=Process.sequential,
-            verbose=True,
+            verbose=False,
             # memory=True,
         )
