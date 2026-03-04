@@ -310,7 +310,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         # PR
         pr = github_repo.create_pull(
             title=self.state.commit_title or self.state.task,
-            body=f"{self.state.commit_message}\n\n{self.state.commit_footer}",
+            body=f"{self.state.commit_message or ''}\n\n{self.state.commit_footer or ''}",
             head=self.state.branch,
             base="develop",
         )
