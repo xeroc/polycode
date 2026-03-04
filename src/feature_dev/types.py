@@ -64,10 +64,6 @@ class FeatureDevState(BaseModel):
     pr_number: Optional[int] = Field(default=None, description="Pull request number")
     review_status: Optional[str] = Field(default=None, description="PR review status")
     diff: Optional[str] = Field(default=None, description="code diff")
-    project_status_updated: bool = Field(
-        default=False,
-        description="Whether project status was updated to Reviewing",
-    )
     commit_title: Optional[str] = Field(
         default=None,
         description="Commit Message title including conventional commit prefix",

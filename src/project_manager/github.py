@@ -177,3 +177,58 @@ class GitHubProjectManager(ProjectManager):
         except Exception as e:
             log.error(f"Failed to add comment to issue #{issue_number}: {e}")
             return False
+
+    def merge_pull_request(
+        self,
+        pr_number: int,
+        commit_message: str | None = None,
+        merge_method: str = "merge",
+    ) -> bool:
+        """Merge a pull request into its base branch (typically develop).
+
+        Args:
+            pr_number: Pull request number
+            commit_message: Optional custom commit message for the merge
+            merge_method: Merge method - "merge", "squash", or "rebase" (default: "merge")
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            repo = self.github_client.get_repo(
+                f"{self.config.repo_owner}/{self.config.repo_name}"
+            )
+            pr = repo.get_pull(pr_number)
+
+            if pr.merged:
+                log.warning(f"Pull request #{pr_number} is already merged")
+                return True
+
+            if pr.state != "open":
+                log.error(
+                    f"Pull request #{pr_number} is not open (state: {pr.state})"
+                )
+                return False
+
+            if commit_message:
+                result = pr.merge(
+                    commit_message=commit_message, merge_method=merge_method
+                )
+            else:
+                result = pr.merge(merge_method=merge_method)
+
+            if result.merged:
+                log.info(
+                    f"Successfully merged pull request #{pr_number} "
+                    f"into {pr.base.ref} using {merge_method}"
+                )
+                return True
+            else:
+                log.error(
+                    f"Failed to merge pull request #{pr_number}: {result.message}"
+                )
+                return False
+
+        except Exception as e:
+            log.error(f"Failed to merge pull request #{pr_number}: {e}")
+            return False

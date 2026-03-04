@@ -3,8 +3,8 @@
 import logging
 import os
 
-from project_manager import GitHubProjectManager, IssueStatus
-from project_manager.types import ProjectConfig, StatusMapping
+from project_manager import GitHubProjectManager
+from project_manager.types import ProjectConfig
 
 log = logging.getLogger(__name__)
 
@@ -66,3 +66,23 @@ class ProjectStatusManager:
             True if successful, False otherwise
         """
         return self.manager.add_comment(issue_number, comment)
+
+    def merge_pull_request(
+        self,
+        pr_number: int,
+        commit_message: str | None = None,
+        merge_method: str = "merge",
+    ) -> bool:
+        """Merge a pull request into its base branch.
+
+        Args:
+            pr_number: Pull request number
+            commit_message: Optional custom commit message for the merge
+            merge_method: Merge method - "merge", "squash", or "rebase" (default: "merge")
+
+        Returns:
+            True if successful, False otherwise
+        """
+        return self.manager.merge_pull_request(
+            pr_number, commit_message, merge_method
+        )

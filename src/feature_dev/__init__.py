@@ -53,6 +53,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     Feature development workflow with consecutive flows.
     """
 
+    status_manager: ProjectStatusManager
+
     def _commit_changes(self, title: str, body="", footer=""):
         print("Commiting changes to repo")
         repo = git.Repo(self.state.repo)
@@ -164,6 +166,8 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         # Discover AGENTS.md files
         self.discover_agents_md_files()
 
+        self.status_manager = ProjectStatusManager()
+
         if self.state.stories:
             return
 
@@ -208,6 +212,13 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         print(f"Planned {len(output.stories)} stories")
         for current_story in output.stories:
             print(f"   🔖 user story:  {current_story.description}")
+
+        self.status_manager.add_comment(
+            self.state.issue_id,
+            f"## 📋 Planning completed\n\n"
+            "Tasks that need implementing:"
+            "\n - [ ] ".join([x.description for x in output.stories]),
+        )
         return output
 
     @listen(setup)
@@ -282,6 +293,41 @@ class FeatureDevFlow(Flow[FeatureDevState]):
             self.state.tests.append(result.tests)
 
     @listen(implement_story)
+    def push_repo(self):
+        repo, *_ = get_github_repo_from_local(self.state.repo)
+        print("Pushing repo ...")
+        repo.git.push("origin", self.state.branch)
+
+    @listen(push_repo)
+    def create_pr(self):
+        """Step 6: Create pull request."""
+        print("Creating pull request")
+        if self.state.pr_number:
+            return
+
+        _, github_repo, _ = get_github_repo_from_local(self.state.repo)
+
+        # PR
+        pr = github_repo.create_pull(
+            title=self.state.commit_title or self.state.task,
+            body=f"{self.state.commit_message}\n\n{self.state.commit_footer}",
+            head=self.state.branch,
+            base="develop",
+        )
+
+        # Get diff between two branches
+        self.state.pr_url = pr.html_url
+        self.state.pr_number = pr.number
+        print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
+
+        self.status_manager.add_comment(
+            self.state.issue_id,
+            f"## 🔍 Review Started\n\n"
+            f"Pull request #{self.state.pr_number} is now under review.\n"
+            f"[View PR]({self.state.pr_url})",
+        )
+
+    @listen(implement_story)
     def test_integration(self):
         """Step 5: Test - integration and E2E testing."""
         print("Running integration tests")
@@ -348,35 +394,7 @@ class FeatureDevFlow(Flow[FeatureDevState]):
 
         return verify_result
 
-    @listen(verify)
-    def push_repo(self):
-        repo, *_ = get_github_repo_from_local(self.state.repo)
-        print("Pushing repo ...")
-        repo.git.push("origin", self.state.branch)
-
-    @listen(push_repo)
-    def create_pr(self):
-        """Step 6: Create pull request."""
-        print("Creating pull request")
-        if self.state.pr_number:
-            return
-
-        _, github_repo, _ = get_github_repo_from_local(self.state.repo)
-
-        # PR
-        pr = github_repo.create_pull(
-            title=self.state.commit_title or self.state.task,
-            body=f"{self.state.commit_message}\n\n{self.state.commit_footer}",
-            head=self.state.branch,
-            base="develop",
-        )
-
-        # Get diff between two branches
-        self.state.pr_url = pr.html_url
-        self.state.pr_number = pr.number
-        print(f"PR {self.state.pr_number} created: {self.state.pr_url}")
-
-    @listen(push_repo)
+    @listen(create_pr)
     def review(self):
         """Step 7: Review - review the pull request."""
         print("Reviewing pull request")
@@ -387,19 +405,10 @@ class FeatureDevFlow(Flow[FeatureDevState]):
         merge_base = repo.merge_base("develop", self.state.branch)[0]
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
 
-        if not self.state.project_status_updated:
-            try:
-                status_manager = ProjectStatusManager()
-                status_manager.update_status(self.state.issue_id, "Reviewing")
-                status_manager.add_comment(
-                    self.state.issue_id,
-                    f"## 🔍 Review Started\n\n"
-                    f"Pull request #{self.state.pr_number} is now under review.\n"
-                    f"[View PR]({self.state.pr_url})",
-                )
-                self.state.project_status_updated = True
-            except Exception as e:
-                print(f"Failed to update project status: {e}")
+        try:
+            self.status_manager.update_status(self.state.issue_id, "Reviewing")
+        except Exception as e:
+            print(f"Failed to update project status: {e}")
 
         output = (
             ReviewCrew()
@@ -428,20 +437,23 @@ class FeatureDevFlow(Flow[FeatureDevState]):
     @listen(review)
     def finish(self):
         """Step 8: Update project status and cleanup worktree."""
+
         try:
-            status_manager = ProjectStatusManager()
-            status_manager.update_status(self.state.issue_id, "Done")
+            self.status_manager.update_status(self.state.issue_id, "Done")
         except Exception as e:
             print(f"Failed to update project status to Done: {e}")
 
-        # git_repo = git.Repo(self.state.repo)
-        # git_repo.git.worktree("remove", self.state.repo)
-        # print(f"Removed worktree: {self.state.repo}")
-        #
-        # parent_dir = os.path.dirname(self.state.repo)
-        # if os.path.exists(parent_dir):
-        #     os.rmdir(parent_dir)
-        # print(f"Cleaned up worktree parent directory")
+        git_repo = git.Repo(self.state.repo)
+        git_repo.git.worktree("remove", self.state.repo)
+        print(f"Removed worktree: {self.state.repo}")
+
+        parent_dir = os.path.dirname(self.state.repo)
+        if os.path.exists(parent_dir):
+            os.rmdir(parent_dir)
+        print(f"Cleaned up worktree parent directory")
+
+        if self.state.pr_number:
+            self.status_manager.merge_pull_request(self.state.pr_number)
 
 
 ############################
@@ -479,13 +491,13 @@ def plot():
 
 def example():
     id = uuid.uuid4()
-    id = "d5e1b205-ebb5-4742-9ac7-2aab0fa29301"
+    # id = "d5e1b205-ebb5-4742-9ac7-2aab0fa29301"
     feature_dev_flow = FeatureDevFlow()
     feature_dev_flow.kickoff(
         inputs=dict(
             id=str(id),
-            issue_id=11,
-            task="Moving Background using conic color gradient that moves linearily 45° from horizontal",
+            issue_id=12,
+            task="Add an about section below the headline that explains what the project is about.",
             path="/home/xeroc/projects/chaoscraft/demo",
             branch="background",
             repo_owner="xeroc",
