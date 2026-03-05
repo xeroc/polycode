@@ -29,7 +29,7 @@ job "polycode" {
       }
     }
     service {
-      name = "na"
+      name = "polycode-api"
       port = "http"
       tags = [
         "traefik.enable=true",
@@ -50,10 +50,9 @@ job "polycode" {
         }
       }
       env {
-        # DATABASE_URL = "not-yet-implemented"
         APP_PORT           = NOMAD_PORT_http
-        REPO_OWNER         = "xeroc"
-        REPO_NAME          = "demo"
+        REPO_OWNER         = "chainsquad"
+        REPO_NAME          = "chaoscraft"
         PROJECT_IDENTIFIER = 1
       }
       vault {
@@ -112,8 +111,8 @@ job "polycode" {
       }
       env {
         # DATABASE_URL = "not-yet-implemented"
-        REPO_OWNER         = "xeroc"
-        REPO_NAME          = "demo"
+        REPO_OWNER         = "chainsquad"
+        REPO_NAME          = "chaoscraft"
         PROJECT_IDENTIFIER = 1
         DATA_PATH          = "/alloc/data"
       }
