@@ -15,8 +15,6 @@ from .types import Issue
 
 log = logging.getLogger(__name__)
 
-MOVE_TO_READY_STATE_LABEL = "verified"
-
 
 class GitHubWebhookPayload(BaseModel):
     """GitHub webhook payload structure.

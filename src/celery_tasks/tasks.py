@@ -25,7 +25,9 @@ log = logging.getLogger(__name__)
 _persistence_tracker = None
 
 
-GITHUB_LABEL_FOR_WORKFLOW_START = "verified"
+GITHUB_LABEL_FOR_WORKFLOW_START = os.environ.get(
+    "GITHUB_LABEL_FOR_WORKFLOW_START", "paid"
+)
 GITHUB_PROJECT_STATUS_MAPPING = dict(
     todo="Backlog",
     ready="Ready",
