@@ -346,10 +346,10 @@ def plot():
 def example():
     repo_owner = "chainsquad"
     repo_name = "chaoscraft"
-    issue_id = 13
-    task = "compact the sub title. More condensed text"
+    issue_id = 14
+    task = "Add some extra margin to the first headline. Replace headline by 'Welcome to ChaosCraft'."
     path = f"/home/xeroc/projects/{repo_owner}/{repo_name}"
-    branch = "about"
+    branch = "welcome"
     flow_identifier = f"{repo_owner}/{repo_name}/{issue_id}"
     id = uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier)
     # id = "888a8fb6-e86d-457a-a2ea-a8e858b1d3f2"
