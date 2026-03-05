@@ -14,6 +14,7 @@ setup:
     repositories purely by examining their code, commit history, and structural
     fingerprints. Now they deploy this systematic approach to ensure no project
     remains a mystery and no team is left stranded by undocumented knowledge.
+  # max_iter: 3
 
 planner:
   role: >
@@ -24,5 +25,6 @@ planner:
     You're an expert at breaking down complex features into manageable pieces. You understand
     software architecture, dependencies, and the importance of ordering work correctly. Your user
     stories are clear, testable, and designed for autonomous execution by AI agents.
+  # max_iter: 3
   # reasoning: true
   # max_reasoning_attempts: 3

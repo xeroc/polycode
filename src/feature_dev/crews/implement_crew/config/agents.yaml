@@ -7,6 +7,7 @@ developer:
     You're a skilled developer who writes clean, maintainable code. You understand the importance of
     tests and implement them alongside feature code. You follow best practices, write clear
     documentation, and ensure your changes integrate well with the existing codebase.
+  # max_iter: 3
 
 consolidator:
   role: >
@@ -21,3 +22,4 @@ consolidator:
     communicating intent as recording change. It bridges the gap between product
     context and code reality — turning ticket descriptions and diffs into commit
     messages that future developers (and tools) can actually rely on.
+  max_iter: 1

@@ -3,6 +3,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from flowbase import BaseFlowModel
+
 
 class KickoffRepo(BaseModel):
     owner: str = Field(description="repo owner")
@@ -29,20 +31,10 @@ class Story(BaseModel):
     acceptance_criteria: List[str] = Field(description="Acceptance criteria")
 
 
-class FeatureDevState(BaseModel):
+class FeatureDevState(BaseFlowModel):
     """State for feature development workflow."""
 
     id: str = Field(default="", description="unique id")
-    issue_id: int = Field(default=0, description="issue id on github")
-    task: str = Field(default="", description="Feature development task")
-    path: str = Field(default="", description="Path to repository")
-    repo: str = Field(default="", description="Path to repository in a worktree")
-    branch: str = Field(default="", description="Feature branch name")
-    memory_prefix: str = Field(default="", description="prefix for memory")
-    repo_owner: Optional[str] = Field(
-        default=None, description="GitHub repository owner"
-    )
-    repo_name: Optional[str] = Field(default=None, description="GitHub repository name")
 
     build_cmd: Optional[str] = Field(default=None, description="Build command")
     test_cmd: Optional[str] = Field(default=None, description="Test command")
@@ -75,21 +67,9 @@ class FeatureDevState(BaseModel):
     )
     verified: bool = Field(default=False, description="All stories verified")
     tested: bool = Field(default=False, description="Integration tests passed")
-    pr_url: Optional[str] = Field(default=None, description="Pull request URL")
 
-    pr_number: Optional[int] = Field(default=None, description="Pull request number")
     review_status: Optional[str] = Field(default=None, description="PR review status")
     diff: Optional[str] = Field(default=None, description="code diff")
-    commit_title: Optional[str] = Field(
-        default=None,
-        description="Commit Message title including conventional commit prefix",
-    )
-    commit_message: Optional[str] = Field(
-        default=None, description="The body of the commit message"
-    )
-    commit_footer: Optional[str] = Field(
-        default=None, description="Commit message footer"
-    )
 
 
 class PlanOutput(BaseModel):
