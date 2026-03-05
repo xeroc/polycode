@@ -9,7 +9,7 @@ export LOG_LEVEL=${APP_LOGLEVEL:=critical}
 echo -e "$SSH_KEY" >~/.ssh/id
 chmod 0600 ~/.ssh/id
 
-ollama pull all-minilm:22m
+curl http://localhost:11434/api/pull -d '{"name": "all-minilm:22m"}'
 
 # needed to allow x-forward of proto and ip so url_for in fastapi returns an https schema'd link
 export FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:="*"}

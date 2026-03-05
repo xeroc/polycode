@@ -115,6 +115,7 @@ job "polycode" {
         REPO_NAME          = "chaoscraft"
         PROJECT_IDENTIFIER = 1
         DATA_PATH          = "/alloc/data"
+        CREWAI_STORAGE_DIR = "/alloc/data"
       }
       vault {
         policies    = ["polycode"]
