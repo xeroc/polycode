@@ -185,15 +185,15 @@ retrospective:
     - Be specific about what worked vs what didn't
     - Include technical details that future implementations can use
 
-    ## Memory Storage Instructions
+    # AGENTS.md
 
-    Store these insights using the memory system for cross-session learning:
-    - Success patterns in "retrospective/success" scope
-    - Gotchas in "retrospective/gotchas" scope
-    - Best practices in "retrospective/practices" scope
+    IMPORTANT: Judge if your findings are worthy being included in all future
+    implementation prompts. If so, update the AGENTS.md with your findings.
+
+    Don't write into any other .md file!
 
   expected_output: >
     Retrospective insights organized by category with specific, actionable findings
-    that can be stored in memory and AGENTS.md files
+    that can be stored in AGENTS.md files
 
   agent: developer
