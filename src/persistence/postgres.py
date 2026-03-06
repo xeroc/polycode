@@ -60,7 +60,10 @@ class Requests(Base):
 
 
 def update_request_status(
-    session: sessionmaker, issue_number: int, status: str, commit: Optional[str] = None
+    session: sessionmaker,
+    issue_number: int,
+    status: str,
+    commit: Optional[str] = None,
 ) -> bool:
     """Update the status of a request by issue_number.
 
@@ -82,16 +85,54 @@ def update_request_status(
         return result > 0
 
 
+def ensure_request_exists(
+    session: sessionmaker,
+    issue_number: int,
+    body: str,
+    status: str = "pending",
+) -> bool:
+    """Ensure a request exists for the given issue_number, inserting if needed.
+
+    Args:
+        session: SQLAlchemy session factory
+        issue_number: The issue_number to check/insert
+        body: The issue body text
+        status: The status for new requests (default: "pending")
+
+    Returns:
+        True if a new request was inserted, False if it already existed
+    """
+    with session() as sess:
+        existing = (
+            sess.query(Requests).filter_by(issue_number=issue_number).first()
+        )
+        if existing:
+            return False
+
+        new_request = Requests(
+            issue_number=issue_number, request_text=body, status=status
+        )
+        sess.add(new_request)
+        sess.commit()
+        return True
+
+
 class FlowState(Base):
     """Flow state table model."""
 
     __tablename__ = "flow_states"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
     flow_uuid: Mapped[str] = mapped_column(String(255), nullable=False)
     method_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    state_json: Mapped[dict[str, Any]] = mapped_column(
+        JSONType, nullable=False
+    )
 
     __table_args__ = (Index("idx_flow_states_uuid", "flow_uuid"),)
 
@@ -101,10 +142,18 @@ class PendingFeedback(Base):
 
     __tablename__ = "pending_feedback"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    flow_uuid: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    context_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
-    state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    flow_uuid: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True
+    )
+    context_json: Mapped[dict[str, Any]] = mapped_column(
+        JSONType, nullable=False
+    )
+    state_json: Mapped[dict[str, Any]] = mapped_column(
+        JSONType, nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -285,7 +334,9 @@ class PostgresFlowPersistence(FlowPersistence):
             ).delete()
             session.commit()
 
-    def _to_dict(self, state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
+    def _to_dict(
+        self, state_data: dict[str, Any] | BaseModel
+    ) -> dict[str, Any]:
         """Convert state_data to dict.
 
         Args:

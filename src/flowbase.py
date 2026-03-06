@@ -23,7 +23,11 @@ from typing import Optional
 
 from pydantic import Field
 
-from persistence.postgres import update_request_status, SessionLocal
+from persistence.postgres import (
+    ensure_request_exists,
+    update_request_status,
+    SessionLocal,
+)
 
 T = TypeVar("T", bound="BaseFlowModel")
 
@@ -71,6 +75,16 @@ class FlowIssueManagement(Flow[T]):
         self.status_manager = ProjectStatusManager(
             self.state.repo_owner, self.state.repo_name
         )
+
+        try:
+            ensure_request_exists(
+                SessionLocal, self.state.issue_id, self.state.task
+            )
+            print(
+                f"🏹 Ensured request exists for issue #{self.state.issue_id}"
+            )
+        except Exception as e:
+            print(f"🚨 Failed to ensure request exists: {e}")
 
         try:
             update_request_status(
