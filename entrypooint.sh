@@ -6,14 +6,6 @@ set -xe
 export APP_RUN=${APP_RUN:=api}
 export LOG_LEVEL=${APP_LOGLEVEL:=critical}
 
-echo -e "$SSH_KEY" >~/.ssh/id
-chmod 0600 ~/.ssh/id
-
-curl http://localhost:11434/api/pull -d '{"name": "all-minilm:22m"}'
-
-# needed to allow x-forward of proto and ip so url_for in fastapi returns an https schema'd link
-export FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:="*"}
-
 COMMAND=$1
 if [[ ! -z "$COMMAND" ]]; then
     shift
@@ -22,6 +14,9 @@ fi
 case "$COMMAND" in
 worker)
     echo "Launching Worker:"
+    curl http://localhost:11434/api/pull -d '{"name": "all-minilm:22m"}'
+    echo -e "$SSH_KEY" >~/.ssh/id
+    chmod 0600 ~/.ssh/id
     exec uv run celery -A celery_tasks.worker.app worker -Ofair --task-events --queues celery,default --loglevel=info $*
     ;;
 
@@ -32,6 +27,8 @@ flower)
 
 api)
     echo "Launching API:"
+    # needed to allow x-forward of proto and ip so url_for in fastapi returns an https schema'd link
+    export FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:="*"}
     exec uv run webhook-server webhook --host=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
     ;;
 

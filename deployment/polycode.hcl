@@ -100,6 +100,7 @@ job "polycode" {
       config {
         image   = "ghcr.io/xeroc/polycode:${var.image_version}"
         command = "worker"
+        args    = ["--concurrency", 1]
         ports   = []
         auth {
           username = "${var.registry_auth.username}"
@@ -116,6 +117,8 @@ job "polycode" {
         PROJECT_IDENTIFIER = 1
         DATA_PATH          = "/alloc/data"
         CREWAI_STORAGE_DIR = "/alloc/data"
+
+        CELERY_WORKER_PREFETCH_MULTIPLIER = 1
       }
       vault {
         policies    = ["polycode"]
