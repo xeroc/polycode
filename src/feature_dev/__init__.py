@@ -106,7 +106,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
 
         self.status_manager.add_comment(
             self.state.issue_id,
-            f"## 📋 Planning completed\n\n"
+            f"\n## 📋 Planning completed\n\n"
             "Tasks that need implementing:"
             "\n - [ ] ".join([x.description for x in output.stories]),
         )
