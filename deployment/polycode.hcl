@@ -114,6 +114,8 @@ job "polycode" {
         # DATABASE_URL = "not-yet-implemented"
         REPO_OWNER         = "chainsquad"
         REPO_NAME          = "chaoscraft"
+        GITHUB_REPO_OWNER  = "chainsquad"
+        GITHUB_REPO_NAME   = "chaoscraft"
         PROJECT_IDENTIFIER = 1
         DATA_PATH          = "/alloc/data"
         CREWAI_STORAGE_DIR = "/alloc/data"
