@@ -2,6 +2,7 @@
 Feature Development Flow module.
 """
 
+import re
 import os
 from typing import TypeVar
 from pathlib import Path
@@ -32,24 +33,29 @@ from persistence.postgres import (
 T = TypeVar("T", bound="BaseFlowModel")
 
 
+def sanitize_branch_name(name: str) -> str:
+    """Convert string to valid git branch name."""
+    s = name.lower()
+    s = re.sub(r"[^a-z0-9._/-]", "-", s)  # replace invalid chars with dash
+    s = re.sub(r"-+", "-", s)  # collapse multiple dashes
+    s = s.strip("-._/")  # strip leading/trailing junk
+    s = re.sub(r"\.{2,}", ".", s)  # no consecutive dots
+    s = re.sub(r"/+", "/", s)  # no consecutive slashes
+    return s[:16] or "unnamed"
+
+
 class BaseFlowModel(BaseModel):
     path: str = Field(default="", description="Path to repository")
-    repo: str = Field(
-        default="", description="Path to repository in a worktree"
-    )
+    repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
     task: str = Field(default="", description="Feature development task")
 
     repo_owner: Optional[str] = Field(
         default=None, description="GitHub repository owner"
     )
-    repo_name: Optional[str] = Field(
-        default=None, description="GitHub repository name"
-    )
+    repo_name: Optional[str] = Field(default=None, description="GitHub repository name")
 
-    pr_number: Optional[int] = Field(
-        default=None, description="Pull request number"
-    )
+    pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id on github")
 
@@ -77,19 +83,13 @@ class FlowIssueManagement(Flow[T]):
         )
 
         try:
-            ensure_request_exists(
-                SessionLocal, self.state.issue_id, self.state.task
-            )
-            print(
-                f"🏹 Ensured request exists for issue #{self.state.issue_id}"
-            )
+            ensure_request_exists(SessionLocal, self.state.issue_id, self.state.task)
+            print(f"🏹 Ensured request exists for issue #{self.state.issue_id}")
         except Exception as e:
             print(f"🚨 Failed to ensure request exists: {e}")
 
         try:
-            update_request_status(
-                SessionLocal, self.state.issue_id, "inprogress"
-            )
+            update_request_status(SessionLocal, self.state.issue_id, "inprogress")
             print(
                 f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}"
             )
@@ -261,9 +261,7 @@ class FlowIssueManagement(Flow[T]):
             print(f"🚨 Failed to update project status to Done: {e}")
 
         try:
-            update_request_status(
-                SessionLocal, self.state.issue_id, "completed"
-            )
+            update_request_status(SessionLocal, self.state.issue_id, "completed")
             print(
                 f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}"
             )

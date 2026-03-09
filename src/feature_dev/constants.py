@@ -1,3 +1,0 @@
-"""
-Feature Development Flow constants.
-"""

@@ -26,9 +26,8 @@ from .types import (
     TestOutput,
     VerifyOutput,
 )
-from .utils import sanitize_branch_name
 from persistence import PostgresFlowPersistence
-from flowbase import FlowIssueManagement
+from flowbase import FlowIssueManagement, sanitize_branch_name
 
 DATA_PATH = os.environ.get("DATA_PATH", "/data")
 DATABASE_URL = os.environ.get("DATABASE_URL")
