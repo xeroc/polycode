@@ -4,6 +4,8 @@ Feature Development Flow module.
 
 import re
 import os
+import json
+import subprocess
 from typing import TypeVar
 from pathlib import Path
 
@@ -70,6 +72,11 @@ class BaseFlowModel(BaseModel):
         default=None, description="Commit message footer"
     )
     memory_prefix: str = Field(default="", description="prefix for memory")
+
+    test_cmd: Optional[str] = Field(default=None, description="Test command")
+    build_cmd: Optional[str] = Field(
+        default=None, description="Build command from package.json"
+    )
 
 
 class FlowIssueManagement(Flow[T]):
@@ -149,6 +156,14 @@ class FlowIssueManagement(Flow[T]):
     def _commit_changes(self, title: str, body="", footer=""):
         print("🏹 Commiting changes to repo")
         repo = git.Repo(self.state.repo)
+
+        repo = git.Repo(self.state.repo)
+        merge_base = repo.merge_base("develop", self.state.branch)[0]
+        diff = repo.git.diff(merge_base, self.state.branch)
+        print(diff)
+        if not diff:
+            # no changes made
+            return
 
         # Ensure we are on branch self.state.branch
         branch_name = repo.active_branch.name
@@ -276,3 +291,59 @@ class FlowIssueManagement(Flow[T]):
         if os.path.exists(parent_dir):
             os.rmdir(parent_dir)
         print(f"🏹 Cleaned up worktree parent directory")
+
+    def _discover_build_cmd(self):
+        """Discover build command from package.json."""
+        if not self.state.repo:
+            return
+
+        package_json = Path(self.state.repo) / "package.json"
+        if package_json.exists():
+            try:
+                with open(package_json, "r") as f:
+                    pkg = json.load(f)
+                scripts = pkg.get("scripts", {})
+                if "build" in scripts:
+                    self.state.build_cmd = f"pnpm run -C {self.state.repo} build"
+                    print(f"📦 Build command: {self.state.build_cmd}")
+                elif "typecheck" in scripts:
+                    self.state.build_cmd = f"pnpm run-C {self.state.repo} typecheck"
+                    print(f"📦 Typecheck command: {self.state.build_cmd}")
+            except Exception as e:
+                print(f"⚠️ Could not read package.json: {e}")
+
+    def _build(self):
+        if not self.state.build_cmd:
+            print("⚠️ No build command, skipping verification")
+            return
+
+        result = subprocess.run(
+            self.state.build_cmd,
+            shell=True,
+            cwd=self.state.repo,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        print(
+            f"✅ Build verification passed\n{result.stdout[:200] if result.stdout else ''}..."
+        )
+
+    def _test(self):
+        if not self.state.test_cmd:
+            print("⚠️ No test command, skipping verification")
+            return
+
+        result = subprocess.run(
+            self.state.test_cmd,
+            shell=True,
+            cwd=self.state.repo,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        print(
+            f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}..."
+        )

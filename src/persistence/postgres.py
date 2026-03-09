@@ -13,6 +13,7 @@ from sqlalchemy.orm import (
     mapped_column,
     sessionmaker,
 )
+from sqlalchemy.sql.expression import text
 from sqlalchemy.types import String, DateTime, Integer
 from sqlalchemy.types import JSON, TypeDecorator
 
@@ -44,12 +45,28 @@ class JSONType(TypeDecorator):
         return dialect.type_descriptor(JSON())
 
 
+class Payments(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    issue_number: Mapped[int] = mapped_column()
+    payment_id: Mapped[str] = mapped_column()
+    amount: Mapped[int] = mapped_column()
+    currency: Mapped[str] = mapped_column()
+    payment_method: Mapped[str] = mapped_column()
+    status: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime | None] = mapped_column(
+        server_default=text("CURRENT_TIMESTAMP")
+    )
+    verified_at: Mapped[datetime | None] = mapped_column(default=None)
+
+
 class Requests(Base):
     """Flow state table model."""
 
     __tablename__ = "requests"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     issue_number: Mapped[int] = mapped_column(Integer, nullable=False)
     request_text: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
@@ -103,15 +120,23 @@ def ensure_request_exists(
         True if a new request was inserted, False if it already existed
     """
     with session() as sess:
-        existing = (
-            sess.query(Requests).filter_by(issue_number=issue_number).first()
-        )
+        existing = sess.query(Requests).filter_by(issue_number=issue_number).first()
         if existing:
             return False
 
+        new_payment = Payments(
+            issue_number=issue_number,
+            status="manual",
+            payment_id="none",
+            amount=0,
+            currency="USD",
+            payment_method="none",
+        )
         new_request = Requests(
             issue_number=issue_number, request_text=body, status=status
         )
+        sess.add(new_payment)
+        sess.commit()
         sess.add(new_request)
         sess.commit()
         return True
@@ -122,17 +147,11 @@ class FlowState(Base):
 
     __tablename__ = "flow_states"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     flow_uuid: Mapped[str] = mapped_column(String(255), nullable=False)
     method_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    state_json: Mapped[dict[str, Any]] = mapped_column(
-        JSONType, nullable=False
-    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
 
     __table_args__ = (Index("idx_flow_states_uuid", "flow_uuid"),)
 
@@ -142,18 +161,10 @@ class PendingFeedback(Base):
 
     __tablename__ = "pending_feedback"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
-    flow_uuid: Mapped[str] = mapped_column(
-        String(255), nullable=False, unique=True
-    )
-    context_json: Mapped[dict[str, Any]] = mapped_column(
-        JSONType, nullable=False
-    )
-    state_json: Mapped[dict[str, Any]] = mapped_column(
-        JSONType, nullable=False
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    flow_uuid: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    context_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
+    state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -334,9 +345,7 @@ class PostgresFlowPersistence(FlowPersistence):
             ).delete()
             session.commit()
 
-    def _to_dict(
-        self, state_data: dict[str, Any] | BaseModel
-    ) -> dict[str, Any]:
+    def _to_dict(self, state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
         """Convert state_data to dict.
 
         Args:
