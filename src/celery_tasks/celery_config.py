@@ -11,7 +11,7 @@ REDIS_DB = int(os.environ.get("REDIS_DB", 0))
 broker_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
-app = Celery("feature_dev")
+app = Celery(__name__)
 app.conf.update(
     broker_url=broker_url,
     result_backend=RESULT_BACKEND,
@@ -30,7 +30,7 @@ app.conf.update(
     # broker_connection_max_retries=5,
     # result_expires=86400,
     # task_routes={
-    #     "celery_tasks.tasks.kickoff_feature_dev_task": {
+    #     "celery_tasks.tasks.kickoff_task": {
     #         "queue": "feature_dev",
     #         "routing_key": "feature_dev",
     #     },

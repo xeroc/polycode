@@ -19,7 +19,6 @@ from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from .types import (
     FeatureDevState,
     ImplementOutput,
-    KickoffIssue,
     PlanOutput,
     ReviewOutput,
     Story,
@@ -27,7 +26,7 @@ from .types import (
     VerifyOutput,
 )
 from persistence import PostgresFlowPersistence
-from flowbase import FlowIssueManagement, sanitize_branch_name
+from flowbase import FlowIssueManagement, sanitize_branch_name, KickoffIssue
 
 DATA_PATH = os.environ.get("DATA_PATH", "/data")
 DATABASE_URL = os.environ.get("DATABASE_URL")

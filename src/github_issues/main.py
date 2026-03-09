@@ -6,9 +6,10 @@ import os
 from typing import Callable
 
 import click
+from flowbase import KickoffIssue, KickoffRepo
 
-from feature_dev import kickoff as feature_dev_kickoff
-from feature_dev.types import KickoffIssue, KickoffRepo
+# from feature_dev import kickoff as feature_dev_kickoff
+from ralph import kickoff as kickoff_ralph
 
 from project_manager import GitHubProjectManager
 from project_manager.types import ProjectConfig, ProjectItem
@@ -23,11 +24,7 @@ log = logging.getLogger(__name__)
 def create_kickoff_callback(
     manager: GitHubProjectManager,
 ) -> Callable[[ProjectItem], None] | None:
-    """Create a callback to kickoff feature development.
-
-    Returns:
-        Callback function or None if feature_dev not available
-    """
+    """Create a callback to kickoff feature development."""
 
     def on_issue_ready(item: ProjectItem) -> None:
         """Callback when an issue is ready to process."""
@@ -47,7 +44,8 @@ def create_kickoff_callback(
             ),
             memory_prefix=f"{manager.config.repo_owner}/{manager.config.repo_name}",
         )
-        feature_dev_kickoff(kickoff_issue)
+        # feature_dev_kickoff(kickoff_issue)
+        kickoff_ralph(kickoff_issue)
 
     return on_issue_ready
 

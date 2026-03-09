@@ -3,23 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from flowbase import BaseFlowModel
-
-
-class KickoffRepo(BaseModel):
-    owner: str = Field(description="repo owner")
-    repository: str = Field(description="repository name")
-
-
-class KickoffIssue(BaseModel):
-    id: int = Field(description="Issue ID")
-    flow_id: uuid.UUID = Field(
-        default=uuid.uuid4(), description="UUID of the flow that will run"
-    )
-    title: str = Field(description="Issue title")
-    body: str = Field(description="Issue description")
-    memory_prefix: str = Field(description="prefix for memory")
-    repository: KickoffRepo
+from flowbase import BaseFlowModel, KickoffRepo
 
 
 class Story(BaseModel):

@@ -8,8 +8,8 @@ from typing import Any
 from celery import current_task
 from datetime import datetime, timezone
 from feature_dev import kickoff as feature_dev_kickoff
-from feature_dev import KickoffIssue
-from feature_dev.types import KickoffRepo
+from ralph import kickoff as kickoff_ralph
+from flowbase import KickoffIssue, KickoffRepo
 from persistence.celery_tasks import CeleryTask
 from persistence.celery_tasks import CeleryTaskTracker
 from persistence.postgres import Base
@@ -61,7 +61,7 @@ get_persistence_tracker()
     soft_time_limit=7200,
     time_limit=7380,
 )
-def kickoff_feature_dev_task(self, issue_number: int) -> dict[str, Any]:
+def kickoff_task(self, issue_number: int) -> dict[str, Any]:
     """Kickoff feature development flow for an issue.
 
     This task orchestrates the entire feature development process:
@@ -130,7 +130,8 @@ def kickoff_feature_dev_task(self, issue_number: int) -> dict[str, Any]:
 
         log.info(f"Kicking off feature dev for: {kickoff_issue.title}")
 
-        feature_dev_kickoff(kickoff_issue)
+        # feature_dev_kickoff(kickoff_issue)
+        kickoff_ralph(kickoff_issue)
 
         log.info(f"Feature dev flow completed for issue #{issue_number}")
         update_status_task(issue_number, "Reviewing")
@@ -485,7 +486,7 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
                 else:
                     log.warning(f"Failed to update issue #{issue_number} to Ready")
 
-                kickoff_feature_dev_task.delay(issue_number)  # type: ignore
+                kickoff_task.delay(issue_number)  # type: ignore
                 log.info(f"Triggered feature dev flow for issue #{issue_number}")
 
                 update_task_completed(task_id, "Issue labeled and flow triggered")

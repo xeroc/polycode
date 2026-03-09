@@ -5,6 +5,7 @@ Feature Development Flow module.
 import re
 import os
 import json
+import uuid
 import subprocess
 from typing import TypeVar
 from pathlib import Path
@@ -33,6 +34,22 @@ from persistence.postgres import (
 )
 
 T = TypeVar("T", bound="BaseFlowModel")
+
+
+class KickoffRepo(BaseModel):
+    owner: str = Field(description="repo owner")
+    repository: str = Field(description="repository name")
+
+
+class KickoffIssue(BaseModel):
+    id: int = Field(description="Issue ID")
+    flow_id: uuid.UUID = Field(
+        default=uuid.uuid4(), description="UUID of the flow that will run"
+    )
+    title: str = Field(description="Issue title")
+    body: str = Field(description="Issue description")
+    memory_prefix: str = Field(description="prefix for memory")
+    repository: KickoffRepo
 
 
 def sanitize_branch_name(name: str) -> str:
