@@ -5,23 +5,25 @@ description = "Antfarm workflows implemented with CrewAI - Multi-agent software 
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "celery>=5.4.0",
+    "click>=8.0.0",
     "crewai[litellm]>=1.10.0b1",
     "crewai-tools>=0.76.0",
-    "click>=8.0.0",
-    "gitpython>=3.1.0",
-    "pygithub>=2.8.1",
-    "pathspec>=0.12.0",
-    "sqlmodel>=0.0.22",
-    "psycopg2-binary>=2.9.9",
-    "httpx>=0.27.0",
     "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
-    "sqlalchemy>=2.0.0",
-    "celery>=5.4.0",
-    "redis>=5.2.0",
     "flower>=2.0.1",
+    "gitpython>=3.1.0",
+    "httpx>=0.27.0",
     "ollama>=0.6.1",
+    "pathspec>=0.12.0",
+    "psycopg2-binary>=2.9.9",
+    "pydantic-settings>=2.0.0",
+    "pygithub>=2.8.1",
+    "pyjwt[crypto]>=2.9.0",
+    "redis>=5.2.0",
+    "sqlalchemy>=2.0.0",
+    "sqlmodel>=0.0.22",
     "ty>=0.0.21",
+    "uvicorn[standard]>=0.32.0",
 ]
 
 [project.scripts]
@@ -40,6 +42,7 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = [
     "src/bug_fix",
+    "src/github_app",
     "src/github_issues",
     "src/project_manager",
     "src/persistence",

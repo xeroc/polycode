@@ -6,11 +6,18 @@ import os
 import click
 import uvicorn
 
+"""CLI tools for project management."""
+
+import logging
+import os
+
+import click
+import uvicorn
+
 from .flow_runner import FlowRunner
 from .github import GitHubProjectManager
 from .types import IssueStatus, ProjectConfig, StatusMapping
 from .watcher import RepoWatcher
-from .webhook import create_webhook_app
 
 log = logging.getLogger(__name__)
 
@@ -134,30 +141,33 @@ def list_items(verbose: bool) -> None:
 @cli.command()
 @click.option("--host", default="0.0.0.0", help="Webhook server host")
 @click.option("--port", default=8000, help="Webhook server port")
-@click.option("--secret", help="Webhook secret for signature validation")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
-def webhook(host: str, port: int, secret: str | None, verbose: bool) -> None:
+def webhook(host: str, port: int, verbose: bool) -> None:
     """Start webhook server for GitHub events.
 
-    Listens for GitHub webhook events and triggers flows automatically.
+    Uses the unified GitHub App webhook server.
+    For GitHub App webhooks (multi-repo), set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY.
+    For legacy webhooks (single repo), set GITHUB_TOKEN and repo env vars.
     """
     setup_logging(verbose)
 
-    webhook_secret = secret or os.environ.get("GITHUB_WEBHOOK_SECRET")
-    manager = create_manager_from_env()
+    click.echo(f"Starting unified webhook server on {host}:{port}")
 
-    flow_runner = FlowRunner(manager=manager)
+    if os.environ.get("GITHUB_APP_ID"):
+        click.echo("Mode: GitHub App (multi-repo)")
+        click.echo(f"Webhook endpoint: http://{host}:{port}/webhook/github")
+        click.echo(f"Health check: http://{host}:{port}/health")
+        click.echo(f"Manual trigger: POST http://{host}:{port}/trigger")
+    else:
+        manager = create_manager_from_env()
+        click.echo("Mode: Legacy (single repo)")
+        click.echo(
+            f"Repository: {manager.config.repo_owner}/{manager.config.repo_name}"
+        )
+        click.echo(f"Project: {manager.config.project_identifier}")
+        click.echo(f"Webhook endpoint: http://{host}:{port}/webhook/github")
 
-    app = create_webhook_app(flow_runner, webhook_secret)
-
-    click.echo(f"Starting webhook server on {host}:{port}")
-    click.echo(
-        f"Repository: {manager.config.repo_owner}/{manager.config.repo_name}"
-    )
-    click.echo(f"Project: {manager.config.project_identifier}")
-    click.echo(f"Webhook endpoint: http://{host}:{port}/webhook/github")
-    click.echo(f"Health check: http://{host}:{port}/health")
-    click.echo(f"Manual trigger: POST http://{host}:{port}/trigger")
+    from github_app.app import app
 
     uvicorn.run(
         app, host=host, port=port, log_level="info" if verbose else "warning"

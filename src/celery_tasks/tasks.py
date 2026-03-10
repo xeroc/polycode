@@ -11,6 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from flowbase import KickoffIssue, KickoffRepo
+from github_app import models as github_app_models
 from persistence.celery_tasks import CeleryTask, CeleryTaskTracker
 from persistence.postgres import Base
 from project_manager.github import GitHubProjectManager
@@ -41,7 +42,9 @@ def get_persistence_tracker():
     global _persistence_tracker
 
     if _persistence_tracker is None:
-        connection_string = os.environ.get("DATABASE_URL", "sqlite:///flow_state.db")
+        connection_string = os.environ.get(
+            "DATABASE_URL", "sqlite:///flow_state.db"
+        )
         engine = create_engine(connection_string)
         Session = sessionmaker(bind=engine)
         _persistence_tracker = CeleryTaskTracker(Session)
@@ -87,7 +90,9 @@ def kickoff_task(self, issue_number: int) -> dict[str, Any]:
 
     try:
         update_task_started(task_id)
-        update_status_task(issue_number, GITHUB_PROJECT_STATUS_MAPPING["in_progress"])
+        update_status_task(
+            issue_number, GITHUB_PROJECT_STATUS_MAPPING["in_progress"]
+        )
 
         repo_name = os.environ.get("GITHUB_REPO_NAME", "demo")
         repo_owner = os.environ.get("GITHUB_REPO_OWNER", "xeroc")
@@ -254,7 +259,9 @@ def update_status_task(issue_number: int, status: str) -> bool:
         if success:
             log.info(f"Updated issue #{issue_number} to '{status}'")
         else:
-            log.warning(f"Failed to update issue #{issue_number} to '{status}'")
+            log.warning(
+                f"Failed to update issue #{issue_number} to '{status}'"
+            )
 
         return success
 
@@ -321,13 +328,17 @@ def flow_heartbeat_task() -> dict[str, Any]:
         running_tasks = []
         timed_out_tasks = []
 
-        connection_string = os.environ.get("DATABASE_URL", "sqlite:///flow_state.db")
+        connection_string = os.environ.get(
+            "DATABASE_URL", "sqlite:///flow_state.db"
+        )
         engine = create_engine(connection_string)
         Session = sessionmaker(bind=engine)
 
         with Session() as session:
             running_tasks_data = (
-                session.query(CeleryTask).filter(CeleryTask.status == "running").all()
+                session.query(CeleryTask)
+                .filter(CeleryTask.status == "running")
+                .all()
             )
 
             for task in running_tasks_data:
@@ -339,7 +350,8 @@ def flow_heartbeat_task() -> dict[str, Any]:
 
                     if age > 7200:
                         log.warning(
-                            f"Task {task.task_id} appears stuck, " f"age: {age} seconds"
+                            f"Task {task.task_id} appears stuck, "
+                            f"age: {age} seconds"
                         )
                         timed_out_tasks.append(task.task_id)
 
@@ -411,7 +423,9 @@ def setup_periodic_tasks(sender, **kwargs):
 
 
 @app.task(bind=True, max_retries=3, soft_time_limit=300, time_limit=330)
-def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]:
+def process_github_webhook_task(
+    self, payload: dict[str, Any]
+) -> dict[str, Any]:
     """Process GitHub webhook event asynchronously.
 
     Migrated from webhook.py handle_issue_event:
@@ -465,7 +479,9 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
             body=issue.get("body"),
             node_id=issue.get("node_id"),
             url=issue.get("html_url"),
-            labels=[label.get("name", "") for label in issue.get("labels", [])],
+            labels=[
+                label.get("name", "") for label in issue.get("labels", [])
+            ],
         )
 
         if action == "labeled":
@@ -483,12 +499,18 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
                 if updated:
                     log.info(f"Updated issue #{issue_number} to Ready status")
                 else:
-                    log.warning(f"Failed to update issue #{issue_number} to Ready")
+                    log.warning(
+                        f"Failed to update issue #{issue_number} to Ready"
+                    )
 
                 kickoff_task.delay(issue_number)  # type: ignore
-                log.info(f"Triggered feature dev flow for issue #{issue_number}")
+                log.info(
+                    f"Triggered feature dev flow for issue #{issue_number}"
+                )
 
-                update_task_completed(task_id, "Issue labeled and flow triggered")
+                update_task_completed(
+                    task_id, "Issue labeled and flow triggered"
+                )
 
                 return {
                     "status": "triggered",

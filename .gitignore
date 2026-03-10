@@ -42,7 +42,6 @@ Thumbs.db
 
 # CrewAI specific
 crew_output/
-*.md
 
 # Logs
 *.log
