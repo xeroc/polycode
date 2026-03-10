@@ -406,13 +406,12 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
     repo_name = repository.get("name", "")
     owner = repository.get("owner", {}).get("login", "")
 
-    project_config_dict = None
     config = ProjectConfig(
         provider="github",
         repo_owner=owner,
         repo_name=repo_name,
         # FIXME: only works with first project so far! (might want to use `repository.has_projects` and disable projects)
-        project_identifier="1",
+        project_identifier=None,
         status_mapping=StatusMapping(),
     )
 

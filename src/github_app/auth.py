@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, cast
 
 import jwt
@@ -93,7 +93,7 @@ class GitHubAppAuth:
 
             data = json.loads(data_str)
             expires_at = datetime.fromisoformat(data["expires_at"])
-            if datetime.utcnow() < expires_at - timedelta(minutes=5):
+            if datetime.now(timezone.utc) < expires_at - timedelta(minutes=5):
                 return data["token"]
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.warning(f"Failed to parse cached token: {e}")
@@ -107,18 +107,14 @@ class GitHubAppAuth:
         cache_key = f"{self.cache_prefix}:installation:{installation_id}:token"
         cache_data = {"token": token, "expires_at": expires_at}
 
-        expires_at_dt = datetime.fromisoformat(
-            expires_at.replace("Z", "+00:00")
-        )
-        ttl = int((expires_at_dt - datetime.utcnow()).total_seconds() - 300)
+        expires_at_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        ttl = int((expires_at_dt - datetime.now(timezone.utc)).total_seconds() - 300)
 
         if ttl > 0:
             self.redis_client.setex(cache_key, ttl, json.dumps(cache_data))
             logger.debug(f"Cached installation token for {ttl} seconds")
 
-    def get_installation(
-        self, installation_id: int
-    ) -> Optional[Dict[str, Any]]:
+    def get_installation(self, installation_id: int) -> Optional[Dict[str, Any]]:
         jwt_token = self.generate_jwt()
         url = f"{self.base_url}/app/installations/{installation_id}"
 
@@ -172,9 +168,7 @@ class GitHubAppAuth:
             logger.error(f"Failed to get installation repos: {e}")
             return None
 
-    def verify_webhook_payload(
-        self, payload: str, signature: str, secret: str
-    ) -> bool:
+    def verify_webhook_payload(self, payload: str, signature: str, secret: str) -> bool:
         import hashlib
         import hmac
 

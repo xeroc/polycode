@@ -45,7 +45,11 @@ class GitHubProjectManager(ProjectManager):
     def project_id(self) -> str:
         """Lazy-load project ID."""
         if self._project_id is None:
-            project_number = int(self.config.project_identifier)
+            project_number = (
+                int(self.config.project_identifier)
+                if self.config.project_identifier
+                else None
+            )
             self._project_id = self.projects_client.get_project_id(
                 self.config.repo_owner, project_number
             )

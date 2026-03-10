@@ -31,12 +31,8 @@ class InstallationManager:
         )
 
         if existing:
-            result = self.update_installation(
-                installation_id, installation_data
-            )
-            assert result is not None, (
-                "Update should succeed for existing installation"
-            )
+            result = self.update_installation(installation_id, installation_data)
+            assert result is not None, "Update should succeed for existing installation"
             return result
 
         installation = GitHubAppInstallation(
@@ -50,6 +46,20 @@ class InstallationManager:
             repositories={},
         )
 
+        print("=" * 80)
+        print(
+            dict(
+                installation_id=installation_id,
+                account_id=installation_data["account"]["id"],
+                account_login=installation_data["account"]["login"],
+                account_type=installation_data["account"]["type"],
+                app_id=installation_data["app_id"],
+                permissions=installation_data.get("permissions", {}),
+                events=installation_data.get("events", []),
+                reposiutories={},
+            )
+        )
+        print("=" * 80)
         self.db_session.add(installation)
         self.db_session.commit()
 
@@ -104,9 +114,7 @@ class InstallationManager:
         logger.info(f"Deactivated installation {installation_id}")
         return True
 
-    def get_installation(
-        self, installation_id: int
-    ) -> Optional[GitHubAppInstallation]:
+    def get_installation(self, installation_id: int) -> Optional[GitHubAppInstallation]:
         """Get an active installation by ID."""
         return (
             self.db_session.query(GitHubAppInstallation)
@@ -138,9 +146,7 @@ class InstallationManager:
         if repos:
             installation.repositories = {"repos": repos}
             self.db_session.commit()
-            logger.info(
-                f"Synced {len(repos)} repos for installation {installation_id}"
-            )
+            logger.info(f"Synced {len(repos)} repos for installation {installation_id}")
 
         return repos
 
@@ -190,9 +196,7 @@ class InstallationManager:
             )
 
         if target_repo:
-            query = query.filter(
-                GitHubWebhookRegistration.target_repo == target_repo
-            )
+            query = query.filter(GitHubWebhookRegistration.target_repo == target_repo)
 
         if active_only:
             query = query.filter(GitHubWebhookRegistration.is_active.is_(True))

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ProjectManagerSettings(BaseSettings):
@@ -19,9 +19,9 @@ class ProjectManagerSettings(BaseSettings):
     # Database Configuration
     DATABASE_URL: str = "sqlite:///polycode.db"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        extra="ignore", env_file=".env", case_sensitive=True
+    )
 
 
 settings = ProjectManagerSettings()  # pyright:ignore # ty:ignore

@@ -71,32 +71,18 @@ class GitHubAppWebhookHandler:
         signature = request.headers.get("X-Hub-Signature-256", "")
         delivery_id = request.headers.get("X-GitHub-Delivery", "")
 
-        logger.info(
-            f"Received webhook: {event_type} (delivery: {delivery_id})"
-        )
+        logger.info(f"Received webhook: {event_type} (delivery: {delivery_id})")
 
         if event_type == "ping":
             return self._handle_ping(payload)
 
         installation_id = self._extract_installation_id(payload)
         if not installation_id:
-            raise HTTPException(
-                status_code=400, detail="Missing installation ID"
-            )
-
-        installation = self.installation_manager.get_installation(
-            installation_id
-        )
-        if not installation:
-            raise HTTPException(
-                status_code=404, detail="Installation not found"
-            )
+            raise HTTPException(status_code=400, detail="Missing installation ID")
 
         if self.webhook_secret and signature:
             if not self.validate_signature(payload_bytes, signature):
-                raise HTTPException(
-                    status_code=401, detail="Invalid webhook signature"
-                )
+                raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
         if event_type == "installation":
             return await self._handle_installation_event(payload)
@@ -106,9 +92,7 @@ class GitHubAppWebhookHandler:
             logger.info(f"Unhandled event type: {event_type}")
             return {"status": "ignored", "event": event_type}
 
-    def _extract_installation_id(
-        self, payload: Dict[str, Any]
-    ) -> Optional[int]:
+    def _extract_installation_id(self, payload: Dict[str, Any]) -> Optional[int]:
         """Extract installation ID from payload."""
         if "installation" in payload:
             return payload["installation"].get("id")
@@ -145,9 +129,7 @@ class GitHubAppWebhookHandler:
         elif action == "deleted":
             installation_id = installation.get("id")
             if installation_id:
-                self.installation_manager.deactivate_installation(
-                    installation_id
-                )
+                self.installation_manager.deactivate_installation(installation_id)
                 logger.info(f"Installation deleted: {installation_id}")
 
         return {"status": "processed", "action": action}
@@ -181,9 +163,7 @@ class GitHubAppWebhookHandler:
             }
 
         # Get installation token
-        token = self.installation_manager.get_installation_token(
-            installation_id
-        )
+        token = self.installation_manager.get_installation_token(installation_id)
         if not token:
             raise HTTPException(
                 status_code=500,
@@ -198,7 +178,7 @@ class GitHubAppWebhookHandler:
                 provider="github",
                 repo_owner=owner,
                 repo_name=name,
-                project_identifier="1",  # TODO: Make configurable
+                project_identifier=None,
                 token=token,
                 status_mapping=StatusMapping(),
             )
@@ -221,9 +201,10 @@ class GitHubAppWebhookHandler:
                 }
 
         except Exception as e:
-            logger.error(
-                f"Failed to create project manager for {repo_slug}: {e}"
-            )
+            import traceback
+
+            traceback.print_exc()
+            logger.error(f"Failed to create project manager for {repo_slug}: {e}")
             # Fall back to delegating without flow runner check
             return await self._delegate_to_celery(payload, installation_id)
 

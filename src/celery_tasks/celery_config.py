@@ -2,7 +2,7 @@
 
 from celery import Celery
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class CelerySettings(BaseSettings):
@@ -26,9 +26,9 @@ class CelerySettings(BaseSettings):
     REDIS_PORT: int
     REDIS_DB: int = 0
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        extra="ignore", env_file=".env", case_sensitive=True
+    )
 
 
 settings = CelerySettings()  # pyright:ignore # ty:ignore

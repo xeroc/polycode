@@ -5,7 +5,14 @@ import os
 from pathlib import Path
 
 import click
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import uvicorn
+
+from persistence.postgres import Base
+from github_app import (
+    models,
+)  # side-effect: required to be loaded for createion  # pyright:ignore #ty:ignore
 
 from .github import GitHubProjectManager  # noqa: E402
 from .types import IssueStatus, ProjectConfig, StatusMapping  # noqa: E402
@@ -143,6 +150,11 @@ def webhook(host: str, port: int, verbose: bool) -> None:
     For legacy webhooks (single repo), set GITHUB_TOKEN and repo env vars.
     """
     setup_logging(verbose)
+
+    log.info("Creating tables ...")
+    connection_string = settings.DATABASE_URL
+    engine = create_engine(connection_string)
+    Base.metadata.create_all(engine)
 
     click.echo(f"Starting unified webhook server on {host}:{port}")
 

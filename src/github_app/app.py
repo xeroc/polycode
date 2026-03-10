@@ -100,7 +100,7 @@ async def github_webhook(request: Request):
     Supported events:
     - ping: Webhook verification
     - installation: GitHub App installation lifecycle
-    - issues: Issue events (delegates to process_github_webhook_task)
+    - issues: Issue events
     """
     db_session = get_db_session()
 

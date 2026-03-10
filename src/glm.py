@@ -6,7 +6,7 @@ from crewai import Agent, BaseLLM, Task
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class GLMSettings(BaseSettings):
@@ -16,9 +16,9 @@ class GLMSettings(BaseSettings):
     OPENAI_MODEL: str = "glm-5"
     OPENAI_BASE_URL: str = "https://api.z.ai/api/coding/paas/v4/chat/completions"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        extra="ignore", env_file=".env", case_sensitive=True
+    )
 
 
 settings = GLMSettings()  # pyright:ignore # ty:ignore

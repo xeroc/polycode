@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class GitHubAppSettings(BaseSettings):
@@ -32,9 +32,9 @@ class GitHubAppSettings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        extra="ignore", env_file=".env", case_sensitive=True
+    )
 
 
 settings = GitHubAppSettings()  # pyright:ignore # ty:ignore

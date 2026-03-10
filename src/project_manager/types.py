@@ -1,7 +1,7 @@
 """Common types for project management."""
 
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -73,7 +73,7 @@ class ProjectConfig(BaseModel):
     provider: str
     repo_owner: str
     repo_name: str
-    project_identifier: str
+    project_identifier: Optional[str] = None
     status_mapping: StatusMapping = StatusMapping()
     token: str | None = None
     extra: dict[str, Any] = {}
