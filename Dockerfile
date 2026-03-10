@@ -1,18 +1,29 @@
+# Use the official Python 3.13 slim image as the base
 FROM python:3.13-slim AS base
 
-WORKDIR /app
-COPY pyproject.toml uv.lock README.md ./
+# Set environment variables to avoid interactive prompts during installation
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y git curl && apt-get clean && rm -rf /var/lib/apt/lists/*
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN pip install --no-cache-dir "crewai[litellm]>=1.10.0b1" && uv sync
+# Install system dependencies, Node.js (from NodeSource), and clean up
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    ssh \
+    curl \
+    ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN node --version && npm --version && npm install -g pnpm && pnpm --version
 
 FROM base
 WORKDIR /app
 
+COPY pyproject.toml uv.lock README.md ./
+RUN pip install --no-cache-dir "crewai[litellm]>=1.10.0b1" && uv sync
+
 COPY . .
 COPY entrypooint.sh /usr/local/bin/entrypoint.sh
-
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Creates a non-root user and adds permission to access the /app folder

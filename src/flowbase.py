@@ -174,7 +174,9 @@ class FlowIssueManagement(Flow[T]):
         print("🏹 Commiting changes to repo")
         repo = git.Repo(self.state.repo)
 
-        repo = git.Repo(self.state.repo)
+        # commit all changes to the repo
+        repo.git.add("-A")
+
         merge_base = repo.merge_base("develop", self.state.branch)[0]
         diff = repo.git.diff(merge_base, self.state.branch)
         print(diff)
@@ -189,8 +191,6 @@ class FlowIssueManagement(Flow[T]):
                 f"Wrong branch in the working directory ({self.state.repo}). Current branch '{branch_name}'. Excected '{self.state.branch}'"
             )
 
-        # commit all changes to the repo
-        repo.git.add("-A")
         commit_message = f"{title}\n\n{body}\n\n{footer}"
         repo.index.commit(commit_message)
         print(f"🏹 Committed changes: {commit_message.split('\n')[0]} ...")

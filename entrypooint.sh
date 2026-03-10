@@ -11,6 +11,9 @@ if [[ ! -z "$COMMAND" ]]; then
     shift
 fi
 
+git config --global user.email "no-reply@chaoscraft.dev"
+git config --global user.name "Chris Cross"
+
 case "$COMMAND" in
 worker)
     echo "Launching Worker:"
