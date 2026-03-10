@@ -6,6 +6,22 @@ from crewai import Agent, BaseLLM, Task
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel
+from pydantic_settings import BaseSettings
+
+
+class GLMSettings(BaseSettings):
+
+    # Celery Configuration
+    OPENAI_API_KEY: str
+    OPENAI_MODEL: str = "glm-5"
+    OPENAI_BASE_URL: str = "https://api.z.ai/api/coding/paas/v4/chat/completions"
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+settings = GLMSettings()  # pyright:ignore # ty:ignore
 
 
 class GLMJSONLLM(BaseLLM):
@@ -13,18 +29,15 @@ class GLMJSONLLM(BaseLLM):
 
     def __init__(
         self,
-        model: str = "glm-5",
-        api_key: Optional[str] = os.environ.get("OPENAI_API_KEY"),
-        base_url: str = "https://api.z.ai/api/coding/paas/v4/chat/completions",
         temperature: Optional[float] = 0.7,
         **kwargs,
     ):
 
         super().__init__(
-            model=model,
+            model=settings.OPENAI_MODEL,
             temperature=temperature,
-            api_key=api_key,
-            base_url=base_url,
+            api_key=settings.OPENAI_API_KEY,  # ty:ignore
+            base_url=settings.OPENAI_BASE_URL,  # ty:ignore
             **kwargs,
         )
 
@@ -58,7 +71,7 @@ class GLMJSONLLM(BaseLLM):
         }
 
         # Add response_format for JSON mode
-        payload["response_format"] = {"type": "json_object"}
+        payload["response_format"] = {"type": "json_object"}  # ty:ignore
 
         # Add tools if supported
         if tools and self.supports_function_calling():
@@ -66,9 +79,9 @@ class GLMJSONLLM(BaseLLM):
 
         # Make API call
         response = requests.post(
-            str(self.base_url),
+            str(self.base_url),  # ty:ignore
             headers={
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Bearer {self.api_key}",  # ty:ignore
                 "Content-Type": "application/json",
             },
             json=payload,

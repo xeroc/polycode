@@ -2,22 +2,15 @@
 
 import logging
 import os
+from pathlib import Path
 
 import click
 import uvicorn
 
-"""CLI tools for project management."""
-
-import logging
-import os
-
-import click
-import uvicorn
-
-from .flow_runner import FlowRunner
-from .github import GitHubProjectManager
-from .types import IssueStatus, ProjectConfig, StatusMapping
-from .watcher import RepoWatcher
+from .github import GitHubProjectManager  # noqa: E402
+from .types import IssueStatus, ProjectConfig, StatusMapping  # noqa: E402
+from .watcher import RepoWatcher  # noqa: E402
+from .config import settings
 
 log = logging.getLogger(__name__)
 
@@ -153,7 +146,7 @@ def webhook(host: str, port: int, verbose: bool) -> None:
 
     click.echo(f"Starting unified webhook server on {host}:{port}")
 
-    if os.environ.get("GITHUB_APP_ID"):
+    if settings.GITHUB_APP_ID:
         click.echo("Mode: GitHub App (multi-repo)")
         click.echo(f"Webhook endpoint: http://{host}:{port}/webhook/github")
         click.echo(f"Health check: http://{host}:{port}/health")
@@ -169,9 +162,7 @@ def webhook(host: str, port: int, verbose: bool) -> None:
 
     from github_app.app import app
 
-    uvicorn.run(
-        app, host=host, port=port, log_level="info" if verbose else "warning"
-    )
+    uvicorn.run(app, host=host, port=port, log_level="info" if verbose else "warning")
 
 
 @cli.command()
@@ -183,9 +174,7 @@ def status(verbose: bool) -> None:
     manager = create_manager_from_env()
 
     items = manager.get_project_items()
-    ready_status = manager.config.status_mapping.to_provider_status(
-        IssueStatus.READY
-    )
+    ready_status = manager.config.status_mapping.to_provider_status(IssueStatus.READY)
     in_progress_status = manager.config.status_mapping.to_provider_status(
         IssueStatus.IN_PROGRESS
     )

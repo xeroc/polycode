@@ -37,4 +37,4 @@ class GitHubAppSettings(BaseSettings):
         case_sensitive = True
 
 
-settings = GitHubAppSettings()
+settings = GitHubAppSettings()  # pyright:ignore # ty:ignore

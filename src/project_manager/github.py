@@ -8,6 +8,7 @@ import github
 from .base import ProjectManager
 from .github_projects_client import GitHubProjectsClient
 from .types import Issue, ProjectConfig, ProjectItem
+from .config import settings
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class GitHubProjectManager(ProjectManager):
         """
         super().__init__(config)
 
-        token = config.token or os.environ.get("GITHUB_TOKEN")
+        token = config.token or settings.GITHUB_TOKEN
         if not token:
             raise ValueError(
                 "GitHub token must be provided via config or GITHUB_TOKEN env var"
@@ -204,9 +205,7 @@ class GitHubProjectManager(ProjectManager):
                 return True
 
             if pr.state != "open":
-                log.error(
-                    f"Pull request #{pr_number} is not open (state: {pr.state})"
-                )
+                log.error(f"Pull request #{pr_number} is not open (state: {pr.state})")
                 return False
 
             if commit_message:

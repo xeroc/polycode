@@ -46,6 +46,7 @@ class KickoffIssue(BaseModel):
     body: str = Field(description="Issue description")
     memory_prefix: str = Field(description="prefix for memory")
     repository: KickoffRepo
+    project_config: ProjectConfig
 
 
 def sanitize_branch_name(name: str) -> str:
@@ -60,23 +61,21 @@ def sanitize_branch_name(name: str) -> str:
 
 
 class BaseFlowModel(BaseModel):
-    path: str = Field(default="", description="Path to repository")
-    repo: str = Field(
-        default="", description="Path to repository in a worktree"
+    project_config: Optional[ProjectConfig] = Field(
+        default=None, description="Description of the project to work on"
     )
+    path: str = Field(default="", description="Path to repository")
+    repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
     task: str = Field(default="", description="Feature development task")
 
+    # FIXME: redundant because also part of project_config
     repo_owner: Optional[str] = Field(
         default=None, description="GitHub repository owner"
     )
-    repo_name: Optional[str] = Field(
-        default=None, description="GitHub repository name"
-    )
+    repo_name: Optional[str] = Field(default=None, description="GitHub repository name")
 
-    pr_number: Optional[int] = Field(
-        default=None, description="Pull request number"
-    )
+    pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id on github")
 
@@ -104,28 +103,18 @@ class FlowIssueManagement(Flow[T]):
     project_manager: GitHubProjectManager
 
     def _setup(self):
-        config = ProjectConfig(
-            provider="github",
-            repo_owner=self.state.repo_owner or "",
-            repo_name=self.state.repo_name or "",
-            project_identifier=os.environ.get("PROJECT_IDENTIFIER", "1"),
-        )
-        self.project_manager = GitHubProjectManager(config)
+        if not self.state.project_config:
+            raise ValueError("project_config required!")
+        self.project_manager = GitHubProjectManager(self.state.project_config)
 
         try:
-            ensure_request_exists(
-                SessionLocal, self.state.issue_id, self.state.task
-            )
-            print(
-                f"🏹 Ensured request exists for issue #{self.state.issue_id}"
-            )
+            ensure_request_exists(SessionLocal, self.state.issue_id, self.state.task)
+            print(f"🏹 Ensured request exists for issue #{self.state.issue_id}")
         except Exception as e:
             print(f"🚨 Failed to ensure request exists: {e}")
 
         try:
-            update_request_status(
-                SessionLocal, self.state.issue_id, "inprogress"
-            )
+            update_request_status(SessionLocal, self.state.issue_id, "inprogress")
             print(
                 f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}"
             )
@@ -300,16 +289,12 @@ class FlowIssueManagement(Flow[T]):
 
     def _cleanup_worktree(self):
         try:
-            self.project_manager.update_issue_status(
-                self.state.issue_id, "Done"
-            )
+            self.project_manager.update_issue_status(self.state.issue_id, "Done")
         except Exception as e:
             print(f"🚨 Failed to update project status to Done: {e}")
 
         try:
-            update_request_status(
-                SessionLocal, self.state.issue_id, "completed"
-            )
+            update_request_status(SessionLocal, self.state.issue_id, "completed")
             print(
                 f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}"
             )
@@ -337,14 +322,10 @@ class FlowIssueManagement(Flow[T]):
                     pkg = json.load(f)
                 scripts = pkg.get("scripts", {})
                 if "build" in scripts:
-                    self.state.build_cmd = (
-                        f"pnpm run -C {self.state.repo} build"
-                    )
+                    self.state.build_cmd = f"pnpm run -C {self.state.repo} build"
                     print(f"📦 Build command: {self.state.build_cmd}")
                 elif "typecheck" in scripts:
-                    self.state.build_cmd = (
-                        f"pnpm run-C {self.state.repo} typecheck"
-                    )
+                    self.state.build_cmd = f"pnpm run-C {self.state.repo} typecheck"
                     print(f"📦 Typecheck command: {self.state.build_cmd}")
             except Exception as e:
                 print(f"⚠️ Could not read package.json: {e}")

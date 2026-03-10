@@ -32,9 +32,7 @@ def create_kickoff_callback(
 
     def on_issue_ready(item: ProjectItem) -> None:
         """Callback when an issue is ready to process."""
-        log.info(
-            f"Starting feature development for issue #{item.issue_number}"
-        )
+        log.info(f"Starting feature development for issue #{item.issue_number}")
         log.info(f"Title: {item.title}")
         log.info(f"Description: {item.body or '(no description)'}")
 
@@ -49,6 +47,7 @@ def create_kickoff_callback(
                 repository=manager.config.repo_name,
             ),
             memory_prefix=f"{manager.config.repo_owner}/{manager.config.repo_name}",
+            project_config=manager.config,
         )
         # feature_dev_kickoff(kickoff_issue)
         kickoff_ralph(kickoff_issue)

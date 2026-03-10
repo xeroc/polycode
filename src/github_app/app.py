@@ -118,107 +118,6 @@ async def github_webhook(request: Request):
 
 
 # ============================================================================
-# Manual Trigger Endpoint (from project_manager/webhook.py)
-# ============================================================================
-
-
-@app.post("/trigger")
-async def manual_trigger(
-    issue_number: Optional[int] = None,
-    repo_owner: Optional[str] = None,
-    repo_name: Optional[str] = None,
-    installation_id: Optional[int] = None,
-):
-    """Manually trigger a flow.
-
-    Args:
-        issue_number: Specific issue to process
-        repo_owner: Repository owner (required if not using installation)
-        repo_name: Repository name (required if not using installation)
-        installation_id: GitHub App installation ID (for multi-repo)
-    """
-    from celery_tasks.tasks import kickoff_task
-    from project_manager.flow_runner import FlowRunner
-    from project_manager.github import GitHubProjectManager
-    from project_manager.types import ProjectConfig, StatusMapping
-
-    # Use environment variables as fallback
-    repo_owner = repo_owner or os.environ.get("GITHUB_REPO_OWNER")
-    repo_name = repo_name or os.environ.get("GITHUB_REPO_NAME")
-
-    if not repo_owner or not repo_name:
-        raise HTTPException(
-            status_code=400,
-            detail="repo_owner and repo_name required (or set env vars)",
-        )
-
-    # Get token (either from GitHub App or environment)
-    if installation_id:
-        token = github_auth.get_installation_token(installation_id)
-        if not token:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to get token for installation {installation_id}",
-            )
-    else:
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            raise HTTPException(status_code=500, detail="GITHUB_TOKEN not set")
-
-    # Create project manager and flow runner
-    config = ProjectConfig(
-        provider="github",
-        repo_owner=repo_owner,
-        repo_name=repo_name,
-        project_identifier=os.environ.get("GITHUB_PROJECT_ID", "1"),
-        token=token,
-        status_mapping=StatusMapping(),
-    )
-
-    manager = GitHubProjectManager(config)
-    flow_runner = FlowRunner(manager=manager)
-
-    # Check if flow is already running
-    if flow_runner.is_flow_running():
-        current = flow_runner.get_running_flow()
-        return {
-            "status": "already_running",
-            "message": (
-                f"Flow already running for issue #{current.issue_number}"
-                if current
-                else "Flow already running"
-            ),
-            "repo": f"{repo_owner}/{repo_name}",
-        }
-
-    # Trigger flow
-    if issue_number:
-        task_result = kickoff_task.delay(issue_number)  # type: ignore
-        return {
-            "status": "triggered",
-            "message": f"Flow triggered for issue #{issue_number}",
-            "repo": f"{repo_owner}/{repo_name}",
-            "task_id": task_result.id,
-        }
-    else:
-        # Trigger next ready issue
-        triggered = flow_runner.trigger_flow()
-        if triggered:
-            return {
-                "status": "triggered",
-                "message": "Flow triggered for next ready issue",
-                "repo": f"{repo_owner}/{repo_name}",
-                "task_id": triggered if isinstance(triggered, str) else None,
-            }
-        else:
-            return {
-                "status": "no_ready_issues",
-                "message": "No ready issues to process",
-                "repo": f"{repo_owner}/{repo_name}",
-            }
-
-
-# ============================================================================
 # Installation Management API
 # ============================================================================
 
@@ -233,9 +132,7 @@ async def sync_installation(installation_id: int):
         repos = installation_manager.sync_repositories(installation_id)
 
         if repos is None:
-            raise HTTPException(
-                status_code=404, detail="Installation not found"
-            )
+            raise HTTPException(status_code=404, detail="Installation not found")
 
         return {
             "installation_id": installation_id,
@@ -262,9 +159,7 @@ async def list_installations():
                     "account": inst.account_login,
                     "active": inst.is_active,
                     "repos_count": len(
-                        inst.repositories.get("repos", [])
-                        if inst.repositories
-                        else []
+                        inst.repositories.get("repos", []) if inst.repositories else []
                     ),
                 }
                 for inst in installations
@@ -345,9 +240,7 @@ async def list_label_mappings(installation_id: Optional[int] = None):
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500, content={"detail": "Internal server error"}
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 if __name__ == "__main__":

@@ -1,20 +1,49 @@
 """Celery configuration for feature development tasks."""
 
-import os
-
 from celery import Celery
 
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
-REDIS_DB = int(os.environ.get("REDIS_DB", 0))
+from pydantic_settings import BaseSettings
 
-broker_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+class CelerySettings(BaseSettings):
+
+    # Celery Configuration
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+
+    GITHUB_LABEL_FOR_WORKFLOW_START: str = "paid"
+    DATABASE_URL: str
+
+    GITHUB_PROJECT_STATUS_MAPPING: dict[str, str] = dict(
+        todo="Backlog",
+        ready="Ready",
+        in_progress="In progress",
+        reviewing="In review",
+        done="Done",
+    )
+
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int = 0
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+settings = CelerySettings()  # pyright:ignore # ty:ignore
+
+
+broker_url = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+result_backend = (
+    f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+)
+
 
 app = Celery(__name__)
 app.conf.update(
     broker_url=broker_url,
-    result_backend=RESULT_BACKEND,
+    result_backend=result_backend,
     # task_serializer="json",
     # accept_content=["json"],
     # result_serializer="json",

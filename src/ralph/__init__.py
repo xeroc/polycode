@@ -15,7 +15,8 @@ Ralph Loop mechanism:
   5. Agent receives previous_errors context for smarter retries
 """
 
-import os
+from project_manager.config import settings as project_settings
+
 import subprocess
 import uuid
 from typing import cast
@@ -31,8 +32,7 @@ from .crews.ralph_crew.ralph_crew import RalphCrew
 from .types import PlanOutput, RalphLoopState, RalphOutput, Story
 
 MAX_ITERATIONS = 3
-DATA_PATH = os.environ.get("DATA_PATH", "/data")
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = project_settings.DATABASE_URL
 if DATABASE_URL and DATABASE_URL.startswith("postgres"):
     print("📊 Connecting persistence with postgres")
     persistence = PostgresFlowPersistence(connection_string=DATABASE_URL)
@@ -143,8 +143,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         print(f"🔨 Iteration {story.iteration}/{MAX_ITERATIONS}")
 
         error_context = (
-            "\n\n## Previous Errors:\n"
-            + "\n".join(f"- {err}" for err in story.errors)
+            "\n\n## Previous Errors:\n" + "\n".join(f"- {err}" for err in story.errors)
             if story.errors
             else "No previous errors"
         )
@@ -200,9 +199,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
         if status == "done":
             print("✅ Completion")
-            print(
-                f"Story '{story.title}' complete - objective criteria verified"
-            )
+            print(f"Story '{story.title}' complete - objective criteria verified")
             story.completed = True
             story.errors = []
 
@@ -227,9 +224,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             return "done"
 
         print("Completion promise not found, retrying...")
-        story.errors.append(
-            f"Iteration {story.iteration}: {agent_output[:200]}..."
-        )
+        story.errors.append(f"Iteration {story.iteration}: {agent_output[:200]}...")
         print(f"🔄 Routing to: implement (iteration {story.iteration + 1})")
         return "retry"
 
@@ -318,7 +313,7 @@ def kickoff(issue: KickoffIssue):
             id=str(issue.flow_id),
             issue_id=issue.id,
             task=f"{issue.title}\n\n{issue.body}",
-            path=f"{DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
+            path=f"{project_settings.DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
             branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
             memory_prefix=f"{issue.repository.owner}/{issue.repository.repository}",
             repo_owner=issue.repository.owner,

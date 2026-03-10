@@ -1,5 +1,7 @@
 """Individual agent execution Celery tasks."""
 
+from project_manager import StatusMapping
+
 import logging
 import os
 import uuid
@@ -11,30 +13,21 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from flowbase import KickoffIssue, KickoffRepo
-from github_app import models as github_app_models
+from github_app import (
+    models as github_app_models,
+)  # noqa: F401 - side-effect import for table creation
 from persistence.celery_tasks import CeleryTask, CeleryTaskTracker
 from persistence.postgres import Base
 from project_manager.github import GitHubProjectManager
-from project_manager.types import Issue, ProjectConfig, StatusMapping
+from project_manager.types import Issue, ProjectConfig
 from ralph import kickoff as kickoff_ralph
 
 from . import app, calculate_timeout, get_flow_id
+from .celery_config import settings
 
 log = logging.getLogger(__name__)
 
 _persistence_tracker = None
-
-
-GITHUB_LABEL_FOR_WORKFLOW_START = os.environ.get(
-    "GITHUB_LABEL_FOR_WORKFLOW_START", "paid"
-)
-GITHUB_PROJECT_STATUS_MAPPING = dict(
-    todo="Backlog",
-    ready="Ready",
-    in_progress="In progress",
-    reviewing="In review",
-    done="Done",
-)
 
 
 def get_persistence_tracker():
@@ -42,9 +35,7 @@ def get_persistence_tracker():
     global _persistence_tracker
 
     if _persistence_tracker is None:
-        connection_string = os.environ.get(
-            "DATABASE_URL", "sqlite:///flow_state.db"
-        )
+        connection_string = settings.DATABASE_URL
         engine = create_engine(connection_string)
         Session = sessionmaker(bind=engine)
         _persistence_tracker = CeleryTaskTracker(Session)
@@ -63,7 +54,7 @@ get_persistence_tracker()
     soft_time_limit=7200,
     time_limit=7380,
 )
-def kickoff_task(self, issue_number: int) -> dict[str, Any]:
+def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str, Any]:
     """Kickoff feature development flow for an issue.
 
     This task orchestrates the entire feature development process:
@@ -80,6 +71,7 @@ def kickoff_task(self, issue_number: int) -> dict[str, Any]:
     Raises:
         Exception: If kickoff fails
     """
+    config = ProjectConfig(**project_config_dict)
     task_id = current_task.request.id  # type: ignore
     flow_id = get_flow_id()
 
@@ -91,29 +83,19 @@ def kickoff_task(self, issue_number: int) -> dict[str, Any]:
     try:
         update_task_started(task_id)
         update_status_task(
-            issue_number, GITHUB_PROJECT_STATUS_MAPPING["in_progress"]
-        )
-
-        repo_name = os.environ.get("GITHUB_REPO_NAME", "demo")
-        repo_owner = os.environ.get("GITHUB_REPO_OWNER", "xeroc")
-        project_id = os.environ.get("GITHUB_PROJECT_ID", "1")
-        token = os.environ.get("GITHUB_TOKEN")
-
-        config = ProjectConfig(
-            provider="github",
-            repo_name=repo_name,
-            repo_owner=repo_owner,
-            project_identifier=project_id,
-            token=token,
-            status_mapping=StatusMapping(**GITHUB_PROJECT_STATUS_MAPPING),
+            project_config_dict,
+            issue_number,
+            settings.GITHUB_PROJECT_STATUS_MAPPING["in_progress"],
         )
 
         manager = GitHubProjectManager(config)
         project_item = manager.find_project_item(issue_number)
+        repo_name = config.repo_name
+        repo_owner = config.repo_owner
 
         if not project_item:
             log.warning(f"Issue #{issue_number} not found in project")
-            update_status_task(issue_number, "Ready")
+            update_status_task(project_config_dict, issue_number, "Ready")
             return {
                 "status": "error",
                 "message": f"Issue #{issue_number} not found in project",
@@ -130,6 +112,7 @@ def kickoff_task(self, issue_number: int) -> dict[str, Any]:
                 owner=manager.config.repo_owner,
                 repository=manager.config.repo_name,
             ),
+            project_config=config,
         )
 
         log.info(f"Kicking off feature dev for: {kickoff_issue.title}")
@@ -138,8 +121,10 @@ def kickoff_task(self, issue_number: int) -> dict[str, Any]:
         kickoff_ralph(kickoff_issue)
 
         log.info(f"Feature dev flow completed for issue #{issue_number}")
-        update_status_task(issue_number, "Reviewing")
-        update_task_completed(task_id, "Feature development completed")
+        update_status_task(project_config_dict, issue_number, "Reviewing")
+        update_task_completed(
+            project_config_dict, task_id, "Feature development completed"
+        )
 
         return {
             "status": "success",
@@ -153,8 +138,8 @@ def kickoff_task(self, issue_number: int) -> dict[str, Any]:
             f"Feature dev flow failed for issue #{issue_number}: {e}",
             exc_info=True,
         )
-        update_task_failed(task_id, str(e))
-        update_status_task(issue_number, "Ready")
+        update_task_failed(project_config_dict, task_id, str(e))
+        update_status_task(project_config_dict, issue_number, "Ready")
 
         retry_count = self.request.retries
         if retry_count < self.max_retries:
@@ -204,7 +189,9 @@ def update_task_started(task_id: str) -> None:
 
 
 @app.task()
-def update_task_completed(task_id: str, result: str | None = None) -> None:
+def update_task_completed(
+    _project_config_dict: dict, task_id: str, result: str | None = None
+) -> None:
     """Mark task as completed in database.
 
     Args:
@@ -216,7 +203,9 @@ def update_task_completed(task_id: str, result: str | None = None) -> None:
 
 
 @app.task()
-def update_task_failed(task_id: str, error_message: str) -> None:
+def update_task_failed(
+    _project_config_dict: dict, task_id: str, error_message: str
+) -> None:
     """Mark task as failed in database.
 
     Args:
@@ -228,7 +217,9 @@ def update_task_failed(task_id: str, error_message: str) -> None:
 
 
 @app.task()
-def update_status_task(issue_number: int, status: str) -> bool:
+def update_status_task(
+    project_config_dict: dict, issue_number: int, status: str
+) -> bool:
     """Update GitHub issue status in project board.
 
     Args:
@@ -239,29 +230,14 @@ def update_status_task(issue_number: int, status: str) -> bool:
         True if successful, False otherwise
     """
     try:
-        repo_name = os.environ.get("GITHUB_REPO_NAME", "demo")
-        repo_owner = os.environ.get("GITHUB_REPO_OWNER", "xeroc")
-        project_id = os.environ.get("GITHUB_PROJECT_ID", "1")
-        token = os.environ.get("GITHUB_TOKEN")
-
-        config = ProjectConfig(
-            provider="github",
-            repo_name=repo_name,
-            repo_owner=repo_owner,
-            project_identifier=project_id,
-            token=token,
-            status_mapping=StatusMapping(**GITHUB_PROJECT_STATUS_MAPPING),
-        )
-
+        config = ProjectConfig(**project_config_dict)
         manager = GitHubProjectManager(config)
         success = manager.update_issue_status(issue_number, status)
 
         if success:
             log.info(f"Updated issue #{issue_number} to '{status}'")
         else:
-            log.warning(
-                f"Failed to update issue #{issue_number} to '{status}'"
-            )
+            log.warning(f"Failed to update issue #{issue_number} to '{status}'")
 
         return success
 
@@ -273,7 +249,7 @@ def update_status_task(issue_number: int, status: str) -> bool:
         return False
 
 
-def add_issue_to_project_task(issue: Any) -> bool:
+def add_issue_to_project_task(project_config_dict: dict, issue: Any) -> bool:
     """Add issue to project board (synchronous helper).
 
     Args:
@@ -282,21 +258,8 @@ def add_issue_to_project_task(issue: Any) -> bool:
     Returns:
         True if successful, False otherwise
     """
+    config = ProjectConfig(**project_config_dict)
     try:
-        repo_name = os.environ.get("GITHUB_REPO_NAME", "demo")
-        repo_owner = os.environ.get("GITHUB_REPO_OWNER", "xeroc")
-        project_id = os.environ.get("GITHUB_PROJECT_ID", "1")
-        token = os.environ.get("GITHUB_TOKEN")
-
-        config = ProjectConfig(
-            provider="github",
-            repo_name=repo_name,
-            repo_owner=repo_owner,
-            project_identifier=project_id,
-            token=token,
-            status_mapping=StatusMapping(**GITHUB_PROJECT_STATUS_MAPPING),
-        )
-
         manager = GitHubProjectManager(config)
         added = manager.add_issue_to_project(issue)
 
@@ -328,17 +291,13 @@ def flow_heartbeat_task() -> dict[str, Any]:
         running_tasks = []
         timed_out_tasks = []
 
-        connection_string = os.environ.get(
-            "DATABASE_URL", "sqlite:///flow_state.db"
-        )
+        connection_string = settings.DATABASE_URL
         engine = create_engine(connection_string)
         Session = sessionmaker(bind=engine)
 
         with Session() as session:
             running_tasks_data = (
-                session.query(CeleryTask)
-                .filter(CeleryTask.status == "running")
-                .all()
+                session.query(CeleryTask).filter(CeleryTask.status == "running").all()
             )
 
             for task in running_tasks_data:
@@ -350,8 +309,7 @@ def flow_heartbeat_task() -> dict[str, Any]:
 
                     if age > 7200:
                         log.warning(
-                            f"Task {task.task_id} appears stuck, "
-                            f"age: {age} seconds"
+                            f"Task {task.task_id} appears stuck, " f"age: {age} seconds"
                         )
                         timed_out_tasks.append(task.task_id)
 
@@ -423,9 +381,7 @@ def setup_periodic_tasks(sender, **kwargs):
 
 
 @app.task(bind=True, max_retries=3, soft_time_limit=300, time_limit=330)
-def process_github_webhook_task(
-    self, payload: dict[str, Any]
-) -> dict[str, Any]:
+def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]:
     """Process GitHub webhook event asynchronously.
 
     Migrated from webhook.py handle_issue_event:
@@ -447,6 +403,18 @@ def process_github_webhook_task(
     issue = payload.get("issue", {})
     issue_number = issue.get("number")
     repository = payload.get("repository", {})
+    repo_name = repository.get("name", "")
+    owner = repository.get("owner", {}).get("login", "")
+
+    project_config_dict = None
+    config = ProjectConfig(
+        provider="github",
+        repo_owner=owner,
+        repo_name=repo_name,
+        # FIXME: only works with first project so far! (might want to use `repository.has_projects` and disable projects)
+        project_identifier="1",
+        status_mapping=StatusMapping(),
+    )
 
     log.info(
         f"Processing webhook: issue #{issue_number}, action: {action}, "
@@ -479,38 +447,30 @@ def process_github_webhook_task(
             body=issue.get("body"),
             node_id=issue.get("node_id"),
             url=issue.get("html_url"),
-            labels=[
-                label.get("name", "") for label in issue.get("labels", [])
-            ],
+            labels=[label.get("name", "") for label in issue.get("labels", [])],
         )
 
         if action == "labeled":
             label = payload.get("label", {})
             label_name = label.get("name") if label else None
 
-            if label_name == GITHUB_LABEL_FOR_WORKFLOW_START:
+            if label_name == settings.GITHUB_LABEL_FOR_WORKFLOW_START:
                 log.info(
-                    f"Label '{GITHUB_LABEL_FOR_WORKFLOW_START}' added to issue #{issue_number}"
+                    f"Label '{settings.GITHUB_LABEL_FOR_WORKFLOW_START}' added to issue #{issue_number}"
                 )
 
-                add_issue_to_project_task(issue_obj)
-                updated = update_status_task(issue_number, "Ready")
+                add_issue_to_project_task(config.model_dump(), issue_obj)
+                updated = update_status_task(config.model_dump(), issue_number, "Ready")
 
                 if updated:
                     log.info(f"Updated issue #{issue_number} to Ready status")
                 else:
-                    log.warning(
-                        f"Failed to update issue #{issue_number} to Ready"
-                    )
+                    log.warning(f"Failed to update issue #{issue_number} to Ready")
 
                 kickoff_task.delay(issue_number)  # type: ignore
-                log.info(
-                    f"Triggered feature dev flow for issue #{issue_number}"
-                )
+                log.info(f"Triggered feature dev flow for issue #{issue_number}")
 
-                update_task_completed(
-                    task_id, "Issue labeled and flow triggered"
-                )
+                update_task_completed(task_id, "Issue labeled and flow triggered")
 
                 return {
                     "status": "triggered",
@@ -535,7 +495,7 @@ def process_github_webhook_task(
     except Exception as e:
         log.error(f"Webhook processing failed: {e}", exc_info=True)
 
-        update_task_failed(task_id, str(e))
+        update_task_failed(config.model_dump(), task_id, str(e))
 
         retry_count = self.request.retries
         if retry_count < self.max_retries:
