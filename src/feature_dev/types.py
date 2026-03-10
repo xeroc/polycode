@@ -1,9 +1,8 @@
-import uuid
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from flowbase import BaseFlowModel, KickoffRepo
+from flowbase import BaseFlowModel
 
 
 class Story(BaseModel):

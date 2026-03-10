@@ -2,36 +2,32 @@
 Feature Development Flow module.
 """
 
-import re
-import os
 import json
-import uuid
+import os
+import re
 import subprocess
-from typing import TypeVar
+import uuid
 from pathlib import Path
+from typing import Optional, TypeVar
 
+import git
 from crewai import Flow
 from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.providers.ollama.types import (
     OllamaProviderConfig,
     OllamaProviderSpec,
 )
-import git
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from glm import GLMJSONLLM
-
-from github_issues.github_status import ProjectStatusManager
-from github_issues.utils import get_github_repo_from_local
-from typing import Optional
-
-from pydantic import Field
-
 from persistence.postgres import (
+    SessionLocal,
     ensure_request_exists,
     update_request_status,
-    SessionLocal,
 )
+from project_manager import GitHubProjectManager
+from project_manager.git_utils import get_github_repo_from_local
+from project_manager.types import ProjectConfig
 
 T = TypeVar("T", bound="BaseFlowModel")
 
@@ -65,16 +61,22 @@ def sanitize_branch_name(name: str) -> str:
 
 class BaseFlowModel(BaseModel):
     path: str = Field(default="", description="Path to repository")
-    repo: str = Field(default="", description="Path to repository in a worktree")
+    repo: str = Field(
+        default="", description="Path to repository in a worktree"
+    )
     branch: str = Field(default="", description="Feature branch name")
     task: str = Field(default="", description="Feature development task")
 
     repo_owner: Optional[str] = Field(
         default=None, description="GitHub repository owner"
     )
-    repo_name: Optional[str] = Field(default=None, description="GitHub repository name")
+    repo_name: Optional[str] = Field(
+        default=None, description="GitHub repository name"
+    )
 
-    pr_number: Optional[int] = Field(default=None, description="Pull request number")
+    pr_number: Optional[int] = Field(
+        default=None, description="Pull request number"
+    )
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id on github")
 
@@ -99,21 +101,31 @@ class BaseFlowModel(BaseModel):
 class FlowIssueManagement(Flow[T]):
     """Generic base class that passes type parameter to Flow"""
 
-    status_manager: ProjectStatusManager
+    project_manager: GitHubProjectManager
 
     def _setup(self):
-        self.status_manager = ProjectStatusManager(
-            self.state.repo_owner, self.state.repo_name
+        config = ProjectConfig(
+            provider="github",
+            repo_owner=self.state.repo_owner or "",
+            repo_name=self.state.repo_name or "",
+            project_identifier=os.environ.get("PROJECT_IDENTIFIER", "1"),
         )
+        self.project_manager = GitHubProjectManager(config)
 
         try:
-            ensure_request_exists(SessionLocal, self.state.issue_id, self.state.task)
-            print(f"🏹 Ensured request exists for issue #{self.state.issue_id}")
+            ensure_request_exists(
+                SessionLocal, self.state.issue_id, self.state.task
+            )
+            print(
+                f"🏹 Ensured request exists for issue #{self.state.issue_id}"
+            )
         except Exception as e:
             print(f"🚨 Failed to ensure request exists: {e}")
 
         try:
-            update_request_status(SessionLocal, self.state.issue_id, "inprogress")
+            update_request_status(
+                SessionLocal, self.state.issue_id, "inprogress"
+            )
             print(
                 f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}"
             )
@@ -275,7 +287,7 @@ class FlowIssueManagement(Flow[T]):
         self.state.pr_number = pr.number
         print(f"🏹 PR {self.state.pr_number} created: {self.state.pr_url}")
 
-        self.status_manager.add_comment(
+        self.project_manager.add_comment(
             self.state.issue_id,
             f"## 🔍 Review Started\n\n"
             f"Pull request #{self.state.pr_number} is now under review.\n"
@@ -284,16 +296,20 @@ class FlowIssueManagement(Flow[T]):
 
     def _merge_branch(self):
         if self.state.pr_number:
-            self.status_manager.merge_pull_request(self.state.pr_number)
+            self.project_manager.merge_pull_request(self.state.pr_number)
 
     def _cleanup_worktree(self):
         try:
-            self.status_manager.update_status(self.state.issue_id, "Done")
+            self.project_manager.update_issue_status(
+                self.state.issue_id, "Done"
+            )
         except Exception as e:
             print(f"🚨 Failed to update project status to Done: {e}")
 
         try:
-            update_request_status(SessionLocal, self.state.issue_id, "completed")
+            update_request_status(
+                SessionLocal, self.state.issue_id, "completed"
+            )
             print(
                 f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}"
             )
@@ -307,7 +323,7 @@ class FlowIssueManagement(Flow[T]):
         parent_dir = os.path.dirname(self.state.repo)
         if os.path.exists(parent_dir):
             os.rmdir(parent_dir)
-        print(f"🏹 Cleaned up worktree parent directory")
+        print("🏹 Cleaned up worktree parent directory")
 
     def _discover_build_cmd(self):
         """Discover build command from package.json."""
@@ -321,10 +337,14 @@ class FlowIssueManagement(Flow[T]):
                     pkg = json.load(f)
                 scripts = pkg.get("scripts", {})
                 if "build" in scripts:
-                    self.state.build_cmd = f"pnpm run -C {self.state.repo} build"
+                    self.state.build_cmd = (
+                        f"pnpm run -C {self.state.repo} build"
+                    )
                     print(f"📦 Build command: {self.state.build_cmd}")
                 elif "typecheck" in scripts:
-                    self.state.build_cmd = f"pnpm run-C {self.state.repo} typecheck"
+                    self.state.build_cmd = (
+                        f"pnpm run-C {self.state.repo} typecheck"
+                    )
                     print(f"📦 Typecheck command: {self.state.build_cmd}")
             except Exception as e:
                 print(f"⚠️ Could not read package.json: {e}")

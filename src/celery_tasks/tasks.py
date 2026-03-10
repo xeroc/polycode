@@ -3,22 +3,21 @@
 import logging
 import os
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from celery import current_task
-from datetime import datetime, timezone
-from feature_dev import kickoff as feature_dev_kickoff
-from ralph import kickoff as kickoff_ralph
-from flowbase import KickoffIssue, KickoffRepo
-from persistence.celery_tasks import CeleryTask
-from persistence.celery_tasks import CeleryTaskTracker
-from persistence.postgres import Base
-from project_manager.github import GitHubProjectManager
-from project_manager.types import Issue
-from project_manager.types import ProjectConfig, StatusMapping
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from . import app, get_flow_id, calculate_timeout
+
+from flowbase import KickoffIssue, KickoffRepo
+from persistence.celery_tasks import CeleryTask, CeleryTaskTracker
+from persistence.postgres import Base
+from project_manager.github import GitHubProjectManager
+from project_manager.types import Issue, ProjectConfig, StatusMapping
+from ralph import kickoff as kickoff_ralph
+
+from . import app, calculate_timeout, get_flow_id
 
 log = logging.getLogger(__name__)
 

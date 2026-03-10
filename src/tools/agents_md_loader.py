@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Type
 
 from crewai.tools import BaseTool

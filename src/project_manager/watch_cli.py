@@ -1,18 +1,22 @@
-"""Daemon that manages GitHub issues using webhook-driven flow."""
+"""Daemon that manages GitHub issues using webhook-driven flow.
 
-import uuid
+Moved from github_issues/main.py as part of refactoring.
+"""
+
 import logging
 import os
+import uuid
 from typing import Callable
 
 import click
+
 from flowbase import KickoffIssue, KickoffRepo
 
 # from feature_dev import kickoff as feature_dev_kickoff
 from ralph import kickoff as kickoff_ralph
 
-from project_manager import GitHubProjectManager
-from project_manager.types import ProjectConfig, ProjectItem
+from .github import GitHubProjectManager
+from .types import ProjectConfig, ProjectItem
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,7 +32,9 @@ def create_kickoff_callback(
 
     def on_issue_ready(item: ProjectItem) -> None:
         """Callback when an issue is ready to process."""
-        log.info(f"Starting feature development for issue #{item.issue_number}")
+        log.info(
+            f"Starting feature development for issue #{item.issue_number}"
+        )
         log.info(f"Title: {item.title}")
         log.info(f"Description: {item.body or '(no description)'}")
 

@@ -1,5 +1,4 @@
-from . import tasks
-from . import app
+from . import app, tasks
 
 assert app
 assert tasks

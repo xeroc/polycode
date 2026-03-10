@@ -1,4 +1,5 @@
 """
+
 Ralph Loop - Ralph Loop pattern using CrewAI @router for control flow.
 
 Flow: Setup → Plan → Ralph Loop (router-controlled) → Verify → Commit
@@ -14,17 +15,15 @@ Ralph Loop mechanism:
   5. Agent receives previous_errors context for smarter retries
 """
 
-import json
 import os
 import subprocess
 import uuid
-from pathlib import Path
 from typing import cast
 
 from crewai.flow.flow import listen, router, start
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
-from flowbase import FlowIssueManagement, sanitize_branch_name, KickoffIssue
+from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
 from persistence.postgres import PostgresFlowPersistence
 
 from .crews.plan_crew.plan_crew import PlanCrew
@@ -144,7 +143,8 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         print(f"🔨 Iteration {story.iteration}/{MAX_ITERATIONS}")
 
         error_context = (
-            "\n\n## Previous Errors:\n" + "\n".join(f"- {err}" for err in story.errors)
+            "\n\n## Previous Errors:\n"
+            + "\n".join(f"- {err}" for err in story.errors)
             if story.errors
             else "No previous errors"
         )
@@ -199,8 +199,10 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         agent_output = self.state.agent_output or ""
 
         if status == "done":
-            print(f"✅ Completion")
-            print(f"Story '{story.title}' complete - objective criteria verified")
+            print("✅ Completion")
+            print(
+                f"Story '{story.title}' complete - objective criteria verified"
+            )
             story.completed = True
             story.errors = []
 
@@ -225,7 +227,9 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             return "done"
 
         print("Completion promise not found, retrying...")
-        story.errors.append(f"Iteration {story.iteration}: {agent_output[:200]}...")
+        story.errors.append(
+            f"Iteration {story.iteration}: {agent_output[:200]}..."
+        )
         print(f"🔄 Routing to: implement (iteration {story.iteration + 1})")
         return "retry"
 

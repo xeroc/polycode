@@ -5,9 +5,8 @@ import os
 
 import github
 
-from github_issues.github_project import GitHubProjectsClient
-
 from .base import ProjectManager
+from .github_projects_client import GitHubProjectsClient
 from .types import Issue, ProjectConfig, ProjectItem
 
 log = logging.getLogger(__name__)

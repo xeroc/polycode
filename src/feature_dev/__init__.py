@@ -5,17 +5,20 @@ Feature Development Flow module.
 import os
 import uuid
 
-from crewai import CrewOutput
 import git
+from crewai import CrewOutput
 from crewai.flow.flow import listen, start
+from crewai.flow.persistence import persist
+from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
+from persistence import PostgresFlowPersistence
 
 from .crews.implement_crew.implement_crew import ImplementCrew
 from .crews.plan_crew.plan_crew import PlanCrew
 from .crews.review_crew.review_crew import ReviewCrew
 from .crews.test_crew.test_crew import TestCrew
 from .crews.verify_crew.verify_crew import VerifyCrew
-from crewai.flow.persistence import persist
-from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from .types import (
     FeatureDevState,
     ImplementOutput,
@@ -25,8 +28,6 @@ from .types import (
     TestOutput,
     VerifyOutput,
 )
-from persistence import PostgresFlowPersistence
-from flowbase import FlowIssueManagement, sanitize_branch_name, KickoffIssue
 
 DATA_PATH = os.environ.get("DATA_PATH", "/data")
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -102,9 +103,9 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in output.stories:
             print(f"  |- 🔖 {current_story.description}")
 
-        self.status_manager.add_comment(
+        self.project_manager.add_comment(
             self.state.issue_id,
-            f"\n## 📋 Planning completed\n\n"
+            "\n## 📋 Planning completed\n\n"
             "Tasks that need implementing:"
             "\n - [ ] ".join([x.description for x in output.stories]),
         )
@@ -121,7 +122,9 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in self.state.completed_stories or []:
             print(f"  |- ✅ {current_story.description}")
 
-        if len(self.state.completed_stories or []) == len(self.state.stories or []):
+        if len(self.state.completed_stories or []) == len(
+            self.state.stories or []
+        ):
             return
 
         def implement_single_story(current_story: Story):
@@ -139,12 +142,19 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                         test_cmd=self.state.test_cmd,
                         current_story=current_story.model_dump_json(),
                         completed_stories="\n- ".join(
-                            [x.description for x in self.state.completed_stories or []]
+                            [
+                                x.description
+                                for x in self.state.completed_stories or []
+                            ]
                         ),
                         current_story_id=current_story.id,
                         current_story_title=current_story.title,
-                        architecture=self.recall_as_markdown_list("architecture"),
-                        configuration=self.recall_as_markdown_list("configuration"),
+                        architecture=self.recall_as_markdown_list(
+                            "architecture"
+                        ),
+                        configuration=self.recall_as_markdown_list(
+                            "configuration"
+                        ),
                         tech_stack=self.recall_as_markdown_list("tech_stack"),
                         agents_md=self.root_agents_md,
                     )
@@ -246,7 +256,8 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                     test_cmd=self.state.test_cmd,
                     current_story=self.state.current_story,
                     completed_stories=[
-                        x.description for x in self.state.completed_stories or []
+                        x.description
+                        for x in self.state.completed_stories or []
                     ],
                 )
             )
@@ -274,7 +285,9 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
 
         try:
-            self.status_manager.update_status(self.state.issue_id, "Reviewing")
+            self.project_manager.update_issue_status(
+                self.state.issue_id, "Reviewing"
+            )
         except Exception as e:
             print(f"🚨 Failed to update project status: {e}")
 

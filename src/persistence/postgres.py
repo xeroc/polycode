@@ -4,8 +4,10 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from crewai.flow.async_feedback.types import PendingFeedbackContext
+from crewai.flow.persistence import FlowPersistence
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Index
+from sqlalchemy import Index, create_engine
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -14,11 +16,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 from sqlalchemy.sql.expression import text
-from sqlalchemy.types import String, DateTime, Integer
-from sqlalchemy.types import JSON, TypeDecorator
-
-from crewai.flow.persistence import FlowPersistence
-from crewai.flow.async_feedback.types import PendingFeedbackContext
+from sqlalchemy.types import JSON, DateTime, Integer, String, TypeDecorator
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://user:password@localhost:5432/chaoscraft"

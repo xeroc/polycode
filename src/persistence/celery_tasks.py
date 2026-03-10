@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import Index
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.types import String, DateTime, Integer, Text
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from .postgres import Base
 

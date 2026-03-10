@@ -1,3 +1,8 @@
+"""Git utilities for GitHub operations.
+
+Moved from github_issues/utils.py as part of refactoring.
+"""
+
 import os
 import re
 

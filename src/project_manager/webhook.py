@@ -6,12 +6,12 @@ import json
 import logging
 from typing import Any
 
-from celery_tasks.tasks import process_github_webhook_task
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
+from celery_tasks.tasks import process_github_webhook_task
+
 from .flow_runner import FlowRunner
-from .types import Issue
 
 log = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ class GitHubWebhookHandler:
         Returns:
             Response dict with status
         """
-        log.info(f"Received ping from GitHub")
+        log.info("Received ping from GitHub")
         log.info(f"  Zen: {payload.zen}")
         log.info(f"  Hook ID: {payload.hook_id}")
         log.info(f"  Repository: {payload.repository.get('full_name')}")

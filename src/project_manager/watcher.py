@@ -108,7 +108,7 @@ class RepoWatcher:
         """
         self._running = True
 
-        log.info(f"Starting repository watcher")
+        log.info("Starting repository watcher")
         log.info(
             f"Repository: {self.manager.config.repo_owner}/{self.manager.config.repo_name}"
         )

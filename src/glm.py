@@ -1,11 +1,11 @@
 import os
-from crewai import BaseLLM, Agent, Task, Crew
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional
+
+import requests
+from crewai import Agent, BaseLLM, Task
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel
-import requests
-import json
 
 
 class GLMJSONLLM(BaseLLM):

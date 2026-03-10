@@ -2,8 +2,9 @@
 
 import time
 import uuid
-from celery.utils.log import get_task_logger
+
 from celery import Celery, Task
+from celery.utils.log import get_task_logger
 
 log = get_task_logger(__name__)
 

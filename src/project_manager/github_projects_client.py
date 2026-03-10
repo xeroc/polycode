@@ -1,4 +1,7 @@
-"""GitHub Projects V2 GraphQL API client with full type annotations."""
+"""GitHub Projects V2 GraphQL API client with full type annotations.
+
+Moved from github_issues/github_project.py as part of refactoring.
+"""
 
 import logging
 
