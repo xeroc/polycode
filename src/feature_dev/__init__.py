@@ -278,7 +278,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
 
         try:
-            self.project_manager.update_issue_status(self.state.issue_id, "Reviewing")
+            self.project_manager.update_issue_status(self.state.issue_id, "In review")
         except Exception as e:
             print(f"🚨 Failed to update project status: {e}")
 

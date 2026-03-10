@@ -45,7 +45,7 @@ def create_manager_from_env() -> GitHubProjectManager:
         STATUS_TODO: Custom "Todo" status name
         STATUS_READY: Custom "Ready" status name
         STATUS_IN_PROGRESS: Custom "In progress" status name
-        STATUS_REVIEWING: Custom "Reviewing" status name
+        STATUS_REVIEWING: Custom "In review" status name
         STATUS_DONE: Custom "Done" status name
         STATUS_BLOCKED: Custom "Blocked" status name
 
@@ -66,7 +66,7 @@ def create_manager_from_env() -> GitHubProjectManager:
         todo=os.environ.get("STATUS_TODO", "Todo"),
         ready=os.environ.get("STATUS_READY", "Ready"),
         in_progress=os.environ.get("STATUS_IN_PROGRESS", "In progress"),
-        reviewing=os.environ.get("STATUS_REVIEWING", "Reviewing"),
+        reviewing=os.environ.get("STATUS_REVIEWING", "In review"),
         done=os.environ.get("STATUS_DONE", "Done"),
         blocked=os.environ.get("STATUS_BLOCKED", "Blocked"),
     )

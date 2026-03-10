@@ -121,7 +121,7 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
         kickoff_ralph(kickoff_issue)
 
         log.info(f"Feature dev flow completed for issue #{issue_number}")
-        update_status_task(project_config_dict, issue_number, "Reviewing")
+        update_status_task(project_config_dict, issue_number, "In review")
         update_task_completed(
             project_config_dict, task_id, "Feature development completed"
         )
