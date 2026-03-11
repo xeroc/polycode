@@ -58,6 +58,7 @@ plan_task:
     !CRUCIAL!:
     * Do not build tests for static files (html, css)
     * Only build behavioral tests.
+    * no iterations here, got straight to your final answer!
 
     Instructions:
     1. Break the task into small user stories (max 20, min 1)
@@ -71,6 +72,7 @@ plan_task:
     9. avoid end-2-end tests, prefer small unittests
   expected_output: >
     Structured information (valid json) about build_cmd, test_cmd, ci notes, baseline, findings, purpose, tech stack, architecture, entry points, configuration, documentation, and stories.
+    Just MUST reply with valid JSON! No other messages! no ```-fencing!
   context:
     - setup_task
   agent: planner

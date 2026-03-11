@@ -2,11 +2,14 @@
 Feature Development Flow module.
 """
 
+import shutil
+
 import json
 import os
 import re
 import subprocess
 import uuid
+import logging
 from pathlib import Path
 from typing import Optional, TypeVar
 
@@ -30,6 +33,7 @@ from project_manager.git_utils import get_github_repo_from_local
 from project_manager.types import ProjectConfig
 
 T = TypeVar("T", bound="BaseFlowModel")
+logger = logging.getLogger(__name__)
 
 
 class KickoffRepo(BaseModel):
@@ -115,8 +119,8 @@ class FlowIssueManagement(Flow[T]):
                 ),
             ),
         )
-        print("💾 Memory:")
-        print(self.memory.tree())
+        logger.info("💾 Memory:")
+        logger.info(self.memory.tree())
 
         self.agents_md_map: dict[str, str] = {}
         self.root_agents_md: str = ""
@@ -130,17 +134,17 @@ class FlowIssueManagement(Flow[T]):
 
         try:
             ensure_request_exists(SessionLocal, self.state.issue_id, self.state.task)
-            print(f"🏹 Ensured request exists for issue #{self.state.issue_id}")
+            logger.info(f"🏹 Ensured request exists for issue #{self.state.issue_id}")
         except Exception as e:
-            print(f"🚨 Failed to ensure request exists: {e}")
+            logger.error(f"🚨 Failed to ensure request exists: {e}")
 
         try:
             update_request_status(SessionLocal, self.state.issue_id, "inprogress")
-            print(
+            logger.info(
                 f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}"
             )
         except Exception as e:
-            print(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
+            logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
 
     def _list_git_tree(self):
         return self.git_repo.git.ls()
@@ -149,17 +153,17 @@ class FlowIssueManagement(Flow[T]):
         branch_name = self.state.branch
         root_repo = self.state.path
 
-        print("🏹 Preparing work tree ...")
+        logger.info("🏹 Preparing work tree ...")
 
         if not os.path.exists(root_repo):
-            print(f"🚨 Repository not found at {root_repo}, cloning...")
+            logger.info(f"🚨 Repository not found at {root_repo}, cloning...")
             parent_dir = os.path.dirname(root_repo)
             if parent_dir:
                 os.makedirs(parent_dir, exist_ok=True)
             # TODO: this requires setting up a ssh alias!
             repo_url = f"github:{self.state.repo_owner}/{self.state.repo_name}"
             git.Repo.clone_from(repo_url, root_repo)
-            print(f"🏹 Cloned repository from {repo_url} to {root_repo}")
+            logger.info(f"🏹 Cloned repository from {repo_url} to {root_repo}")
 
         # TODO: develop branch is required currently
         self.git_repo.git.fetch("origin")
@@ -169,7 +173,7 @@ class FlowIssueManagement(Flow[T]):
         if branch_name not in [b.name for b in self.git_repo.branches]:
             develop_branch = self.git_repo.branches["develop"]
             self.git_repo.create_head(branch_name, develop_branch.name)
-            print(f"🏹 Created branch: {branch_name}")
+            logger.info(f"🏹 Created branch: {branch_name}")
 
         worktrees_dir = os.path.join(root_repo, ".git", ".worktrees")
         os.makedirs(worktrees_dir, exist_ok=True)
@@ -177,10 +181,10 @@ class FlowIssueManagement(Flow[T]):
 
         if os.path.exists(worktree_path):
             self.git_repo.git.worktree("remove", worktree_path, "--force")
-            print(f"🏹 Removed existing worktree at: {worktree_path}")
+            logger.info(f"🏹 Removed existing worktree at: {worktree_path}")
 
         self.git_repo.git.worktree("add", worktree_path, branch_name)
-        print(f"🏹 Created worktree at: {worktree_path}")
+        logger.info(f"🏹 Created worktree at: {worktree_path}")
 
         dependencies = ["node_modules", ".venv", ".env"]
         for dep in dependencies:
@@ -188,36 +192,38 @@ class FlowIssueManagement(Flow[T]):
             target = os.path.join(worktree_path, dep)
             if os.path.exists(source) and not os.path.exists(target):
                 os.symlink(source, target)
-                print(f"🔗 Linked {dep} from main repo to worktree")
+                logger.info(f"🔗 Linked {dep} from main repo to worktree")
 
         # Update inputs
         self.state.repo = worktree_path
         self.state.path = worktree_path
 
     def _commit_changes(self, title: str, body="", footer=""):
-        print("🏹 Commiting changes to repo")
+        logger.info("🏹 Commiting changes to repo")
         repo = git.Repo(self.state.repo)
 
-        # commit all changes to the repo
-        repo.git.add("-A")
+        # Stage changes (all modified files)
+        repo.git.add(A=True)  # -A stages all changes (including deletions)
 
-        merge_base = repo.merge_base("develop", self.state.branch)[0]
-        diff = repo.git.diff(merge_base, self.state.branch)
-        print(diff)
-        if not diff:
-            # no changes made
-            return
-
-        # Ensure we are on branch self.state.branch
-        branch_name = repo.active_branch.name
-        if branch_name != self.state.branch:
-            raise ValueError(
-                f"Wrong branch in the working directory ({self.state.repo}). Current branch '{branch_name}'. Excected '{self.state.branch}'"
-            )
+        # merge_base = repo.merge_base("develop", self.state.branch)[0]
+        # diff = repo.git.diff(merge_base, self.state.branch)
+        # if not diff:
+        #     logger.warn("No changes have been made to the repo!")
+        #     # no changes made
+        #     return
+        #
+        # # Ensure we are on branch self.state.branch
+        # branch_name = repo.active_branch.name
+        # if branch_name != self.state.branch:
+        #     raise ValueError(
+        #         f"Wrong branch in the working directory ({self.state.repo}). Current branch '{branch_name}'. Excected '{self.state.branch}'"
+        #     )
 
         commit_message = f"{title}\n\n{body}\n\n{footer}"
-        repo.index.commit(commit_message)
-        print(f"🏹 Committed changes: {commit_message.split('\n')[0]} ...")
+        commit = repo.index.commit(commit_message)
+        logger.info(
+            f"🏹 Committed changes: {commit_message.split('\n')[0]} ... (#{commit.hexsha})"
+        )
 
     def recall_as_markdown_list(self, name: str, **kwargs):
         if "scope" not in kwargs:
@@ -238,9 +244,9 @@ class FlowIssueManagement(Flow[T]):
                 with open(agents_file, "r", encoding="utf-8") as f:
                     content = f.read()
                 agents_md_files[relative_path] = content
-                print(f"📕 Discovered AGENTS.md: {relative_path}")
+                logger.info(f"📕 Discovered AGENTS.md: {relative_path}")
             except Exception as e:
-                print(f"🚨 Error reading {agents_file}: {e}")
+                logger.error(f"🚨 Error reading {agents_file}: {e}")
 
         self.agents_md_map = agents_md_files
 
@@ -251,19 +257,21 @@ class FlowIssueManagement(Flow[T]):
             # Use the first discovered file as root if no direct AGENTS.md
             first_path = next(iter(agents_md_files.keys()))
             self.root_agents_md = agents_md_files[first_path]
-            print(f"📕 Using {first_path} as root AGENTS.md")
+            logger.info(f"📕 Using {first_path} as root AGENTS.md")
 
-        print(f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}")
+        logger.info(f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}")
         return agents_md_files
 
     def _push_repo(self):
         repo, *_ = get_github_repo_from_local(self.state.repo)
-        print("🏹 Pushing repo ...")
-        repo.git.push("origin", self.state.branch)
+        logger.info("🏹 Pushing repo ...")
+
+        origin = repo.remote(name="origin")
+        origin.push()
 
     def _create_pr(self):
         """Step 6: Create pull request."""
-        print("🏹 Creating pull request")
+        logger.info("🏹 Creating pull request")
         if self.state.pr_number:
             return
 
@@ -280,7 +288,7 @@ class FlowIssueManagement(Flow[T]):
         # Get diff between two branches
         self.state.pr_url = pr.html_url
         self.state.pr_number = pr.number
-        print(f"🏹 PR {self.state.pr_number} created: {self.state.pr_url}")
+        logger.info(f"🏹 PR {self.state.pr_number} created: {self.state.pr_url}")
 
         self.project_manager.add_comment(
             self.state.issue_id,
@@ -297,23 +305,27 @@ class FlowIssueManagement(Flow[T]):
         try:
             self.project_manager.update_issue_status(self.state.issue_id, "Done")
         except Exception as e:
-            print(f"🚨 Failed to update project status to Done: {e}")
+            logger.info(f"🚨 Failed to update project status to Done: {e}")
 
         try:
             update_request_status(SessionLocal, self.state.issue_id, "completed")
-            print(
+            logger.info(
                 f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}"
             )
         except Exception as e:
-            print(f"🚨 Failed to update PostgreSQL status: {e}")
+            logger.error(f"🚨 Failed to update PostgreSQL status: {e}")
 
         self.git_repo.git.worktree("remove", self.state.repo)
-        print(f"🏹 Removed worktree: {self.state.repo}")
+        logger.info(f"🏹 Removed worktree: {self.state.repo}")
 
         parent_dir = os.path.dirname(self.state.repo)
         if os.path.exists(parent_dir):
-            os.rmdir(parent_dir)
-        print("🏹 Cleaned up worktree parent directory")
+            try:
+                # os.rmdir(parent_dir)
+                shutil.rmtree(parent_dir)
+            except Exception:
+                pass
+        logger.info("🏹 Cleaned up worktree parent directory")
 
     def _discover_build_cmd(self):
         """Discover build command from package.json."""
@@ -328,16 +340,16 @@ class FlowIssueManagement(Flow[T]):
                 scripts = pkg.get("scripts", {})
                 if "build" in scripts:
                     self.state.build_cmd = f"pnpm run -C {self.state.repo} build"
-                    print(f"📦 Build command: {self.state.build_cmd}")
+                    logger.info(f"📦 Build command: {self.state.build_cmd}")
                 elif "typecheck" in scripts:
                     self.state.build_cmd = f"pnpm run-C {self.state.repo} typecheck"
-                    print(f"📦 Typecheck command: {self.state.build_cmd}")
+                    logger.info(f"📦 Typecheck command: {self.state.build_cmd}")
             except Exception as e:
-                print(f"⚠️ Could not read package.json: {e}")
+                logger.warn(f"⚠️ Could not read package.json: {e}")
 
     def _build(self):
         if not self.state.build_cmd:
-            print("⚠️ No build command, skipping verification")
+            logger.warn("⚠️ No build command, skipping verification")
             return
 
         result = subprocess.run(
@@ -349,13 +361,13 @@ class FlowIssueManagement(Flow[T]):
             text=True,
             timeout=180,
         )
-        print(
+        logger.info(
             f"✅ Build verification passed\n{result.stdout[:200] if result.stdout else ''}..."
         )
 
     def _test(self):
         if not self.state.test_cmd:
-            print("⚠️ No test command, skipping verification")
+            logger.warn("⚠️ No test command, skipping verification")
             return
 
         result = subprocess.run(
@@ -367,6 +379,6 @@ class FlowIssueManagement(Flow[T]):
             text=True,
             timeout=180,
         )
-        print(
+        logger.info(
             f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}..."
         )

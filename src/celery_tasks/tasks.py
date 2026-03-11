@@ -101,7 +101,7 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
                 "message": f"Issue #{issue_number} not found in project",
             }
 
-        flow_identifier = f"{repo_owner}/{repo_name}/{issue_number}"
+        flow_identifier = f"{repo_owner}/{repo_name}/{issue_number}-1"
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier),
