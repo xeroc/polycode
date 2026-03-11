@@ -3,13 +3,22 @@ setup_task:
     Prepare the development environment for this feature.
 
     TASK:
+    ```
     {task}
+    ```
 
     REPO: {repo}
     BRANCH: {branch}
 
-    CREWAI REFERENCE GUIDE (AGENTS.md):
+    FILES IN REPO/WORKING DIRECTORY (honors .gitignore!):
+    ```
+    {file_in_repos}
+    ```
+
+    AGENTS.md:
+    ```
     {agents_md}
+    ```
 
     TOOLS:
     - DirectoryReadTool: Read the directory structure

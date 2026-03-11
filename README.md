@@ -1,10 +1,10 @@
-# Antfarm CrewAI 🚀
+# Polycode 🚀
 
-Antfarm workflows implemented with CrewAI - Multi-agent software development automation.
+Polycode workflows implemented with CrewAI - Multi-agent software development automation.
 
 ## Overview
 
-This project implements the antfarm workflow system using CrewAI framework. Each antfarm workflow is represented as a separate "Crew" with specialized AI agents that collaborate to complete complex software development tasks.
+This project implements the polycode workflow system using CrewAI framework. Each polycode workflow is represented as a separate "Crew" with specialized AI agents that collaborate to complete complex software development tasks.
 
 **Key Features:**
 
@@ -293,15 +293,15 @@ mapper.create_mapping(
 
 ### GitHub App API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | App info and status |
-| `/health` | GET | Health check |
-| `/webhook/github` | POST | GitHub webhook receiver |
-| `/installations` | GET | List all installations |
-| `/installations/{id}/sync` | POST | Sync repositories for installation |
-| `/mappings` | GET | List label-to-flow mappings |
-| `/mappings` | POST | Create new label mapping |
+| Endpoint                   | Method | Description                        |
+| -------------------------- | ------ | ---------------------------------- |
+| `/`                        | GET    | App info and status                |
+| `/health`                  | GET    | Health check                       |
+| `/webhook/github`          | POST   | GitHub webhook receiver            |
+| `/installations`           | GET    | List all installations             |
+| `/installations/{id}/sync` | POST   | Sync repositories for installation |
+| `/mappings`                | GET    | List label-to-flow mappings        |
+| `/mappings`                | POST   | Create new label mapping           |
 
 ### Webhook Testing
 
@@ -373,25 +373,25 @@ flow_handlers["ralph_flow"] = execute_ralph_flow
 
 ### Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Webhook 404 | Verify `WEBHOOK_PATH` matches GitHub App setting |
-| Signature validation fails | Check `GITHUB_APP_WEBHOOK_SECRET` matches |
-| Token generation fails | Verify `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` |
-| Can't push to repo | Ensure app has `contents:write` permission |
-| Flow not triggered | Check label mapping exists and is active |
-| Installation not found | Sync repositories: `POST /installations/{id}/sync` |
+| Issue                      | Solution                                            |
+| -------------------------- | --------------------------------------------------- |
+| Webhook 404                | Verify `WEBHOOK_PATH` matches GitHub App setting    |
+| Signature validation fails | Check `GITHUB_APP_WEBHOOK_SECRET` matches           |
+| Token generation fails     | Verify `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` |
+| Can't push to repo         | Ensure app has `contents:write` permission          |
+| Flow not triggered         | Check label mapping exists and is active            |
+| Installation not found     | Sync repositories: `POST /installations/{id}/sync`  |
 
 ### GitHub App vs PAT
 
-| Feature | GitHub App | Personal Access Token |
-|---------|-----------|----------------------|
-| Multi-repo support | ✅ Yes | ❌ Manual setup |
-| Scoped permissions | ✅ Per-installation | ❌ All-or-nothing |
-| Token expiry | ✅ Auto-refresh | ⚠️ Manual rotation |
-| Push to external repos | ✅ If app installed | ❌ Need their PAT |
-| Webhook automation | ✅ Built-in | ❌ Manual setup |
-| Security | ✅ Fine-grained | ⚠️ Broad access |
+| Feature                | GitHub App          | Personal Access Token |
+| ---------------------- | ------------------- | --------------------- |
+| Multi-repo support     | ✅ Yes              | ❌ Manual setup       |
+| Scoped permissions     | ✅ Per-installation | ❌ All-or-nothing     |
+| Token expiry           | ✅ Auto-refresh     | ⚠️ Manual rotation    |
+| Push to external repos | ✅ If app installed | ❌ Need their PAT     |
+| Webhook automation     | ✅ Built-in         | ❌ Manual setup       |
+| Security               | ✅ Fine-grained     | ⚠️ Broad access       |
 
 ### Additional Resources
 
@@ -455,37 +455,37 @@ result = security_crew.crew().kickoff(inputs={
 
 ### Bug Fix Crew
 
-| Agent | Role | Responsibility |
-|-------|------|---------------|
-| **Triager** | Bug Report Triager | Analyzes bug reports, reproduces issues, classifies severity |
-| **Investigator** | Root Cause Investigator | Traces bugs to root cause and proposes fix approach |
-| **Setup** | Environment Setup Specialist | Creates bugfix branch and establishes baseline |
-| **Fixer** | Bug Fix Implementation Engineer | Implements minimal, targeted fixes with regression tests |
-| **Verifier** | Bug Fix Verification Specialist | Verifies fix correctness and completeness |
-| **PR Creator** | Pull Request Creator | Creates clear, documented PRs with fix details |
+| Agent            | Role                            | Responsibility                                               |
+| ---------------- | ------------------------------- | ------------------------------------------------------------ |
+| **Triager**      | Bug Report Triager              | Analyzes bug reports, reproduces issues, classifies severity |
+| **Investigator** | Root Cause Investigator         | Traces bugs to root cause and proposes fix approach          |
+| **Setup**        | Environment Setup Specialist    | Creates bugfix branch and establishes baseline               |
+| **Fixer**        | Bug Fix Implementation Engineer | Implements minimal, targeted fixes with regression tests     |
+| **Verifier**     | Bug Fix Verification Specialist | Verifies fix correctness and completeness                    |
+| **PR Creator**   | Pull Request Creator            | Creates clear, documented PRs with fix details               |
 
 ### Feature Development Crew
 
-| Agent | Role | Responsibility |
-|-------|------|---------------|
-| **Planner** | Feature Planner | Decomposes tasks into ordered, executable user stories |
-| **Setup** | Environment Setup Specialist | Prepares environment, creates branch, establishes baseline |
-| **Developer** | Feature Developer | Implements features with high code quality and tests |
-| **Verifier** | Implementation Verifier | Quick sanity check of developer work |
-| **Tester** | Integration & E2E Test Engineer | Ensures features work together |
-| **Reviewer** | Code Review Specialist | Reviews PRs for code quality and best practices |
+| Agent         | Role                            | Responsibility                                             |
+| ------------- | ------------------------------- | ---------------------------------------------------------- |
+| **Planner**   | Feature Planner                 | Decomposes tasks into ordered, executable user stories     |
+| **Setup**     | Environment Setup Specialist    | Prepares environment, creates branch, establishes baseline |
+| **Developer** | Feature Developer               | Implements features with high code quality and tests       |
+| **Verifier**  | Implementation Verifier         | Quick sanity check of developer work                       |
+| **Tester**    | Integration & E2E Test Engineer | Ensures features work together                             |
+| **Reviewer**  | Code Review Specialist          | Reviews PRs for code quality and best practices            |
 
 ### Security Audit Crew
 
-| Agent | Role | Responsibility |
-|-------|------|---------------|
-| **Scanner** | Security Scanner | Performs comprehensive security analysis |
-| **Prioritizer** | Security Finding Prioritizer | Deduplicates, ranks, and groups findings |
-| **Setup** | Security Environment Setup Specialist | Creates security branches and establishes baselines |
-| **Fixer** | Security Fix Implementation Engineer | Implements minimal, targeted security fixes |
-| **Verifier** | Security Fix Verification Specialist | Verifies vulnerabilities are actually patched |
-| **Tester** | Security Integration Tester | Final integration testing and audit re-run |
-| **PR Creator** | Security PR Creator | Creates comprehensive security PRs |
+| Agent           | Role                                  | Responsibility                                      |
+| --------------- | ------------------------------------- | --------------------------------------------------- |
+| **Scanner**     | Security Scanner                      | Performs comprehensive security analysis            |
+| **Prioritizer** | Security Finding Prioritizer          | Deduplicates, ranks, and groups findings            |
+| **Setup**       | Security Environment Setup Specialist | Creates security branches and establishes baselines |
+| **Fixer**       | Security Fix Implementation Engineer  | Implements minimal, targeted security fixes         |
+| **Verifier**    | Security Fix Verification Specialist  | Verifies vulnerabilities are actually patched       |
+| **Tester**      | Security Integration Tester           | Final integration testing and audit re-run          |
+| **PR Creator**  | Security PR Creator                   | Creates comprehensive security PRs                  |
 
 ## Workflow Details
 

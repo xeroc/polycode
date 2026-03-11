@@ -15,6 +15,8 @@ Ralph Loop mechanism:
   5. Agent receives previous_errors context for smarter retries
 """
 
+from project_manager import StatusMapping
+
 from project_manager.config import settings as project_settings
 
 import subprocess
@@ -26,6 +28,7 @@ from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
 from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
 from persistence.postgres import PostgresFlowPersistence
+from project_manager.types import ProjectConfig
 
 from .crews.plan_crew.plan_crew import PlanCrew
 from .crews.ralph_crew.ralph_crew import RalphCrew
@@ -76,6 +79,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
     def setup(self):
         """Prepare worktree, discover build command and AGENTS.md files."""
         print("🚀 Ralph Loop starting...")
+        self._setup()
         self._prepare_work_tree()
 
     @listen(setup)
@@ -100,6 +104,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
                     repo=self.state.repo,
                     branch=self.state.branch,
                     agents_md=self.root_agents_md,
+                    file_in_repos=self._list_git_tree(),
                 )
             )
         )
@@ -319,6 +324,7 @@ def kickoff(issue: KickoffIssue):
             repo_owner=issue.repository.owner,
             repo_name=issue.repository.repository,
             max_iterations=MAX_ITERATIONS,
+            project_config=issue.project_config,
         )
     )
 
@@ -332,6 +338,13 @@ def example():
     branch = "smaller-robot"
     flow_identifier = f"{repo_owner}/{repo_name}/{issue_id}"
     id = uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier)
+    project_config = ProjectConfig(
+        provider="github",
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+        project_identifier="1",
+        status_mapping=StatusMapping(),
+    )
     # id = "888a8fb6-e86d-457a-a2ea-a8e858b1d3f2"
     flow = RalphLoopFlow()
     flow.kickoff(
@@ -343,6 +356,7 @@ def example():
             branch=branch,
             repo_owner=repo_owner,
             repo_name=repo_name,
+            project_config=project_config,
         )
     )
 

@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import uvicorn
 
+from celery_tasks.tasks import kickoff_task
 from persistence.postgres import Base
 from github_app import (
     models,
@@ -16,7 +17,6 @@ from github_app import (
 
 from .github import GitHubProjectManager  # noqa: E402
 from .types import IssueStatus, ProjectConfig, StatusMapping  # noqa: E402
-from .watcher import RepoWatcher  # noqa: E402
 from .config import settings
 
 log = logging.getLogger(__name__)
@@ -92,24 +92,6 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option("--once", is_flag=True, help="Run one cycle and exit")
-@click.option("--interval", default=300, help="Polling interval in seconds")
-@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
-def watch(once: bool, interval: int, verbose: bool) -> None:
-    """Watch repository for issues to process.
-
-    Polls the repository at the specified interval and processes issues
-    that are in "Ready" status.
-    """
-    setup_logging(verbose)
-
-    manager = create_manager_from_env()
-    watcher = RepoWatcher(manager, poll_interval=interval)
-
-    watcher.start(run_once=once)
-
-
-@cli.command()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 def sync(verbose: bool) -> None:
     """Sync all open issues to the project."""
@@ -175,6 +157,33 @@ def webhook(host: str, port: int, verbose: bool) -> None:
     from github_app.app import app
 
     uvicorn.run(app, host=host, port=port, log_level="info" if verbose else "warning")
+
+
+@cli.command("github-issue")
+@click.argument("issue_number", type=int)
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
+def github_issue_cmd(issue_number: int, verbose: bool) -> None:
+    """Process a specific GitHub issue by number.
+
+    Fetches the issue and moves it to 'In progress' status.
+    """
+    setup_logging(verbose)
+
+    manager = create_manager_from_env()
+    click.echo(f"Processing issue #{issue_number}...")
+
+    in_progress_status = manager.config.status_mapping.to_provider_status(
+        IssueStatus.IN_PROGRESS
+    )
+
+    success = manager.update_issue_status(issue_number, in_progress_status)
+
+    if success:
+        click.echo(f"Issue #{issue_number} moved to '{in_progress_status}'")
+        kickoff_task(manager.config.model_dump(), issue_number)  # pyright:ignore
+    else:
+        click.echo(f"Failed to update issue #{issue_number}", err=True)
+        raise SystemExit(1)
 
 
 @cli.command()

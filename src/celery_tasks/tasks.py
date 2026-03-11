@@ -466,7 +466,7 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
                 else:
                     log.warning(f"Failed to update issue #{issue_number} to Ready")
 
-                kickoff_task.delay(issue_number)  # type: ignore
+                kickoff_task.delay(config.model_dump(), issue_number)  # type: ignore
                 log.info(f"Triggered feature dev flow for issue #{issue_number}")
 
                 update_task_completed(task_id, "Issue labeled and flow triggered")

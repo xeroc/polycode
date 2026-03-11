@@ -101,10 +101,31 @@ class FlowIssueManagement(Flow[T]):
     """Generic base class that passes type parameter to Flow"""
 
     project_manager: GitHubProjectManager
+    git_repo: git.Repo
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.memory = Memory(
+            llm=GLMJSONLLM(),
+            embedder=OllamaProviderSpec(
+                provider="ollama",
+                config=OllamaProviderConfig(
+                    model_name="all-minilm:22m",
+                ),
+            ),
+        )
+        print("💾 Memory:")
+        print(self.memory.tree())
+
+        self.agents_md_map: dict[str, str] = {}
+        self.root_agents_md: str = ""
 
     def _setup(self):
         if not self.state.project_config:
             raise ValueError("project_config required!")
+
+        self.git_repo = git.Repo(self.state.path)
         self.project_manager = GitHubProjectManager(self.state.project_config)
 
         try:
@@ -120,6 +141,9 @@ class FlowIssueManagement(Flow[T]):
             )
         except Exception as e:
             print(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
+
+    def _list_git_tree(self):
+        return self.git_repo.git.ls()
 
     def _prepare_work_tree(self):
         branch_name = self.state.branch
@@ -138,14 +162,13 @@ class FlowIssueManagement(Flow[T]):
             print(f"🏹 Cloned repository from {repo_url} to {root_repo}")
 
         # TODO: develop branch is required currently
-        git_repo = git.Repo(root_repo)
-        git_repo.git.fetch("origin")
-        git_repo.git.checkout("develop")
-        git_repo.git.reset("--hard", "origin/develop")
+        self.git_repo.git.fetch("origin")
+        self.git_repo.git.checkout("develop")
+        self.git_repo.git.reset("--hard", "origin/develop")
 
-        if branch_name not in [b.name for b in git_repo.branches]:
-            develop_branch = git_repo.branches["develop"]
-            git_repo.create_head(branch_name, develop_branch.name)
+        if branch_name not in [b.name for b in self.git_repo.branches]:
+            develop_branch = self.git_repo.branches["develop"]
+            self.git_repo.create_head(branch_name, develop_branch.name)
             print(f"🏹 Created branch: {branch_name}")
 
         worktrees_dir = os.path.join(root_repo, ".git", ".worktrees")
@@ -153,10 +176,10 @@ class FlowIssueManagement(Flow[T]):
         worktree_path = os.path.join(worktrees_dir, branch_name)
 
         if os.path.exists(worktree_path):
-            git_repo.git.worktree("remove", worktree_path, "--force")
+            self.git_repo.git.worktree("remove", worktree_path, "--force")
             print(f"🏹 Removed existing worktree at: {worktree_path}")
 
-        git_repo.git.worktree("add", worktree_path, branch_name)
+        self.git_repo.git.worktree("add", worktree_path, branch_name)
         print(f"🏹 Created worktree at: {worktree_path}")
 
         dependencies = ["node_modules", ".venv", ".env"]
@@ -201,23 +224,6 @@ class FlowIssueManagement(Flow[T]):
             kwargs.update(dict(scope=self.state.memory_prefix))
         conf_recall = self.recall(name, **kwargs)
         return "\n".join(f"- {m.record.content}" for m in conf_recall)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.memory = Memory(
-            llm=GLMJSONLLM(),
-            embedder=OllamaProviderSpec(
-                provider="ollama",
-                config=OllamaProviderConfig(
-                    model_name="all-minilm:22m",
-                ),
-            ),
-        )
-        print("💾 Memory:")
-        print(self.memory.tree())
-
-        self.agents_md_map: dict[str, str] = {}
-        self.root_agents_md: str = ""
 
     def discover_agents_md_files(self):
         """Discover all AGENTS.md files in the repository."""
@@ -301,8 +307,7 @@ class FlowIssueManagement(Flow[T]):
         except Exception as e:
             print(f"🚨 Failed to update PostgreSQL status: {e}")
 
-        git_repo = git.Repo(self.state.repo)
-        git_repo.git.worktree("remove", self.state.repo)
+        self.git_repo.git.worktree("remove", self.state.repo)
         print(f"🏹 Removed worktree: {self.state.repo}")
 
         parent_dir = os.path.dirname(self.state.repo)

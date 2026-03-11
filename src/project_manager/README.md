@@ -267,10 +267,6 @@ Manages flow execution with single-flight guarantee.
 
 FastAPI webhook server for GitHub events.
 
-### Watcher (`watcher.py`)
-
-Legacy polling-based repository watcher.
-
 ### CLI (`cli.py`)
 
 Command-line tools for project management.
@@ -550,7 +546,7 @@ python -m project_manager.cli list
 ### Programmatic Usage
 
 ```python
-from project_manager import GitHubProjectManager, RepoWatcher
+from project_manager import GitHubProjectManager
 from project_manager.types import ProjectConfig, IssueStatus
 
 # Create manager
@@ -581,35 +577,6 @@ manager.add_comment(issue_number=42, comment="Working on this...")
 added = manager.sync_issues_to_project()
 ```
 
-### Custom Processing
-
-```python
-from project_manager import GitHubProjectManager, RepoWatcher
-from project_manager.types import ProjectConfig
-
-def on_issue_ready(item):
-    """Custom callback when an issue is ready to process."""
-    print(f"Processing issue #{item.issue_number}: {item.title}")
-    # Your custom logic here
-
-config = ProjectConfig(
-    provider="github",
-    repo_owner="xeroc",
-    repo_name="demo",
-    project_identifier="1",
-)
-
-manager = GitHubProjectManager(config)
-watcher = RepoWatcher(
-    manager=manager,
-    poll_interval=300,
-    on_issue_ready=on_issue_ready,
-)
-
-# Start watching
-watcher.start()
-```
-
 ## Components
 
 ### Types (`types.py`)
@@ -626,10 +593,6 @@ Abstract base class defining the provider interface.
 ### GitHub Implementation (`github.py`)
 
 GitHub Projects V2 implementation using GraphQL API.
-
-### Watcher (`watcher.py`)
-
-Repository watcher with polling support.
 
 ### CLI (`cli.py`)
 
