@@ -39,11 +39,25 @@ class RalphCrew:
             allow_code_execution=False,
         )
 
+    @agent
+    def summarizer(self) -> Agent:
+        return Agent(
+            config=self.agents_config["summarizer"],  # type: ignore[index]
+            verbose=True,
+        )
+
     @task
     def implement_task(self) -> Task:
         return Task(
             config=self.tasks_config["implement_task"],  # type: ignore[index]
+        )
+
+    @task
+    def commit_message_task(self) -> Task:
+        return Task(
+            config=self.tasks_config["commit_message_task"],  # type: ignore[index]
             output_pydantic=RalphOutput,
+            context=[self.implement_task()],  # pyright:ignore
         )
 
     @crew

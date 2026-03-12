@@ -1,5 +1,7 @@
+from typing import List
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+from crewai.tools import BaseTool
 from crewai_tools import FileWriterTool
 
 from glm import GLMJSONLLM
@@ -18,7 +20,7 @@ class PlanCrew:
 
     @agent
     def setup(self) -> Agent:
-        tools = [FileReadTool(), DirectoryReadTool(), FileWriterTool()]
+        tools: List[BaseTool] = [FileReadTool(), DirectoryReadTool(), FileWriterTool()]
 
         if self.agents_md_map:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
@@ -33,7 +35,7 @@ class PlanCrew:
 
     @agent
     def planner(self) -> Agent:
-        tools = []
+        tools: List[BaseTool] = []
 
         if self.agents_md_map:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))

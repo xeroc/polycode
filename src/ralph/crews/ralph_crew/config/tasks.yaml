@@ -34,11 +34,17 @@ implement_task:
     3. Follow existing code patterns in the repo
     4. If previous_errors are provided, AVOID those specific mistakes
 
-    5. Generate → a conventional commit message
-    6. Report → what was changed
-    7. Set status:
+    5. Report → what was changed
+    6. Set status:
        - "done" if build passed
        - "retry" if build failed (so Flow can iterate)
+
+  expected_output: |
+  agent: implementer
+
+commit_message_task:
+  description: |
+    Generate a conventional commit message for the changes of our impolementer.
 
     ### COMMIT MESSAGE FORMAT:
     - title: `<type>(<scope>): <subject>` (max 72 chars)
@@ -46,7 +52,6 @@ implement_task:
     - footer: Breaking changes or issue refs (optional)
 
     Types: feat, fix, docs, style, refactor, perf, test, chore
-
   expected_output: |
     RalphOutput with:
     - status: "done" (build passed) or "retry" (build failed)
@@ -54,4 +59,4 @@ implement_task:
     - title: Commit message title
     - message: Commit message body
     - footer: Commit footer (empty if none)
-  agent: implementer
+  agent: summarizer

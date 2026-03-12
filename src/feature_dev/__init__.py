@@ -2,6 +2,8 @@
 Feature Development Flow module.
 """
 
+from project_manager import StatusMapping
+
 import os
 import uuid
 
@@ -13,6 +15,8 @@ from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
 from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
 from persistence import PostgresFlowPersistence
+from project_manager.config import settings as project_settings
+from project_manager.types import ProjectConfig
 
 from .crews.implement_crew.implement_crew import ImplementCrew
 from .crews.plan_crew.plan_crew import PlanCrew
@@ -29,8 +33,7 @@ from .types import (
     VerifyOutput,
 )
 
-DATA_PATH = os.environ.get("DATA_PATH", "/data")
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = project_settings.DATABASE_URL
 if DATABASE_URL and DATABASE_URL.startswith("postgres"):
     print("📊 Connecting persistence with postgres")
     persistence = PostgresFlowPersistence(connection_string=DATABASE_URL)
@@ -43,10 +46,6 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
     """
     Feature development workflow with consecutive flows.
     """
-
-    @start()
-    def prepare_work_tree(self):
-        self._prepare_work_tree()
 
     @start()
     def setup(self):
@@ -103,7 +102,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in output.stories:
             print(f"  |- 🔖 {current_story.description}")
 
-        self.project_manager.add_comment(
+        self._project_manager.add_comment(
             self.state.issue_id,
             "\n## 📋 Planning completed\n\n"
             "Tasks that need implementing:"
@@ -122,9 +121,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in self.state.completed_stories or []:
             print(f"  |- ✅ {current_story.description}")
 
-        if len(self.state.completed_stories or []) == len(
-            self.state.stories or []
-        ):
+        if len(self.state.completed_stories or []) == len(self.state.stories or []):
             return
 
         def implement_single_story(current_story: Story):
@@ -142,19 +139,12 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                         test_cmd=self.state.test_cmd,
                         current_story=current_story.model_dump_json(),
                         completed_stories="\n- ".join(
-                            [
-                                x.description
-                                for x in self.state.completed_stories or []
-                            ]
+                            [x.description for x in self.state.completed_stories or []]
                         ),
                         current_story_id=current_story.id,
                         current_story_title=current_story.title,
-                        architecture=self.recall_as_markdown_list(
-                            "architecture"
-                        ),
-                        configuration=self.recall_as_markdown_list(
-                            "configuration"
-                        ),
+                        architecture=self.recall_as_markdown_list("architecture"),
+                        configuration=self.recall_as_markdown_list("configuration"),
                         tech_stack=self.recall_as_markdown_list("tech_stack"),
                         agents_md=self.root_agents_md,
                     )
@@ -256,8 +246,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                     test_cmd=self.state.test_cmd,
                     current_story=self.state.current_story,
                     completed_stories=[
-                        x.description
-                        for x in self.state.completed_stories or []
+                        x.description for x in self.state.completed_stories or []
                     ],
                 )
             )
@@ -285,9 +274,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
 
         try:
-            self.project_manager.update_issue_status(
-                self.state.issue_id, "Reviewing"
-            )
+            self._project_manager.update_issue_status(self.state.issue_id, "In review")
         except Exception as e:
             print(f"🚨 Failed to update project status: {e}")
 
@@ -337,11 +324,18 @@ def kickoff(issue: KickoffIssue):
             id=str(issue.flow_id),
             issue_id=issue.id,
             task=f"{issue.title}\n\n{issue.body}",
-            path=f"{DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
+            path=f"{project_settings.DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
             branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
             memory_prefix=f"{issue.repository.owner}/{issue.repository.repository}",
             repo_owner=issue.repository.owner,
             repo_name=issue.repository.repository,
+            project_config=ProjectConfig(
+                provider="github",
+                repo_owner=issue.repository.owner,
+                repo_name=issue.repository.repository,
+                project_identifier="1",
+                status_mapping=StatusMapping(),
+            ),
         )
     )
 

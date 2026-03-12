@@ -78,9 +78,7 @@ class GitHubProjectsClient:
         }
         self.endpoint = "https://api.github.com/graphql"
 
-    def _query(
-        self, query: str, variables: dict | None = None
-    ) -> GraphQLResponse:
+    def _query(self, query: str, variables: dict | None = None) -> GraphQLResponse:
         """Execute a GraphQL query.
 
         Args:
@@ -103,32 +101,69 @@ class GitHubProjectsClient:
             response.raise_for_status()
             return GraphQLResponse(**response.json())
 
-    def get_project_id(self, owner: str, project_number: int) -> str:
+    def get_project_id(self, owner: str, project_number: int | None = None) -> str:
         """Get the global ID for a project.
-
         Args:
             owner: Repository owner.
-            project_number: Project number.
-
+            project_number: Project number. If None, returns the first project found.
         Returns:
             Global ID of the project.
         """
-        query = (
-            """
-        query($owner: String!, $projectNumber: Int!) {
-            repository(owner: $owner, name: "%s") {
-                projectV2(number: $projectNumber) {
-                    id
+        if project_number is not None:
+            query = """
+            query($owner: String!, $projectNumber: Int!) {
+                repository(owner: $owner, name: "%s") {
+                    projectV2(number: $projectNumber) {
+                        id
+                    }
                 }
             }
-        }
-        """
-            % self.repo_name
-        )
-        result = self._query(
-            query, {"owner": owner, "projectNumber": project_number}
-        )
-        return result.data["repository"]["projectV2"]["id"]
+            """ % self.repo_name
+            result = self._query(
+                query, {"owner": owner, "projectNumber": project_number}
+            )
+            if result.data["repository"]["projectV2"] is None:
+                raise ValueError("No project found with that number!")
+            return result.data["repository"]["projectV2"]["id"]
+        else:
+            # Try as organization first, then fall back to user
+            query = """
+            query($owner: String!) {
+                organization(login: $owner) {
+                    projectsV2(first: 1) {
+                        nodes {
+                            id
+                        }
+                    }
+                }
+            }
+            """
+            try:
+                result = self._query(query, {"owner": owner})
+                nodes = result.data["organization"]["projectsV2"]["nodes"]
+                if nodes:
+                    return nodes[0]["id"]
+            except Exception:
+                pass
+
+            # Fall back to user
+            query = """
+            query($owner: String!) {
+                user(login: $owner) {
+                    projectsV2(first: 1) {
+                        nodes {
+                            id
+                        }
+                    }
+                }
+            }
+            """
+            result = self._query(query, {"owner": owner})
+            nodes = result.data["user"]["projectsV2"]["nodes"]
+            if nodes:
+                return nodes[0]["id"]
+
+            raise ValueError("No projects found for this owner!")
 
     def get_project_items(self, project_id: str) -> list[ProjectItem]:
         """Get all items in a project with their status.
@@ -171,9 +206,7 @@ class GitHubProjectsClient:
         items: list[ProjectItem] = []
         cursor: str | None = None
         while True:
-            result = self._query(
-                query, {"projectId": project_id, "cursor": cursor}
-            )
+            result = self._query(query, {"projectId": project_id, "cursor": cursor})
             data = result.data["node"]["items"]
             for node in data["nodes"]:
                 content = node.get("content")
@@ -185,9 +218,7 @@ class GitHubProjectsClient:
                             issue_number=content["number"],
                             title=content["title"],
                             body=content["body"],
-                            status=status_field["name"]
-                            if status_field
-                            else None,
+                            status=status_field["name"] if status_field else None,
                         )
                     )
             if not data["pageInfo"]["hasNextPage"]:
@@ -195,9 +226,7 @@ class GitHubProjectsClient:
             cursor = data["pageInfo"]["endCursor"]
         return items
 
-    def add_issue_to_project(
-        self, project_id: str, issue_node_id: str
-    ) -> str | None:
+    def add_issue_to_project(self, project_id: str, issue_node_id: str) -> str | None:
         """Add an issue to a project.
 
         Args:
@@ -221,9 +250,7 @@ class GitHubProjectsClient:
         )
         return result.data["addProjectV2ItemById"]["item"]["id"]
 
-    def get_status_field_id(
-        self, project_id: str
-    ) -> tuple[str, dict[str, str]]:
+    def get_status_field_id(self, project_id: str) -> tuple[str, dict[str, str]]:
         """Get the ID and options of the Status field in a project.
 
         Args:

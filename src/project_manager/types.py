@@ -1,7 +1,7 @@
 """Common types for project management."""
 
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -46,7 +46,7 @@ class StatusMapping(BaseModel):
     todo: str = "Todo"
     ready: str = "Ready"
     in_progress: str = "In progress"
-    reviewing: str = "Reviewing"
+    reviewing: str = "In review"
     done: str = "Done"
     blocked: str = "Blocked"
 
@@ -61,7 +61,7 @@ class StatusMapping(BaseModel):
             todo=data.get("todo", "Todo"),
             ready=data.get("ready", "Ready"),
             in_progress=data.get("in_progress", "In progress"),
-            reviewing=data.get("reviewing", "Reviewing"),
+            reviewing=data.get("reviewing", "In review"),
             done=data.get("done", "Done"),
             blocked=data.get("blocked", "Blocked"),
         )
@@ -73,7 +73,7 @@ class ProjectConfig(BaseModel):
     provider: str
     repo_owner: str
     repo_name: str
-    project_identifier: str
+    project_identifier: Optional[str] = None
     status_mapping: StatusMapping = StatusMapping()
     token: str | None = None
     extra: dict[str, Any] = {}

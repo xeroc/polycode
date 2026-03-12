@@ -11,7 +11,6 @@ from .types import (
     ProjectItem,
     StatusMapping,
 )
-from .watcher import RepoWatcher
 
 __all__ = [
     "ProjectManager",
@@ -22,6 +21,5 @@ __all__ = [
     "ProjectConfig",
     "ProjectItem",
     "StatusMapping",
-    "RepoWatcher",
     "get_github_repo_from_local",
 ]

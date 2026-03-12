@@ -15,9 +15,13 @@ Ralph Loop mechanism:
   5. Agent receives previous_errors context for smarter retries
 """
 
-import os
+from project_manager import StatusMapping
+
+from project_manager.config import settings as project_settings
+
 import subprocess
 import uuid
+import logging
 from typing import cast
 
 from crewai.flow.flow import listen, router, start
@@ -25,16 +29,18 @@ from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
 from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
 from persistence.postgres import PostgresFlowPersistence
+from project_manager.types import ProjectConfig
 
 from .crews.plan_crew.plan_crew import PlanCrew
 from .crews.ralph_crew.ralph_crew import RalphCrew
 from .types import PlanOutput, RalphLoopState, RalphOutput, Story
 
+logger = logging.getLogger(__name__)
+
 MAX_ITERATIONS = 3
-DATA_PATH = os.environ.get("DATA_PATH", "/data")
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = project_settings.DATABASE_URL
 if DATABASE_URL and DATABASE_URL.startswith("postgres"):
-    print("📊 Connecting persistence with postgres")
+    logger.info("📊 Connecting persistence with postgres")
     persistence = PostgresFlowPersistence(connection_string=DATABASE_URL)
 else:
     persistence = SQLiteFlowPersistence()
@@ -74,9 +80,10 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
     @start()
     def setup(self):
-        """Prepare worktree, discover build command and AGENTS.md files."""
-        print("🚀 Ralph Loop starting...")
-        self._prepare_work_tree()
+        logger.info("🚀 Ralph Loop starting...")
+        self._setup()
+        # self._prepare_work_tree()
+        self.pickup_issue()
 
     @listen(setup)
     def plan(self):
@@ -89,7 +96,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         if self.state.stories:
             return
 
-        print("📝 Planning story from prompt...")
+        logger.info("📝 Planning story from prompt...")
 
         result = (
             PlanCrew()
@@ -100,6 +107,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
                     repo=self.state.repo,
                     branch=self.state.branch,
                     agents_md=self.root_agents_md,
+                    file_in_repos=self._list_git_tree(),
                 )
             )
         )
@@ -109,9 +117,9 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         self.state.build_cmd = output.build_cmd
         self.state.test_cmd = output.test_cmd
 
-        print(f"🔖 Planned {len(output.stories)} stories")
+        logger.info(f"🔖 Planned {len(output.stories)} stories")
         for current_story in output.stories:
-            print(f"  |- 🔖 {current_story.description}")
+            logger.info(f"  |- 🔖 {current_story.description}")
 
     @listen(plan)
     def start_ralph_loop(self):
@@ -119,7 +127,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         Ralph Loop entry - log start info.
         """
         num_stories = len(self.state.stories) if self.state.stories else 0
-        print(
+        logger.info(
             f"\n🔨 Starting Ralph Loop for {num_stories} stories (max {MAX_ITERATIONS} iterations each)"
         )
 
@@ -134,17 +142,18 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         """
         story = self._current_story()
         if not story:
+            logger.info("Reached last story ..")
             return
+        self._setup()
 
         story.iteration += 1
-        print(
+        logger.info(
             f"\n📖 Story {self.state.current_story_index + 1}/{len(self.state.stories or [])}: {story.title}"
         )
-        print(f"🔨 Iteration {story.iteration}/{MAX_ITERATIONS}")
+        logger.info(f"🔨 Iteration {story.iteration}/{MAX_ITERATIONS}")
 
         error_context = (
-            "\n\n## Previous Errors:\n"
-            + "\n".join(f"- {err}" for err in story.errors)
+            "\n\n## Previous Errors:\n" + "\n".join(f"- {err}" for err in story.errors)
             if story.errors
             else "No previous errors"
         )
@@ -190,6 +199,8 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         if not story:
             return "done"
 
+        self._setup()
+
         try:
             self._test()
         except Exception as e:
@@ -199,38 +210,34 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         agent_output = self.state.agent_output or ""
 
         if status == "done":
-            print("✅ Completion")
-            print(
-                f"Story '{story.title}' complete - objective criteria verified"
-            )
+            logger.info("✅ Completion")
+            logger.info(f"Story '{story.title}' complete - objective criteria verified")
             story.completed = True
             story.errors = []
 
             if self._has_more_stories():
                 self.state.current_story_index += 1
-                print("➡️ Moving to next story...")
+                logger.info("➡️ Moving to next story...")
                 return "next_story"
 
             return status
 
         if story.iteration >= MAX_ITERATIONS:
-            print(
+            logger.info(
                 f"⚠️ Max iterations ({MAX_ITERATIONS}) reached for story '{story.title}'"
             )
             story.completed = True
-            print("Proceeding with current state (safety brake engaged)")
+            logger.info("Proceeding with current state (safety brake engaged)")
 
             if self._has_more_stories():
                 self.state.current_story_index += 1
-                print("➡️ Moving to next story...")
+                logger.info("➡️ Moving to next story...")
                 return "next_story"
             return "done"
 
-        print("Completion promise not found, retrying...")
-        story.errors.append(
-            f"Iteration {story.iteration}: {agent_output[:200]}..."
-        )
-        print(f"🔄 Routing to: implement (iteration {story.iteration + 1})")
+        logger.info("Completion promise not found, retrying...")
+        story.errors.append(f"Iteration {story.iteration}: {agent_output[:200]}...")
+        logger.info(f"🔄 Routing to: implement (iteration {story.iteration + 1})")
         return "retry"
 
     @listen("retry")
@@ -246,31 +253,33 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
     @listen("done")
     def verify_build(self):
         """Final verification that build passes."""
-        print(f"\n🔍 Final build verification: {self.state.build_cmd}")
+        logger.info(f"\n🔍 Final build verification: {self.state.build_cmd}")
         self.state.build_success = True
+        self._setup()
         try:
             self._build()
         except subprocess.TimeoutExpired:
-            print("⏱️ Build timed out after 180 seconds")
+            logger.info("⏱️ Build timed out after 180 seconds")
             self.state.build_success = False
         except subprocess.CalledProcessError as e:
-            print(f"❌ Build verification failed:\n{e.stderr}")
+            logger.info(f"❌ Build verification failed:\n{e.stderr}")
             self.state.build_success = False
 
         self.state.test_success = True
         try:
             self._test()
         except subprocess.TimeoutExpired:
-            print("⏱️ Test timed out after 180 seconds")
+            logger.info("⏱️ Test timed out after 180 seconds")
             self.state.test_success = False
         except subprocess.CalledProcessError as e:
-            print(f"❌ Test verification failed:\n{e.stderr}")
+            logger.info(f"❌ Test verification failed:\n{e.stderr}")
             self.state.test_success = False
 
     @listen(verify_build)
     def commit(self):
         """Commit changes with conventional commit message from agent."""
-        print("\n💾 Committing changes...")
+        logger.info("\n💾 Committing changes...")
+        self._setup()
 
         self._commit_changes(
             title=self.state.commit_title or "chore: ralph loop changes",
@@ -278,7 +287,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             footer=self.state.commit_footer or "",
         )
 
-        print(f"✅ Committed: {self.state.commit_title}")
+        logger.info(f"✅ Committed: {self.state.commit_title}")
 
     @listen(commit)
     def push_repo(self):
@@ -318,12 +327,13 @@ def kickoff(issue: KickoffIssue):
             id=str(issue.flow_id),
             issue_id=issue.id,
             task=f"{issue.title}\n\n{issue.body}",
-            path=f"{DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
+            path=f"{project_settings.DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
             branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
             memory_prefix=f"{issue.repository.owner}/{issue.repository.repository}",
             repo_owner=issue.repository.owner,
             repo_name=issue.repository.repository,
             max_iterations=MAX_ITERATIONS,
+            project_config=issue.project_config,
         )
     )
 
@@ -337,6 +347,13 @@ def example():
     branch = "smaller-robot"
     flow_identifier = f"{repo_owner}/{repo_name}/{issue_id}"
     id = uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier)
+    project_config = ProjectConfig(
+        provider="github",
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+        project_identifier="1",
+        status_mapping=StatusMapping(),
+    )
     # id = "888a8fb6-e86d-457a-a2ea-a8e858b1d3f2"
     flow = RalphLoopFlow()
     flow.kickoff(
@@ -348,6 +365,7 @@ def example():
             branch=branch,
             repo_owner=repo_owner,
             repo_name=repo_name,
+            project_config=project_config,
         )
     )
 
