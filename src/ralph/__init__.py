@@ -80,10 +80,10 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
     @start()
     def setup(self):
-        """Prepare worktree, discover build command and AGENTS.md files."""
         logger.info("🚀 Ralph Loop starting...")
         self._setup()
         # self._prepare_work_tree()
+        self.pickup_issue()
 
     @listen(setup)
     def plan(self):
@@ -144,6 +144,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         if not story:
             logger.info("Reached last story ..")
             return
+        self._setup()
 
         story.iteration += 1
         logger.info(
@@ -197,6 +198,8 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         story = self._current_story()
         if not story:
             return "done"
+
+        self._setup()
 
         try:
             self._test()
@@ -252,6 +255,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         """Final verification that build passes."""
         logger.info(f"\n🔍 Final build verification: {self.state.build_cmd}")
         self.state.build_success = True
+        self._setup()
         try:
             self._build()
         except subprocess.TimeoutExpired:
@@ -275,6 +279,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
     def commit(self):
         """Commit changes with conventional commit message from agent."""
         logger.info("\n💾 Committing changes...")
+        self._setup()
 
         self._commit_changes(
             title=self.state.commit_title or "chore: ralph loop changes",

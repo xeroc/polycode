@@ -104,9 +104,6 @@ class BaseFlowModel(BaseModel):
 class FlowIssueManagement(Flow[T]):
     """Generic base class that passes type parameter to Flow"""
 
-    project_manager: GitHubProjectManager
-    git_repo: git.Repo
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -125,12 +122,20 @@ class FlowIssueManagement(Flow[T]):
         self.agents_md_map: dict[str, str] = {}
         self.root_agents_md: str = ""
 
+    @property
+    def _project_manager(self) -> GitHubProjectManager:
+        if not self.state.project_config:
+            raise ValueError("projet_config not specified!")
+        return GitHubProjectManager(self.state.project_config)
+
+    @property
+    def _git_repo(self) -> git.Repo:
+        return git.Repo(self.state.path)
+
     def _setup(self):
+        self._prepare_work_tree()
         if not self.state.project_config:
             raise ValueError("project_config required!")
-
-        self.git_repo = git.Repo(self.state.path)
-        self.project_manager = GitHubProjectManager(self.state.project_config)
 
         try:
             ensure_request_exists(SessionLocal, self.state.issue_id, self.state.task)
@@ -138,6 +143,7 @@ class FlowIssueManagement(Flow[T]):
         except Exception as e:
             logger.error(f"🚨 Failed to ensure request exists: {e}")
 
+    def pickup_issue(self):
         try:
             update_request_status(SessionLocal, self.state.issue_id, "inprogress")
             logger.info(
@@ -147,43 +153,50 @@ class FlowIssueManagement(Flow[T]):
             logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
 
     def _list_git_tree(self):
-        return self.git_repo.git.ls()
+        return self._git_repo.git.ls()
 
     def _prepare_work_tree(self):
+        if ".worktrees" in self.state.path:
+            self.state.path = os.path.join(self.state.path, "..", "..")
+
         branch_name = self.state.branch
         root_repo = self.state.path
 
         logger.info("🏹 Preparing work tree ...")
 
-        if not os.path.exists(root_repo):
-            logger.info(f"🚨 Repository not found at {root_repo}, cloning...")
-            parent_dir = os.path.dirname(root_repo)
-            if parent_dir:
-                os.makedirs(parent_dir, exist_ok=True)
-            # TODO: this requires setting up a ssh alias!
-            repo_url = f"github:{self.state.repo_owner}/{self.state.repo_name}"
-            git.Repo.clone_from(repo_url, root_repo)
-            logger.info(f"🏹 Cloned repository from {repo_url} to {root_repo}")
+        if os.path.exists(root_repo):
+            return
+
+        logger.info(f"🚨 Repository not found at {root_repo}, cloning...")
+        parent_dir = os.path.dirname(root_repo)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
+        # TODO: this requires setting up a ssh alias!
+        repo_url = f"github:{self.state.repo_owner}/{self.state.repo_name}"
+        git.Repo.clone_from(repo_url, root_repo)
+        logger.info(f"🏹 Cloned repository from {repo_url} to {root_repo}")
 
         # TODO: develop branch is required currently
-        self.git_repo.git.fetch("origin")
-        self.git_repo.git.checkout("develop")
-        self.git_repo.git.reset("--hard", "origin/develop")
+        self._git_repo.git.fetch("origin")
+        self._git_repo.git.reset("--hard", "origin/develop")
 
-        if branch_name not in [b.name for b in self.git_repo.branches]:
-            develop_branch = self.git_repo.branches["develop"]
-            self.git_repo.create_head(branch_name, develop_branch.name)
+        if branch_name not in [b.name for b in self._git_repo.branches]:
+            develop_branch = self._git_repo.branches["develop"]
+            self._git_repo.create_head(branch_name, develop_branch.name)
             logger.info(f"🏹 Created branch: {branch_name}")
 
         worktrees_dir = os.path.join(root_repo, ".git", ".worktrees")
-        os.makedirs(worktrees_dir, exist_ok=True)
+        try:
+            os.makedirs(worktrees_dir, exist_ok=True)
+        except Exception:
+            logger.error(f"Failed to create directory: {worktrees_dir}")
         worktree_path = os.path.join(worktrees_dir, branch_name)
 
-        if os.path.exists(worktree_path):
-            self.git_repo.git.worktree("remove", worktree_path, "--force")
-            logger.info(f"🏹 Removed existing worktree at: {worktree_path}")
+        # if os.path.exists(worktree_path):
+        #     self._git_repo.git.worktree("remove", worktree_path, "--force")
+        #     logger.info(f"🏹 Removed existing worktree at: {worktree_path}")
 
-        self.git_repo.git.worktree("add", worktree_path, branch_name)
+        self._git_repo.git.worktree("add", worktree_path, branch_name)
         logger.info(f"🏹 Created worktree at: {worktree_path}")
 
         dependencies = ["node_modules", ".venv", ".env"]
@@ -196,7 +209,6 @@ class FlowIssueManagement(Flow[T]):
 
         # Update inputs
         self.state.repo = worktree_path
-        self.state.path = worktree_path
 
     def _commit_changes(self, title: str, body="", footer=""):
         logger.info("🏹 Commiting changes to repo")
@@ -290,7 +302,7 @@ class FlowIssueManagement(Flow[T]):
         self.state.pr_number = pr.number
         logger.info(f"🏹 PR {self.state.pr_number} created: {self.state.pr_url}")
 
-        self.project_manager.add_comment(
+        self._project_manager.add_comment(
             self.state.issue_id,
             f"## 🔍 Review Started\n\n"
             f"Pull request #{self.state.pr_number} is now under review.\n"
@@ -299,11 +311,11 @@ class FlowIssueManagement(Flow[T]):
 
     def _merge_branch(self):
         if self.state.pr_number:
-            self.project_manager.merge_pull_request(self.state.pr_number)
+            self._project_manager.merge_pull_request(self.state.pr_number)
 
     def _cleanup_worktree(self):
         try:
-            self.project_manager.update_issue_status(self.state.issue_id, "Done")
+            self._project_manager.update_issue_status(self.state.issue_id, "Done")
         except Exception as e:
             logger.info(f"🚨 Failed to update project status to Done: {e}")
 
@@ -315,7 +327,7 @@ class FlowIssueManagement(Flow[T]):
         except Exception as e:
             logger.error(f"🚨 Failed to update PostgreSQL status: {e}")
 
-        self.git_repo.git.worktree("remove", self.state.repo)
+        self._git_repo.git.worktree("remove", self.state.repo)
         logger.info(f"🏹 Removed worktree: {self.state.repo}")
 
         parent_dir = os.path.dirname(self.state.repo)

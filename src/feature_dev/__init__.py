@@ -48,10 +48,6 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
     """
 
     @start()
-    def prepare_work_tree(self):
-        self._prepare_work_tree()
-
-    @start()
     def setup(self):
         """Step 1: Plan - decompose task into user stories."""
         print("📑 Planning feature into user stories")
@@ -106,7 +102,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in output.stories:
             print(f"  |- 🔖 {current_story.description}")
 
-        self.project_manager.add_comment(
+        self._project_manager.add_comment(
             self.state.issue_id,
             "\n## 📋 Planning completed\n\n"
             "Tasks that need implementing:"
@@ -278,7 +274,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
 
         try:
-            self.project_manager.update_issue_status(self.state.issue_id, "In review")
+            self._project_manager.update_issue_status(self.state.issue_id, "In review")
         except Exception as e:
             print(f"🚨 Failed to update project status: {e}")
 
