@@ -36,7 +36,7 @@ redis_client = Redis(
 
 github_auth = GitHubAppAuth(
     app_id=settings.GITHUB_APP_ID,
-    private_key=settings.GITHUB_APP_PRIVATE_KEY,
+    private_key=settings.GITHUB_APP_PRIVATE_KEY.replace("\\n", "\n"),
     redis_client=redis_client,
 )
 
