@@ -52,10 +52,12 @@ def create_manager_from_env() -> GitHubProjectManager:
     Returns:
         Configured project manager
     """
-    provider = os.environ.get("PROJECT_PROVIDER", "github")
-    repo_owner = os.environ.get("REPO_OWNER")
-    repo_name = os.environ.get("REPO_NAME")
-    project_identifier = os.environ.get("PROJECT_IDENTIFIER")
+    from .config import settings
+
+    provider = settings.PROJECT_PROVIDER or "github"
+    repo_owner = settings.REPO_OWNER
+    repo_name = settings.REPO_NAME
+    project_identifier = settings.PROJECT_IDENTIFIER
 
     if not repo_owner or not repo_name or not project_identifier:
         raise ValueError(

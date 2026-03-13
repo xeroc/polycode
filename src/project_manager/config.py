@@ -16,6 +16,11 @@ class ProjectManagerSettings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
 
+    PROJECT_PROVIDER: Optional[str] = None
+    REPO_OWNER: Optional[str] = None
+    REPO_NAME: Optional[str] = None
+    PROJECT_IDENTIFIER: Optional[str] = None
+
     # Database Configuration
     DATABASE_URL: str = "sqlite:///polycode.db"
 

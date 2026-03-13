@@ -95,10 +95,11 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
         )
 
         manager = GitHubProjectManager(config)
-        project_item = manager.find_project_item(issue_number)
+        issue = manager.get_issue(issue_number)
         repo_name = config.repo_name
         repo_owner = config.repo_owner
 
+        project_item = manager.find_project_item(issue_number)
         if not project_item:
             log.warning(f"Issue #{issue_number} not found in project")
             update_status_task(project_config_dict, issue_number, "Ready")
@@ -111,8 +112,8 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier),
-            title=project_item.title,
-            body=project_item.body or "",
+            title=issue.title,
+            body=issue.body or "",
             memory_prefix=f"{repo_owner}/{repo_name}",
             repository=KickoffRepo(
                 owner=manager.config.repo_owner,
@@ -248,9 +249,6 @@ def update_status_task(
         return success
 
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
         log.error(f"Failed to update status for issue #{issue_number}: {e}")
         return False
 

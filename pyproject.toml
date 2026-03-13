@@ -25,6 +25,7 @@ dependencies = [
     "sqlmodel>=0.0.22",
     "ty>=0.0.21",
     "uvicorn[standard]>=0.32.0",
+    "pytest>=9.0.2",
 ]
 
 [project.scripts]
