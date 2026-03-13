@@ -14,9 +14,7 @@ class FixedDirectoryReadToolSchema(BaseModel):
 class DirectoryReadToolSchema(FixedDirectoryReadToolSchema):
     """Input for DirectoryReadTool."""
 
-    directory: str = Field(
-        ..., description="Mandatory directory to list content"
-    )
+    directory: str = Field(..., description="Mandatory directory to list content")
 
 
 class DirectoryReadTool(BaseTool):
@@ -31,15 +29,13 @@ class DirectoryReadTool(BaseTool):
         super().__init__(**kwargs)
         if directory is not None:
             self.directory = directory
-            self.description = (
-                f"A tool that can be used to list {directory}'s content."
-            )
+            self.description = f"A tool that can be used to list {directory}'s content."
             self.args_schema = FixedDirectoryReadToolSchema
             self._generate_description()
 
     def _load_ignore_patterns(self, base_path: Path) -> PathSpec:
         """Load and parse ignore patterns from .gitignore and .dockerignore."""
-        patterns = [".*"]
+        patterns = [".*", "__pycache__", ".venv"]
 
         ignore_files = [base_path / ".gitignore", base_path / ".dockerignore"]
         for ignore_file in ignore_files:

@@ -60,9 +60,7 @@ get_persistence_tracker()
     soft_time_limit=7200,
     time_limit=7380,
 )
-def kickoff_task(
-    self, project_config_dict: dict, issue_number: int
-) -> dict[str, Any]:
+def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str, Any]:
     """Kickoff feature development flow for an issue.
 
     This task orchestrates the entire feature development process:
@@ -97,10 +95,11 @@ def kickoff_task(
         )
 
         manager = GitHubProjectManager(config)
-        project_item = manager.find_project_item(issue_number)
+        issue = manager.get_issue(issue_number)
         repo_name = config.repo_name
         repo_owner = config.repo_owner
 
+        project_item = manager.find_project_item(issue_number)
         if not project_item:
             log.warning(f"Issue #{issue_number} not found in project")
             update_status_task(project_config_dict, issue_number, "Ready")
@@ -109,12 +108,12 @@ def kickoff_task(
                 "message": f"Issue #{issue_number} not found in project",
             }
 
-        flow_identifier = f"{repo_owner}/{repo_name}/{issue_number}-1"
+        flow_identifier = f"{repo_owner}/{repo_name}/{issue_number}"
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier),
-            title=project_item.title,
-            body=project_item.body or "",
+            title=issue.title,
+            body=issue.body or "",
             memory_prefix=f"{repo_owner}/{repo_name}",
             repository=KickoffRepo(
                 owner=manager.config.repo_owner,
@@ -245,16 +244,11 @@ def update_status_task(
         if success:
             log.info(f"Updated issue #{issue_number} to '{status}'")
         else:
-            log.warning(
-                f"Failed to update issue #{issue_number} to '{status}'"
-            )
+            log.warning(f"Failed to update issue #{issue_number} to '{status}'")
 
         return success
 
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
         log.error(f"Failed to update status for issue #{issue_number}: {e}")
         return False
 
@@ -307,9 +301,7 @@ def flow_heartbeat_task() -> dict[str, Any]:
 
         with Session() as session:
             running_tasks_data = (
-                session.query(CeleryTask)
-                .filter(CeleryTask.status == "running")
-                .all()
+                session.query(CeleryTask).filter(CeleryTask.status == "running").all()
             )
 
             for task in running_tasks_data:
@@ -321,8 +313,7 @@ def flow_heartbeat_task() -> dict[str, Any]:
 
                     if age > 7200:
                         log.warning(
-                            f"Task {task.task_id} appears stuck, "
-                            f"age: {age} seconds"
+                            f"Task {task.task_id} appears stuck, " f"age: {age} seconds"
                         )
                         timed_out_tasks.append(task.task_id)
 
@@ -394,9 +385,7 @@ def setup_periodic_tasks(sender, **kwargs):
 
 
 @app.task(bind=True, max_retries=3, soft_time_limit=300, time_limit=330)
-def process_github_webhook_task(
-    self, payload: dict[str, Any]
-) -> dict[str, Any]:
+def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]:
     """Process GitHub webhook event asynchronously.
 
     Migrated from webhook.py handle_issue_event:
@@ -461,9 +450,7 @@ def process_github_webhook_task(
             body=issue.get("body"),
             node_id=issue.get("node_id"),
             url=issue.get("html_url"),
-            labels=[
-                label.get("name", "") for label in issue.get("labels", [])
-            ],
+            labels=[label.get("name", "") for label in issue.get("labels", [])],
         )
 
         if action == "labeled":
@@ -476,25 +463,17 @@ def process_github_webhook_task(
                 )
 
                 add_issue_to_project_task(config.model_dump(), issue_obj)
-                updated = update_status_task(
-                    config.model_dump(), issue_number, "Ready"
-                )
+                updated = update_status_task(config.model_dump(), issue_number, "Ready")
 
                 if updated:
                     log.info(f"Updated issue #{issue_number} to Ready status")
                 else:
-                    log.warning(
-                        f"Failed to update issue #{issue_number} to Ready"
-                    )
+                    log.warning(f"Failed to update issue #{issue_number} to Ready")
 
                 kickoff_task.delay(config.model_dump(), issue_number)  # type: ignore
-                log.info(
-                    f"Triggered feature dev flow for issue #{issue_number}"
-                )
+                log.info(f"Triggered feature dev flow for issue #{issue_number}")
 
-                update_task_completed(
-                    task_id, "Issue labeled and flow triggered"
-                )
+                update_task_completed(task_id, "Issue labeled and flow triggered")
 
                 return {
                     "status": "triggered",

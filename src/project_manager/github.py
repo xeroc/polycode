@@ -2,6 +2,7 @@
 
 import logging
 import os
+from typing import cast
 
 import github
 from github.Repository import Repository
@@ -19,6 +20,9 @@ class GitHubProjectManager(ProjectManager):
 
     github_client: github.Github
     repo: Repository
+
+    def __repr__(self):
+        return f"ProjectManager(github, repo={self.repo.url})"
 
     def __init__(self, config: ProjectConfig) -> None:
         """Initialize GitHub project manager.
@@ -162,6 +166,9 @@ class GitHubProjectManager(ProjectManager):
         if success:
             log.info(f"Updated issue #{issue_number} to '{status}'")
         return success
+
+    def get_issue(self, issue_number: int) -> Issue:
+        return cast(Issue, self.repo.get_issue(issue_number))
 
     def add_comment(self, issue_number: int, comment: str) -> bool:
         """Add a comment to an issue.
