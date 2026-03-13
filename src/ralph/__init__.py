@@ -10,8 +10,8 @@ Ralph Loop mechanism:
   2. Stop Hook: Router scans agent output for exact completion promise string
   3. Router Routes: Based on presence/absence of completion promise
      - "retry" → implement again (continue Ralph loop, max 3 iterations)
-     - "story_done" → commit_story (commit current story, then continue)
-     - "done" → verify_build (all stories committed, final verification)
+     - "next_story" → commit_story (commit current story, then continue)
+     - "completed" → verify_build (all stories committed, final verification)
   4. Per-Story Commits: Each story is committed immediately upon completion
   5. Emergency Brake: Max iterations (3) prevents runaway processes
   6. Agent receives previous_errors context for smarter retries
@@ -20,9 +20,9 @@ Ralph Loop mechanism:
 import logging
 import subprocess
 import uuid
-from typing import cast
+from typing import Literal, cast
 
-from crewai.flow.flow import listen, router, start
+from crewai.flow.flow import listen, or_, router, start
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
 from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
@@ -36,6 +36,7 @@ from .crews.ralph_crew.ralph_crew import RalphCrew
 from .types import PlanOutput, RalphLoopState, RalphOutput, Story
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 MAX_ITERATIONS = 3
 DATABASE_URL = project_settings.DATABASE_URL
@@ -46,7 +47,7 @@ else:
     persistence = SQLiteFlowPersistence()
 
 
-@persist(persistence=persistence, verbose=True)
+@persist(persistence=persistence, verbose=False)
 class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
     """
     Ralph Loop Flow - externally verified completion with per-story commits.
@@ -91,7 +92,6 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         """Create a single story from the 120-char prompt."""
 
         self.discover_agents_md_files()
-        self._setup()
         self._discover_build_cmd()
 
         if self.state.stories:
@@ -122,17 +122,12 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         for current_story in output.stories:
             logger.info(f"  |- 🔖 {current_story.description}")
 
-    @listen(plan)
-    def start_ralph_loop(self):
-        """
-        Ralph Loop entry - log start info.
-        """
         num_stories = len(self.state.stories) if self.state.stories else 0
         logger.info(
             f"\n🔨 Starting Ralph Loop for {num_stories} stories (max {MAX_ITERATIONS} iterations each)"
         )
 
-    @listen(start_ralph_loop)
+    @listen(or_(plan, "retry", "next_story"))
     def implement(self):
         """
         Single iteration of Ralph Loop for current story.
@@ -145,7 +140,6 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         if not story:
             logger.info("Reached last story ..")
             return
-        self._setup()
 
         story.iteration += 1
         logger.info(
@@ -154,8 +148,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         logger.info(f"🔨 Iteration {story.iteration}/{MAX_ITERATIONS}")
 
         error_context = (
-            "\n\n## Previous Errors:\n"
-            + "\n".join(f"- {err}" for err in story.errors)
+            "\n\n## Previous Errors:\n" + "\n".join(f"- {err}" for err in story.errors)
             if story.errors
             else "No previous errors"
         )
@@ -185,40 +178,55 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         self.state.commit_message = output.message
         self.state.commit_footer = output.footer
 
+        if output.status == "done":
+            logger.info(f"\n💾 Committing story: {story.title}")
+            self._commit_changes(
+                title=self.state.commit_title or f"feat: {story.title}",
+                body=self.state.commit_message or story.description,
+                footer=self.state.commit_footer or "",
+            )
+
         return output.status
 
     @router(implement)
-    def check_completion_promise(self, status):
+    def check_completion_promise(
+        self, status
+    ) -> Literal["completed", "retry", "next_story"]:
         """
         Ralph Loop Router: determines next action based on completion promise.
 
         Routes:
         - "retry" → implement (continue Ralph loop for current story)
-        - "story_done" → commit_story (current story passed, commit it)
-        - "done" → verify_build (all stories complete, final verification)
+        - "next_story" → commit_story (current story passed, commit it)
+        - "completed" → verify_build (all stories complete, final verification)
         """
         story = self._current_story()
         if not story:
-            return "done"
-
-        self._setup()
+            logger.info("✅ No more stories to complete")
+            return "completed"
 
         try:
             self._test()
         except Exception as e:
+            logger.warning("❌ Tests failed")
             story.errors.append(str(e))
             return "retry"
+        logger.warning("✅ Tests succeeded")
 
-        agent_output = self.state.agent_output or ""
-
-        if status == "done":
+        if status == "completed":
             logger.info("✅ Completion")
-            logger.info(
-                f"Story '{story.title}' complete - objective criteria verified"
-            )
+            logger.info(f"Story '{story.title}' complete - objective criteria verified")
             story.completed = True
             story.errors = []
-            return "story_done"
+
+            has_more = self._has_more_stories()
+            if has_more:
+                self.state.current_story_index += 1
+                logger.info("➡️ Moving to next story...")
+                return "next_story"
+
+            logger.info("➡️ No more stories!")
+            return "completed"
 
         if story.iteration >= MAX_ITERATIONS:
             logger.info(
@@ -226,61 +234,19 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             )
             story.completed = True
             logger.info("Proceeding with current state (safety brake engaged)")
-            return "story_done"
+            return "completed"
 
         logger.info("Completion promise not found, retrying...")
-        story.errors.append(
-            f"Iteration {story.iteration}: {agent_output[:200]}..."
-        )
-        logger.info(
-            f"🔄 Routing to: implement (iteration {story.iteration + 1})"
-        )
+        agent_output = self.state.agent_output or ""
+        story.errors.append(f"Iteration {story.iteration}: {agent_output[:200]}...")
+        logger.info(f"🔄 Routing to: implement (iteration {story.iteration + 1})")
         return "retry"
 
-    @listen("retry")
-    def implement_retry(self):
-        """Retry implementation - called by router for "retry" route."""
-        return self.implement()  # pyright:ignore
-
-    @listen("story_done")
-    def commit_story(self):
-        """Commit completed story before moving to next or finishing."""
-        story = self._current_story()
-        if not story:
-            return False
-
-        logger.info(f"\n💾 Committing story: {story.title}")
-        self._setup()
-
-        self._commit_changes(
-            title=self.state.commit_title or f"feat: {story.title}",
-            body=self.state.commit_message or story.description,
-            footer=self.state.commit_footer or "",
-        )
-        logger.info(f"✅ Committed: {story.title}")
-
-        has_more = self._has_more_stories()
-        if has_more:
-            self.state.current_story_index += 1
-            logger.info("➡️ Moving to next story...")
-        return has_more
-
-    @router(commit_story)
-    def route_after_commit(self, has_more):
-        """Route to next story or final verification after commit."""
-        return "next_story" if has_more else "done"
-
-    @listen("next_story")
-    def implement_next_story(self):
-        """Start implementing next story."""
-        return self.implement()  # pyright:ignore
-
-    @listen("done")
+    @listen("completed")
     def verify_build(self):
         """Final verification that build passes."""
         logger.info(f"\n🔍 Final build verification: {self.state.build_cmd}")
         self.state.build_success = True
-        self._setup()
         try:
             self._build()
         except subprocess.TimeoutExpired:
@@ -325,13 +291,13 @@ def kickoff(issue: KickoffIssue):
         branch: Branch name (default: ralph-loop)
 
     Ralph Loop mechanism:
-        - Completion promise: Agent outputs `<promise>COMPLETE</promise>` when done
+        - Completion promise: Agent outputs `<promise>COMPLETE</promise>` when completed
         - Stop hook: Router scans output for exact string match (case-sensitive)
         - Objective verification: Agent only outputs promise when criteria are met
           (tests passing, build succeeding, linter clean, etc.)
         - Per-story commits: Each story is committed immediately upon completion
         - Emergency brake: Max iterations (3) prevents runaway processes
-        - Router: "retry" → continue loop, "story_done" → commit then continue, "done" → verify and push
+        - Router: "retry" → continue loop, "next_story" → commit then continue, "completed" → verify and push
     """
     flow = RalphLoopFlow()
     flow.kickoff(
@@ -380,6 +346,14 @@ def example():
             project_config=project_config,
         )
     )
+
+
+def plot():
+    """
+    Plot the flow.
+    """
+    flow = RalphLoopFlow()
+    flow.plot()
 
 
 if __name__ == "__main__":

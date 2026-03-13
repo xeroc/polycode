@@ -1,4 +1,3 @@
----
 repos:
   ######################################
   # Hooks for all projects
@@ -35,6 +34,19 @@ repos:
         # MD033: no inline HTML
         # MD041: first line in a file should be a top-level heading
         args: [--fix, --disable, MD013, MD033, MD041, MD046, MD040, "--"]
+
+  ######################################
+  # Python linting and type checking
+  ######################################
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --ignore-init-module-imports
 
   - repo: https://github.com/ComPWA/pyright-pre-commit
     rev: "v1.1.407"

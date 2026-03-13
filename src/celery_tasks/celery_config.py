@@ -1,7 +1,6 @@
 """Celery configuration for feature development tasks."""
 
 from celery import Celery
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

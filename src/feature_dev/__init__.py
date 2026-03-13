@@ -2,8 +2,6 @@
 Feature Development Flow module.
 """
 
-from project_manager import StatusMapping
-
 import os
 import uuid
 
@@ -15,6 +13,7 @@ from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
 from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
 from persistence import PostgresFlowPersistence
+from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
 from project_manager.types import ProjectConfig
 

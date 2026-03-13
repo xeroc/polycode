@@ -23,7 +23,6 @@ class ProjectManager(ABC):
         Returns:
             List of open issues
         """
-        pass
 
     @abstractmethod
     def get_project_items(self) -> list[ProjectItem]:
@@ -32,7 +31,6 @@ class ProjectManager(ABC):
         Returns:
             List of project items
         """
-        pass
 
     @abstractmethod
     def add_issue_to_project(self, issue: Issue) -> str | None:
@@ -44,7 +42,6 @@ class ProjectManager(ABC):
         Returns:
             Project item ID if successful, None otherwise
         """
-        pass
 
     @abstractmethod
     def update_issue_status(self, issue_number: int, status: str) -> bool:
@@ -57,7 +54,6 @@ class ProjectManager(ABC):
         Returns:
             True if successful, False otherwise
         """
-        pass
 
     @abstractmethod
     def add_comment(self, issue_number: int, comment: str) -> bool:
@@ -70,7 +66,6 @@ class ProjectManager(ABC):
         Returns:
             True if successful, False otherwise
         """
-        pass
 
     def find_project_item(self, issue_number: int) -> ProjectItem | None:
         """Find a project item by issue number.

@@ -1,4 +1,5 @@
 from typing import List
+
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
@@ -27,7 +28,7 @@ class PlanCrew:
 
         return Agent(
             config=self.agents_config["setup"],  # type: ignore
-            verbose=True,
+            verbose=False,
             llm=GLMJSONLLM(),
             tools=tools,
             allow_code_execution=False,
@@ -43,7 +44,7 @@ class PlanCrew:
         return Agent(
             config=self.agents_config["planner"],  # type: ignore
             llm=GLMJSONLLM(),
-            verbose=True,
+            verbose=False,
             tools=tools,
         )
 
@@ -68,5 +69,5 @@ class PlanCrew:
             agents=self.agents,  # type: ignore
             tasks=self.tasks,  # type: ignore
             process=Process.sequential,
-            verbose=True,
+            verbose=False,
         )

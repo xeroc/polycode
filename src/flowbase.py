@@ -2,14 +2,13 @@
 Feature Development Flow module.
 """
 
-import shutil
-
 import json
+import logging
 import os
 import re
+import shutil
 import subprocess
 import uuid
-import logging
 from pathlib import Path
 from typing import Optional, TypeVar
 
@@ -173,7 +172,7 @@ class FlowIssueManagement(Flow[T]):
         branch_name = "develop"  # Still call it develop locally
         if remote_develop_exists:
             target_remote_branch = self._git_repo.remotes.origin.refs.develop
-            logger.info(f"🏹 Remote develop branch found, using origin/develop")
+            logger.info("🏹 Remote develop branch found, using origin/develop")
         else:
             target_remote_branch = default_branch
             logger.info(

@@ -34,7 +34,7 @@ class RalphCrew:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
         return Agent(
             config=self.agents_config["implementer"],  # type: ignore[index]
-            verbose=True,
+            verbose=False,
             tools=tools,
             allow_code_execution=False,
         )
@@ -43,7 +43,7 @@ class RalphCrew:
     def summarizer(self) -> Agent:
         return Agent(
             config=self.agents_config["summarizer"],  # type: ignore[index]
-            verbose=True,
+            verbose=False,
         )
 
     @task
@@ -67,5 +67,5 @@ class RalphCrew:
             agents=self.agents,  # type: ignore[arg-type]
             tasks=self.tasks,  # type: ignore[arg-type]
             process=Process.sequential,
-            verbose=True,
+            verbose=False,
         )

@@ -1,16 +1,15 @@
 """GitHub-specific project manager implementation."""
 
 import logging
-import os
 from typing import cast
 
 import github
 from github.Repository import Repository
 
 from .base import ProjectManager
+from .config import settings
 from .github_projects_client import GitHubProjectsClient
 from .types import Issue, ProjectConfig, ProjectItem
-from .config import settings
 
 log = logging.getLogger(__name__)
 

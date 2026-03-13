@@ -1,9 +1,6 @@
 """Individual agent execution Celery tasks."""
 
-from project_manager import StatusMapping
-
 import logging
-import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -13,11 +10,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from flowbase import KickoffIssue, KickoffRepo
-from github_app import (
-    models as github_app_models,
-)  # noqa: F401 - side-effect import for table creation
 from persistence.celery_tasks import CeleryTask, CeleryTaskTracker
 from persistence.postgres import Base
+from project_manager import StatusMapping
 from project_manager.github import GitHubProjectManager
 from project_manager.types import Issue, ProjectConfig
 from ralph import kickoff as kickoff_ralph
@@ -288,7 +283,7 @@ def flow_heartbeat_task() -> dict[str, Any]:
     Returns:
         Dict with heartbeat results
     """
-    tracker = get_persistence_tracker()
+    get_persistence_tracker()
     log.info("Running flow heartbeat check")
 
     try:
