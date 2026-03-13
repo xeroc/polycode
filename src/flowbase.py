@@ -70,7 +70,7 @@ class BaseFlowModel(BaseModel):
     project_config: Optional[ProjectConfig] = Field(
         default=None, description="Description of the project to work on"
     )
-    path: str = Field(default="", description="Path to repository")
+    path: str = Field(default="", description="Original Path to repository")
     repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
     task: str = Field(default="", description="Feature development task")
@@ -132,7 +132,7 @@ class FlowIssueManagement(Flow[T]):
 
     @property
     def _git_repo(self) -> git.Repo:
-        return git.Repo(self.state.path)
+        return git.Repo(self.state.repo)
 
     def _setup(self):
         self._prepare_work_tree()
