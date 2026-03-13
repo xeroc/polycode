@@ -35,6 +35,9 @@ from project_manager.types import ProjectConfig
 T = TypeVar("T", bound="BaseFlowModel")
 logger = logging.getLogger(__name__)
 
+# Label that must be present before merging a PR
+MERGE_REQUIRED_LABEL = "approved"
+
 
 class KickoffRepo(BaseModel):
     owner: str = Field(description="repo owner")
@@ -348,8 +351,33 @@ class FlowIssueManagement(Flow[T]):
         )
 
     def _merge_branch(self):
-        if self.state.pr_number:
-            self._project_manager.merge_pull_request(self.state.pr_number)
+        """Merge the pull request only if the required label is present."""
+        if not self.state.pr_number:
+            logger.warning("⚠️ No PR number set, skipping merge")
+            return
+
+        # Check if the required label is present
+        if not self._project_manager.has_label(
+            self.state.pr_number, MERGE_REQUIRED_LABEL
+        ):
+            logger.warning(
+                f"⚠️ Pull request #{self.state.pr_number} does not have the required label "
+                f"'{MERGE_REQUIRED_LABEL}'. Merge aborted."
+            )
+            self._project_manager.add_comment(
+                self.state.issue_id,
+                f"## ⚠️ Merge Blocked\n\n"
+                f"Pull request #{self.state.pr_number} cannot be merged because it does not have "
+                f"the required label: `{MERGE_REQUIRED_LABEL}`.\n\n"
+                f"Please add the label and try again.",
+            )
+            return
+
+        # Label is present, proceed with merge
+        logger.info(
+            f"✅ Pull request #{self.state.pr_number} has required label '{MERGE_REQUIRED_LABEL}', proceeding with merge"
+        )
+        self._project_manager.merge_pull_request(self.state.pr_number)
 
     def _cleanup_worktree(self):
         try:
