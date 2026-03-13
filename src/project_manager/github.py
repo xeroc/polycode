@@ -1,7 +1,6 @@
 """GitHub-specific project manager implementation."""
 
 import logging
-import os
 from typing import cast
 
 import github

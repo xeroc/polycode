@@ -3,7 +3,6 @@
 from project_manager import StatusMapping
 
 import logging
-import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -288,7 +287,7 @@ def flow_heartbeat_task() -> dict[str, Any]:
     Returns:
         Dict with heartbeat results
     """
-    tracker = get_persistence_tracker()
+    get_persistence_tracker()
     log.info("Running flow heartbeat check")
 
     try:

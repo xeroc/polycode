@@ -28,7 +28,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 class Base(DeclarativeBase):
     """SQLAlchemy declarative base."""
 
-    pass
 
 
 class JSONType(TypeDecorator):

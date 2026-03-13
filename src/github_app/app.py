@@ -8,7 +8,6 @@ This replaces the separate FastAPI instance in project_manager.
 """
 
 import logging
-import os
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
