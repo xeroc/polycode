@@ -178,13 +178,14 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         self.state.commit_message = output.message
         self.state.commit_footer = output.footer
 
-        if output.status == "done":
+        if output.status.lower() in ["done", "completed"]:
             logger.info(f"\n💾 Committing story: {story.title}")
             self._commit_changes(
                 title=self.state.commit_title or f"feat: {story.title}",
                 body=self.state.commit_message or story.description,
                 footer=self.state.commit_footer or "",
             )
+            return "completed"
 
         return output.status
 

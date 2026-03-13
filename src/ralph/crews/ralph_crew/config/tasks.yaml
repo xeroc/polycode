@@ -35,7 +35,7 @@ implement_task:
     4. If previous_errors are provided, AVOID those specific mistakes
     5. Report → what was changed
     6. Set status:
-       - "done" if build passed
+       - "completed" if build passed
        - "retry" if build failed (so Flow can iterate)
 
   expected_output: |

@@ -157,21 +157,23 @@ class FlowIssueManagement(Flow[T]):
     def _list_git_tree(self):
         return self._git_repo.git.ls_files()
 
-    def setup_develop_branch(self):
+    def _setup_develop_branch(self):
+        git_repo = git.Repo(self.state.path)
+
         # Fetch latest from remote
-        self._git_repo.remotes.origin.fetch()
+        git_repo.remotes.origin.fetch()
 
         # Get default branch from remote
         # This gets the HEAD reference which points to the default branch
-        default_branch = self._git_repo.remotes.origin.refs.HEAD.reference
+        default_branch = git_repo.remotes.origin.refs.HEAD.reference
 
         # Check if remote develop branch exists
-        remote_develop_exists = hasattr(self._git_repo.remotes.origin.refs, "develop")
+        remote_develop_exists = hasattr(git_repo.remotes.origin.refs, "develop")
 
         # Determine which branch to use
         branch_name = "develop"  # Still call it develop locally
         if remote_develop_exists:
-            target_remote_branch = self._git_repo.remotes.origin.refs.develop
+            target_remote_branch = git_repo.remotes.origin.refs.develop
             logger.info("🏹 Remote develop branch found, using origin/develop")
         else:
             target_remote_branch = default_branch
@@ -180,17 +182,17 @@ class FlowIssueManagement(Flow[T]):
             )
 
         # Check if local develop branch exists
-        if "develop" in self._git_repo.heads:
-            develop_branch = self._git_repo.heads.develop
+        if "develop" in git_repo.heads:
+            develop_branch = git_repo.heads.develop
         else:
             # Create local develop branch tracking the target remote branch
-            develop_branch = self._git_repo.create_head("develop", target_remote_branch)
+            develop_branch = git_repo.create_head("develop", target_remote_branch)
 
         # Checkout develop branch
         develop_branch.checkout()
 
         # Reset to target remote branch
-        self._git_repo.git.reset("--hard", target_remote_branch)
+        git_repo.git.reset("--hard", target_remote_branch)
 
         print(f"Successfully set up develop branch pointing to {target_remote_branch}")
         return develop_branch
@@ -200,55 +202,39 @@ class FlowIssueManagement(Flow[T]):
             self.state.path = os.path.join(self.state.path, "..", "..")
 
         branch_name = self.state.branch
-        root_repo = self.state.path
+        self.state.path = self.state.path
+        worktrees_dir = os.path.join(self.state.path, ".git", ".worktrees")
+        worktree_path = os.path.join(worktrees_dir, branch_name)
+        self.state.repo = worktree_path
 
-        logger.info("🏹 Preparing work tree ...")
-
-        if os.path.exists(root_repo):
+        logger.warning(f"Repo dir: {self.state.repo}")
+        if os.path.exists(worktree_path):
             return
 
-        logger.info(f"🚨 Repository not found at {root_repo}, cloning...")
-        parent_dir = os.path.dirname(root_repo)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
-        # TODO: this requires setting up a ssh alias!
-        repo_url = f"github:{self.state.repo_owner}/{self.state.repo_name}"
-        git.Repo.clone_from(repo_url, root_repo)
-        logger.info(f"🏹 Cloned repository from {repo_url} to {root_repo}")
+        logger.info("🏹 Preparing work tree ...")
+        if not os.path.exists(self.state.path):
+            logger.info(f"🚨 Repository not found at {self.state.path}, cloning...")
+            parent_dir = os.path.dirname(self.state.path)
+            if parent_dir:
+                os.makedirs(parent_dir, exist_ok=True)
+            # TODO: this requires setting up a ssh alias!
+            repo_url = f"github:{self.state.repo_owner}/{self.state.repo_name}"
+            git.Repo.clone_from(repo_url, self.state.path)
+            logger.info(f"🏹 Cloned repository from {repo_url} to {self.state.path}")
 
-        # TODO: develop branch is required currently
-        self._git_repo.git.fetch("origin")
-        self._git_repo.git.reset("--hard", "origin/develop")
+        self._setup_develop_branch()
+        self._create_worktree(branch_name)
+        self._symblink_packages(worktree_path)
 
-        if branch_name not in [b.name for b in self._git_repo.branches]:
-            develop_branch = self._git_repo.branches["develop"]
-            self._git_repo.create_head(branch_name, develop_branch.name)
-            logger.info(f"🏹 Created branch: {branch_name}")
-
-        worktrees_dir = os.path.join(root_repo, ".git", ".worktrees")
-        try:
-            os.makedirs(worktrees_dir, exist_ok=True)
-        except Exception:
-            logger.error(f"Failed to create directory: {worktrees_dir}")
-        worktree_path = os.path.join(worktrees_dir, branch_name)
-
-        # if os.path.exists(worktree_path):
-        #     self._git_repo.git.worktree("remove", worktree_path, "--force")
-        #     logger.info(f"🏹 Removed existing worktree at: {worktree_path}")
-
-        self._git_repo.git.worktree("add", worktree_path, branch_name)
-        logger.info(f"🏹 Created worktree at: {worktree_path}")
-
+    def _symblink_packages(self, worktree_path: str):
+        # symlink some dependencies from root, if exists
         dependencies = ["node_modules", ".venv", ".env"]
         for dep in dependencies:
-            source = os.path.join(root_repo, dep)
+            source = os.path.join(self.state.path, dep)
             target = os.path.join(worktree_path, dep)
             if os.path.exists(source) and not os.path.exists(target):
                 os.symlink(source, target)
                 logger.info(f"🔗 Linked {dep} from main repo to worktree")
-
-        # Update inputs
-        self.state.repo = worktree_path
 
     def _commit_changes(self, title: str, body="", footer=""):
         logger.info("🏹 Commiting changes to repo")
@@ -360,13 +346,13 @@ class FlowIssueManagement(Flow[T]):
             self.state.issue_id, MERGE_REQUIRED_LABEL
         ):
             logger.warning(
-                f"⚠️ Pull request #{self.state.pr_number} does not have the required label "
+                f"⚠️ Issue #{self.state.issue_id} does not have the required label "
                 f"'{MERGE_REQUIRED_LABEL}'. Merge aborted."
             )
             self._project_manager.add_comment(
                 self.state.issue_id,
                 f"## ⚠️ Merge Blocked\n\n"
-                f"Pull request #{self.state.pr_number} cannot be merged because it does not have "
+                f"Pull request #{self.state.pr_number} cannot be merged because. The issue {self.state.issue_id} does not have "
                 f"the required label: `{MERGE_REQUIRED_LABEL}`.\n\n"
                 f"Please add the label and try again.",
             )
@@ -377,6 +363,22 @@ class FlowIssueManagement(Flow[T]):
             f"✅ Pull request #{self.state.pr_number} has required label '{MERGE_REQUIRED_LABEL}', proceeding with merge"
         )
         self._project_manager.merge_pull_request(self.state.pr_number)
+
+    def _create_worktree(self, branch_name: str):
+        root_git_repo = git.Repo(self.state.path)
+        worktrees_dir = os.path.join(self.state.path, ".git", ".worktrees")
+        worktree_path = os.path.join(worktrees_dir, branch_name)
+        if branch_name not in [b.name for b in root_git_repo.branches]:
+            develop_branch = root_git_repo.branches["develop"]
+            root_git_repo.create_head(branch_name, develop_branch.name)
+            logger.info(f"🏹 Created branch: {branch_name}")
+        try:
+            os.makedirs(worktrees_dir, exist_ok=True)
+        except Exception:
+            logger.error(f"Failed to create directory: {worktrees_dir}")
+
+        root_git_repo.git.worktree("add", worktree_path, branch_name)
+        logger.info(f"🏹 Created worktree at: {worktree_path}")
 
     def _cleanup_worktree(self):
         try:
