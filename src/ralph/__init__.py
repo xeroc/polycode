@@ -220,7 +220,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
                 logger.info("➡️ Moving to next story...")
                 return "next_story"
 
-            return status
+            return "done"
 
         if story.iteration >= MAX_ITERATIONS:
             logger.info(

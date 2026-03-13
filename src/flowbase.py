@@ -155,6 +155,44 @@ class FlowIssueManagement(Flow[T]):
     def _list_git_tree(self):
         return self._git_repo.git.ls_files()
 
+    def setup_develop_branch(self):
+        # Fetch latest from remote
+        self._git_repo.remotes.origin.fetch()
+
+        # Get default branch from remote
+        # This gets the HEAD reference which points to the default branch
+        default_branch = self._git_repo.remotes.origin.refs.HEAD.reference
+
+        # Check if remote develop branch exists
+        remote_develop_exists = hasattr(self._git_repo.remotes.origin.refs, "develop")
+
+        # Determine which branch to use
+        branch_name = "develop"  # Still call it develop locally
+        if remote_develop_exists:
+            target_remote_branch = self._git_repo.remotes.origin.refs.develop
+            logger.info(f"🏹 Remote develop branch found, using origin/develop")
+        else:
+            target_remote_branch = default_branch
+            logger.info(
+                f"🏹 No remote develop branch found, using default branch: {default_branch}"
+            )
+
+        # Check if local develop branch exists
+        if "develop" in self._git_repo.heads:
+            develop_branch = self._git_repo.heads.develop
+        else:
+            # Create local develop branch tracking the target remote branch
+            develop_branch = self._git_repo.create_head("develop", target_remote_branch)
+
+        # Checkout develop branch
+        develop_branch.checkout()
+
+        # Reset to target remote branch
+        self._git_repo.git.reset("--hard", target_remote_branch)
+
+        print(f"Successfully set up develop branch pointing to {target_remote_branch}")
+        return develop_branch
+
     def _prepare_work_tree(self):
         if ".worktrees" in self.state.path:
             self.state.path = os.path.join(self.state.path, "..", "..")

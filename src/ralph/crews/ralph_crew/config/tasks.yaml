@@ -33,7 +33,6 @@ implement_task:
     2. Keep changes minimal and focused
     3. Follow existing code patterns in the repo
     4. If previous_errors are provided, AVOID those specific mistakes
-
     5. Report → what was changed
     6. Set status:
        - "done" if build passed

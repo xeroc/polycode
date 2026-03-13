@@ -109,6 +109,7 @@ class GitHubProjectsClient:
         Returns:
             Global ID of the project.
         """
+        project_id: str | None = None
         if project_number is not None:
             query = """
             query($owner: String!, $projectNumber: Int!) {
@@ -122,10 +123,11 @@ class GitHubProjectsClient:
             result = self._query(
                 query, {"owner": owner, "projectNumber": project_number}
             )
-            if result.data["repository"]["projectV2"] is None:
-                raise ValueError("No project found with that number!")
-            return result.data["repository"]["projectV2"]["id"]
-        else:
+            node = result.data["repository"].get("projectV2")
+            if node is not None:
+                project_id = node["id"]
+
+        if project_id is None:
             # Try as organization first, then fall back to user
             query = """
             query($owner: String!) {
@@ -138,14 +140,17 @@ class GitHubProjectsClient:
                 }
             }
             """
-            try:
-                result = self._query(query, {"owner": owner})
-                nodes = result.data["organization"]["projectsV2"]["nodes"]
+            result = self._query(query, {"owner": owner})
+            if result.data.get("organization", {}):
+                nodes = (
+                    result.data.get("organization", {})
+                    .get("projectsV2", {})
+                    .get("nodes")
+                )
                 if nodes:
-                    return nodes[0]["id"]
-            except Exception:
-                pass
+                    project_id = nodes[0]["id"]
 
+        if project_id is None:
             # Fall back to user
             query = """
             query($owner: String!) {
@@ -159,11 +164,15 @@ class GitHubProjectsClient:
             }
             """
             result = self._query(query, {"owner": owner})
-            nodes = result.data["user"]["projectsV2"]["nodes"]
-            if nodes:
-                return nodes[0]["id"]
+            if result.data.get("user", {}):
+                nodes = result.data.get("user", {}).get("projectsV2", {}).get("nodes")
+                if nodes:
+                    project_id = nodes[0]["id"]
 
+        if project_id is None:
             raise ValueError("No projects found for this owner!")
+
+        return project_id
 
     def get_project_items(self, project_id: str) -> list[ProjectItem]:
         """Get all items in a project with their status.

@@ -182,6 +182,38 @@ class GitHubProjectManager(ProjectManager):
             log.error(f"Failed to add comment to issue #{issue_number}: {e}")
             return False
 
+    def has_label(self, pr_number: int, label_name: str) -> bool:
+        """Check if a pull request has a specific label.
+
+        Args:
+            pr_number: Pull request number
+            label_name: Name of the label to check for
+
+        Returns:
+            True if the label is present on the PR, False otherwise
+        """
+        try:
+            repo = self.github_client.get_repo(
+                f"{self.config.repo_owner}/{self.config.repo_name}"
+            )
+            pr = repo.get_pull(pr_number)
+
+            # Check if any label matches the requested label name
+            for label in pr.labels:
+                if label.name == label_name:
+                    log.info(f"Pull request #{pr_number} has label '{label_name}'")
+                    return True
+
+            log.info(f"Pull request #{pr_number} does not have label '{label_name}'")
+            return False
+
+        except github.UnknownObjectException:
+            log.warning(f"Pull request #{pr_number} not found")
+            return False
+        except Exception as e:
+            log.error(f"Failed to check label on PR #{pr_number}: {e}")
+            return False
+
     def merge_pull_request(
         self,
         pr_number: int,
