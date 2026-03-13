@@ -153,7 +153,7 @@ class FlowIssueManagement(Flow[T]):
             logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
 
     def _list_git_tree(self):
-        return self._git_repo.git.ls()
+        return self._git_repo.git.ls_files()
 
     def _prepare_work_tree(self):
         if ".worktrees" in self.state.path:
