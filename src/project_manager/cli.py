@@ -2,11 +2,9 @@
 
 import logging
 import os
-from pathlib import Path
 
 import click
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import uvicorn
 
 from celery_tasks.tasks import kickoff_task
@@ -90,7 +88,6 @@ def create_manager_from_env() -> GitHubProjectManager:
 @click.group()
 def cli() -> None:
     """Project management CLI tools."""
-    pass
 
 
 @cli.command()

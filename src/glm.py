@@ -1,12 +1,6 @@
-import os
-from typing import Any, Optional
+from typing import Optional
 
 from crewai.llms.providers.openai.completion import OpenAICompletion
-import requests
-from crewai import Agent, BaseLLM, Task
-from crewai.tools.base_tool import BaseTool
-from crewai.utilities.types import LLMMessage
-from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
