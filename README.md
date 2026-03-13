@@ -665,7 +665,3 @@ For issues or questions:
 1. Check the [CrewAI documentation](https://docs.crewai.com/)
 2. Review the original antfarm workflow files
 3. Open an issue in the repository
-
----
-
-**Built with CrewAI 🤖 • Inspired by Antfarm 🌱**

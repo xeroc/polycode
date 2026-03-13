@@ -36,7 +36,7 @@ T = TypeVar("T", bound="BaseFlowModel")
 logger = logging.getLogger(__name__)
 
 # Label that must be present before merging a PR
-MERGE_REQUIRED_LABEL = "approved"
+MERGE_REQUIRED_LABEL = "polycode:automerge"
 
 
 class KickoffRepo(BaseModel):
@@ -358,7 +358,7 @@ class FlowIssueManagement(Flow[T]):
 
         # Check if the required label is present
         if not self._project_manager.has_label(
-            self.state.pr_number, MERGE_REQUIRED_LABEL
+            self.state.issue_id, MERGE_REQUIRED_LABEL
         ):
             logger.warning(
                 f"⚠️ Pull request #{self.state.pr_number} does not have the required label "

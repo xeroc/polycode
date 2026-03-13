@@ -4,6 +4,7 @@ import logging
 import os
 
 import github
+from github.Repository import Repository
 
 from .base import ProjectManager
 from .github_projects_client import GitHubProjectsClient
@@ -15,6 +16,9 @@ log = logging.getLogger(__name__)
 
 class GitHubProjectManager(ProjectManager):
     """GitHub Projects V2 implementation of ProjectManager."""
+
+    github_client: github.Github
+    repo: Repository
 
     def __init__(self, config: ProjectConfig) -> None:
         """Initialize GitHub project manager.
@@ -36,7 +40,9 @@ class GitHubProjectManager(ProjectManager):
         self.token = token
         self.github_client = github.Github(auth=github.Auth.Token(token))
         self.projects_client = GitHubProjectsClient(token, config.repo_name)
-
+        self.repo = self.github_client.get_repo(
+            f"{self.config.repo_owner}/{self.config.repo_name}"
+        )
         self._project_id: str | None = None
         self._status_field_id: str | None = None
         self._status_options: dict[str, str] | None = None
@@ -70,12 +76,9 @@ class GitHubProjectManager(ProjectManager):
         Returns:
             List of open issues
         """
-        repo = self.github_client.get_repo(
-            f"{self.config.repo_owner}/{self.config.repo_name}"
-        )
         issues: list[Issue] = []
 
-        for issue in repo.get_issues(state="open"):
+        for issue in self.repo.get_issues(state="open"):
             issues.append(
                 Issue(
                     id=issue.number,
@@ -171,10 +174,7 @@ class GitHubProjectManager(ProjectManager):
             True if successful, False otherwise
         """
         try:
-            repo = self.github_client.get_repo(
-                f"{self.config.repo_owner}/{self.config.repo_name}"
-            )
-            issue = repo.get_issue(issue_number)
+            issue = self.repo.get_issue(issue_number)
             issue.create_comment(comment)
             log.info(f"Added comment to issue #{issue_number}")
             return True
@@ -182,7 +182,7 @@ class GitHubProjectManager(ProjectManager):
             log.error(f"Failed to add comment to issue #{issue_number}: {e}")
             return False
 
-    def has_label(self, pr_number: int, label_name: str) -> bool:
+    def has_label(self, issue_number: int, label_name: str) -> bool:
         """Check if a pull request has a specific label.
 
         Args:
@@ -193,25 +193,22 @@ class GitHubProjectManager(ProjectManager):
             True if the label is present on the PR, False otherwise
         """
         try:
-            repo = self.github_client.get_repo(
-                f"{self.config.repo_owner}/{self.config.repo_name}"
-            )
-            pr = repo.get_pull(pr_number)
+            pr = self.repo.get_issue(issue_number)
 
             # Check if any label matches the requested label name
             for label in pr.labels:
                 if label.name == label_name:
-                    log.info(f"Pull request #{pr_number} has label '{label_name}'")
+                    log.info(f"Pull request #{issue_number} has label '{label_name}'")
                     return True
 
-            log.info(f"Pull request #{pr_number} does not have label '{label_name}'")
+            log.info(f"Pull request #{issue_number} does not have label '{label_name}'")
             return False
 
         except github.UnknownObjectException:
-            log.warning(f"Pull request #{pr_number} not found")
+            log.warning(f"Pull request #{issue_number} not found")
             return False
         except Exception as e:
-            log.error(f"Failed to check label on PR #{pr_number}: {e}")
+            log.error(f"Failed to check label on PR #{issue_number}: {e}")
             return False
 
     def merge_pull_request(
@@ -231,10 +228,7 @@ class GitHubProjectManager(ProjectManager):
             True if successful, False otherwise
         """
         try:
-            repo = self.github_client.get_repo(
-                f"{self.config.repo_owner}/{self.config.repo_name}"
-            )
-            pr = repo.get_pull(pr_number)
+            pr = self.repo.get_pull(pr_number)
 
             if pr.merged:
                 log.warning(f"Pull request #{pr_number} is already merged")
