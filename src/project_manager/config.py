@@ -21,6 +21,10 @@ class ProjectManagerSettings(BaseSettings):
     REPO_NAME: Optional[str] = None
     PROJECT_IDENTIFIER: Optional[str] = None
 
+    # Label that must be present before merging a PR
+    MERGE_REQUIRED_LABEL = "polycode:automerge"
+    WORK_FLOW_START_LABEL: str = "polycode:implement"
+
     # Database Configuration
     DATABASE_URL: str = "sqlite:///polycode.db"
 

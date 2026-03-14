@@ -9,8 +9,6 @@ class CelerySettings(BaseSettings):
     # Celery Configuration
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
-
-    GITHUB_LABEL_FOR_WORKFLOW_START: str = "paid"
     DATABASE_URL: str
 
     GITHUB_PROJECT_STATUS_MAPPING: dict[str, str] = dict(

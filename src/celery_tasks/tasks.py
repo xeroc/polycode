@@ -15,6 +15,7 @@ from persistence.postgres import Base
 from project_manager import StatusMapping
 from project_manager.github import GitHubProjectManager
 from project_manager.types import Issue, ProjectConfig
+from project_manager.config import settings as project_settings
 from ralph import kickoff as kickoff_ralph
 
 from . import app, calculate_timeout, get_flow_id
@@ -452,9 +453,9 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
             label = payload.get("label", {})
             label_name = label.get("name") if label else None
 
-            if label_name == settings.GITHUB_LABEL_FOR_WORKFLOW_START:
+            if label_name == project_settings.WORK_FLOW_START_LABEL:
                 log.info(
-                    f"Label '{settings.GITHUB_LABEL_FOR_WORKFLOW_START}' added to issue #{issue_number}"
+                    f"Label '{project_settings.WORK_FLOW_START_LABEL}' added to issue #{issue_number}"
                 )
 
                 add_issue_to_project_task(config.model_dump(), issue_obj)

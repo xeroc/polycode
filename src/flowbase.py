@@ -30,12 +30,10 @@ from persistence.postgres import (
 from project_manager import GitHubProjectManager
 from project_manager.git_utils import get_github_repo_from_local
 from project_manager.types import ProjectConfig
+from project_manager.config import settings as project_settings
 
 T = TypeVar("T", bound="BaseFlowModel")
 logger = logging.getLogger(__name__)
-
-# Label that must be present before merging a PR
-MERGE_REQUIRED_LABEL = "polycode:automerge"
 
 
 class KickoffRepo(BaseModel):
@@ -343,24 +341,24 @@ class FlowIssueManagement(Flow[T]):
 
         # Check if the required label is present
         if not self._project_manager.has_label(
-            self.state.issue_id, MERGE_REQUIRED_LABEL
+            self.state.issue_id, project_settings.MERGE_REQUIRED_LABEL
         ):
             logger.warning(
                 f"⚠️ Issue #{self.state.issue_id} does not have the required label "
-                f"'{MERGE_REQUIRED_LABEL}'. Merge aborted."
+                f"'{project_settings.MERGE_REQUIRED_LABEL}'. Merge aborted."
             )
             self._project_manager.add_comment(
                 self.state.issue_id,
                 f"## ⚠️ Merge Blocked\n\n"
                 f"Pull request #{self.state.pr_number} cannot be merged because. The issue {self.state.issue_id} does not have "
-                f"the required label: `{MERGE_REQUIRED_LABEL}`.\n\n"
+                f"the required label: `{project_settings.MERGE_REQUIRED_LABEL}`.\n\n"
                 f"Please add the label and try again.",
             )
             return
 
         # Label is present, proceed with merge
         logger.info(
-            f"✅ Pull request #{self.state.pr_number} has required label '{MERGE_REQUIRED_LABEL}', proceeding with merge"
+            f"✅ Pull request #{self.state.pr_number} has required label '{project_settings.MERGE_REQUIRED_LABEL}', proceeding with merge"
         )
         self._project_manager.merge_pull_request(self.state.pr_number)
 
