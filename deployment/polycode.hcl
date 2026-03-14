@@ -81,6 +81,39 @@ job "polycode" {
     }
   }
 
+  group "ollama" {
+    network {
+      mode = "bridge"
+      port "ollama" {
+        to = 11434
+      }
+    }
+    service {
+      name = "polycode-ollama"
+      port = "ollama"
+      check {
+        name     = "ollama service port alive"
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
+    task "ollama" {
+      driver = "docker"
+      config {
+        image = "ollama/ollama"
+        ports = ["ollama"]
+      }
+      env {
+        OLLAMA_MODELS = "all-minilm:22m"
+      }
+      resources {
+        cpu    = 2000
+        memory = 1024
+      }
+    }
+  }
+
   group "worker" {
     network {
       mode = "bridge"
@@ -134,6 +167,10 @@ job "polycode" {
           {{ $k }}={{ $v | replaceAll "\n" "\\n" }}
           {{ end }}{{ end }}
 
+          {{ with service "polycode-ollama" }}{{ with index . 0 }}
+          OLLAMA_HOST="http://{{.Address}}:{{.Port}}"
+          {{ end }}{{ end }}
+
           {{ with service "polycode-redis" }}{{ with index . 0 }}
           REDIS_HOST={{.Address}}
           REDIS_PORT={{.Port}}
@@ -171,20 +208,6 @@ job "polycode" {
       resources {
         cpu    = 2000
         memory = 4048
-      }
-    }
-    task "ollama" {
-      driver = "docker"
-      config {
-        image = "ollama/ollama"
-        ports = ["ollama"]
-      }
-      env {
-        OLLAMA_MODELS = "all-minilm:22m"
-      }
-      resources {
-        cpu    = 2000
-        memory = 1024
       }
     }
   }

@@ -1,8 +1,6 @@
 implement_task:
   description: |
-    ## Single Iteration of Ralph Loop
-
-    You are running **iteration {iteration}** of {max_iterations}.
+    ## Implementation of individual stories
 
     ### STORY TO IMPLEMENT:
     {story}
@@ -15,7 +13,7 @@ implement_task:
     - BRANCH: {branch}
     - BUILD_CMD: {build_cmd}
 
-    ### PREVIOUS ERRORS (from earlier iterations):
+    ### PREVIOUS ERRORS (from earlier stories):
     {previous_errors}
 
     ### AGENTS.md REFERENCE:
@@ -34,9 +32,6 @@ implement_task:
     3. Follow existing code patterns in the repo
     4. If previous_errors are provided, AVOID those specific mistakes
     5. Report → what was changed
-    6. Set status:
-       - "completed" if build passed
-       - "retry" if build failed (so Flow can iterate)
 
   expected_output: |
   agent: implementer
@@ -53,7 +48,6 @@ commit_message_task:
     Types: feat, fix, docs, style, refactor, perf, test, chore
   expected_output: |
     RalphOutput with:
-    - status: "done" (build passed) or "retry" (build failed)
     - changes: What was implemented
     - title: Commit message title
     - message: Commit message body

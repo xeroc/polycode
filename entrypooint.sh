@@ -17,7 +17,7 @@ git config --global user.name "Chris Cross"
 case "$COMMAND" in
 worker)
     echo "Launching Worker:"
-    curl http://localhost:11434/api/pull -d '{"name": "all-minilm:22m"}'
+    curl ${OLLAMA_HOST}/api/pull -d '{"name": "all-minilm:22m"}'
     echo -e "$SSH_KEY" >~/.ssh/id
     chmod 0600 ~/.ssh/id
     exec uv run celery -A celery_tasks.worker.app worker -Ofair --task-events --queues celery,default --loglevel=info $*

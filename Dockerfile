@@ -22,7 +22,6 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 RUN pip install --no-cache-dir "crewai[litellm]>=1.10.0b1" && uv sync
 
-COPY . .
 COPY entrypooint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
@@ -35,5 +34,6 @@ USER appuser
 RUN mkdir /home/appuser/.ssh && ssh-keyscan github.com >> /home/appuser/.ssh/known_hosts
 
 VOLUME [ "/data" ]
+COPY . .
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

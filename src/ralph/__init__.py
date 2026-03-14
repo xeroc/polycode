@@ -8,13 +8,8 @@ Ralph Loop mechanism:
   1. Completion Promise: Agent outputs `<promise>COMPLETE</promise>` when objective
      criteria are met (tests passing, build succeeding, linter clean, etc.)
   2. Stop Hook: Router scans agent output for exact completion promise string
-  3. Router Routes: Based on presence/absence of completion promise
-     - "retry" → implement again (continue Ralph loop, max 3 iterations)
-     - "next_story" → commit_story (commit current story, then continue)
-     - "completed" → verify_build (all stories committed, final verification)
-  4. Per-Story Commits: Each story is committed immediately upon completion
-  5. Emergency Brake: Max iterations (3) prevents runaway processes
-  6. Agent receives previous_errors context for smarter retries
+  3. Per-Story Commits: Each story is committed immediately upon completion
+  4. Agent receives previous_errors context for smarter retries
 """
 
 import logging
@@ -38,7 +33,6 @@ from .types import PlanOutput, RalphLoopState, RalphOutput, Story
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-MAX_ITERATIONS = 3
 DATABASE_URL = project_settings.DATABASE_URL
 if DATABASE_URL and DATABASE_URL.startswith("postgres"):
     logger.info("📊 Connecting persistence with postgres")
@@ -56,7 +50,6 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
     - Agent outputs completion promise when objective criteria are met
     - Stop hook scans output for exact string match (case-sensitive)
     - Router routes based on completion promise presence
-    - Max iterations safety brake prevents runaway processes
     - Agent receives previous_errors for smarter iteration
     - Each story is committed immediately upon completion
     - Runs per-story with individual iteration tracking
@@ -64,21 +57,6 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
     agents_md_map: dict[str, str] = {}
     root_agents_md: str = ""
-
-    def _current_story(self) -> Story | None:
-        """Get the current story being processed."""
-        if not self.state.stories or self.state.current_story_index >= len(
-            self.state.stories
-        ):
-            return None
-        return self.state.stories[self.state.current_story_index]
-
-    def _has_more_stories(self) -> bool:
-        """Check if there are more stories after the current one."""
-        return (
-            self.state.stories is not None
-            and self.state.current_story_index + 1 < len(self.state.stories)
-        )
 
     @start()
     def setup(self):
@@ -123,127 +101,78 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             logger.info(f"  |- 🔖 {current_story.description}")
 
         num_stories = len(self.state.stories) if self.state.stories else 0
-        logger.info(
-            f"\n🔨 Starting Ralph Loop for {num_stories} stories (max {MAX_ITERATIONS} iterations each)"
-        )
+        logger.info(f"\n🔨 Starting Ralph Loop for {num_stories} stories")
 
-    @listen(or_(plan, "retry", "next_story"))
+    @listen(plan)
     def implement(self):
         """
-        Single iteration of Ralph Loop for current story.
+        Single iteration of Ralph Loop for current story per story
 
         Agent is instructed to output completion promise ONLY when:
         - All objective criteria are met (tests pass, build succeeds, etc.)
         - Not based on subjective judgment
         """
-        story = self._current_story()
-        if not story:
-            logger.info("Reached last story ..")
-            return
 
-        story.iteration += 1
-        logger.info(
-            f"\n📖 Story {self.state.current_story_index + 1}/{len(self.state.stories or [])}: {story.title}"
-        )
-        logger.info(f"🔨 Iteration {story.iteration}/{MAX_ITERATIONS}")
-
-        error_context = (
-            "\n\n## Previous Errors:\n" + "\n".join(f"- {err}" for err in story.errors)
-            if story.errors
-            else "No previous errors"
+        unfinished_stories = list(
+            filter(lambda story: not story.completed, self.state.stories or [])
         )
 
-        result = (
-            RalphCrew()
-            .crew(agents_md_map=self.agents_md_map)
-            .kickoff(
-                inputs=dict(
-                    task=self.state.task[:120],
-                    story=story.model_dump_json(),
-                    repo=self.state.repo,
-                    branch=self.state.branch,
-                    test_cmd=self.state.test_cmd,
-                    build_cmd=self.state.build_cmd,
-                    agents_md=self.root_agents_md,
-                    iteration=story.iteration,
-                    max_iterations=MAX_ITERATIONS,
-                    previous_errors=error_context,
+        logger.info(f"Unfinished stories: {len(unfinished_stories)}")
+        for story in unfinished_stories:
+            logger.info(f"\n📖 Story: {story.title}")
+
+            error_context = (
+                "\n\n## Previous Errors:\n"
+                + "\n".join(f"- {err}" for err in story.errors)
+                if story.errors
+                else "No previous errors"
+            )
+
+            result = (
+                RalphCrew()
+                .crew(agents_md_map=self.agents_md_map)
+                .kickoff(
+                    inputs=dict(
+                        task=self.state.task[:120],
+                        story=story.model_dump_json(),
+                        repo=self.state.repo,
+                        branch=self.state.branch,
+                        test_cmd=self.state.test_cmd,
+                        build_cmd=self.state.build_cmd,
+                        agents_md=self.root_agents_md,
+                        previous_errors=error_context,
+                    )
                 )
             )
-        )
 
-        output = cast(RalphOutput, result.pydantic)  # type: ignore
-        self.state.agent_output = output.changes
-        self.state.commit_title = output.title
-        self.state.commit_message = output.message
-        self.state.commit_footer = output.footer
+            output = cast(RalphOutput, result.pydantic)  # pyright:ignore
+            self.state.agent_output = output.changes
+            self.state.commit_title = output.title
+            self.state.commit_message = output.message
+            self.state.commit_footer = output.footer
 
-        if output.status.lower() in ["done", "completed"]:
+            try:
+                self._test()
+            except Exception as e:
+                logger.warning("❌ Tests failed")
+                story.errors.append(str(e))
+                continue
+
+            logger.warning("✅ Tests succeeded")
+
             logger.info(f"\n💾 Committing story: {story.title}")
             self._commit_changes(
                 title=self.state.commit_title or f"feat: {story.title}",
                 body=self.state.commit_message or story.description,
                 footer=self.state.commit_footer or "",
             )
-            return "completed"
 
-        return output.status
-
-    @router(implement)
-    def check_completion_promise(
-        self, status
-    ) -> Literal["completed", "retry", "next_story"]:
-        """
-        Ralph Loop Router: determines next action based on completion promise.
-
-        Routes:
-        - "retry" → implement (continue Ralph loop for current story)
-        - "next_story" → commit_story (current story passed, commit it)
-        - "completed" → verify_build (all stories complete, final verification)
-        """
-        story = self._current_story()
-        if not story:
-            logger.info("✅ No more stories to complete")
-            return "completed"
-
-        try:
-            self._test()
-        except Exception as e:
-            logger.warning("❌ Tests failed")
-            story.errors.append(str(e))
-            return "retry"
-        logger.warning("✅ Tests succeeded")
-
-        if status == "completed":
             logger.info("✅ Completion")
             logger.info(f"Story '{story.title}' complete - objective criteria verified")
             story.completed = True
             story.errors = []
 
-            has_more = self._has_more_stories()
-            if has_more:
-                self.state.current_story_index += 1
-                logger.info("➡️ Moving to next story...")
-                return "next_story"
-
-            logger.info("➡️ No more stories!")
-            return "completed"
-
-        if story.iteration >= MAX_ITERATIONS:
-            logger.info(
-                f"⚠️ Max iterations ({MAX_ITERATIONS}) reached for story '{story.title}'"
-            )
-            story.completed = True
-            logger.info("Proceeding with current state (safety brake engaged)")
-            return "completed"
-
-        logger.info("Completion promise not found, retrying...")
-        agent_output = self.state.agent_output or ""
-        story.errors.append(f"Iteration {story.iteration}: {agent_output[:200]}...")
-        logger.info(f"🔄 Routing to: implement (iteration {story.iteration + 1})")
-        return "retry"
-
-    @listen("completed")
+    @listen(implement)
     def verify_build(self):
         """Final verification that build passes."""
         logger.info(f"\n🔍 Final build verification: {self.state.build_cmd}")
@@ -297,8 +226,6 @@ def kickoff(issue: KickoffIssue):
         - Objective verification: Agent only outputs promise when criteria are met
           (tests passing, build succeeding, linter clean, etc.)
         - Per-story commits: Each story is committed immediately upon completion
-        - Emergency brake: Max iterations (3) prevents runaway processes
-        - Router: "retry" → continue loop, "next_story" → commit then continue, "completed" → verify and push
     """
     flow = RalphLoopFlow()
     flow.kickoff(
@@ -311,7 +238,6 @@ def kickoff(issue: KickoffIssue):
             memory_prefix=f"{issue.repository.owner}/{issue.repository.repository}",
             repo_owner=issue.repository.owner,
             repo_name=issue.repository.repository,
-            max_iterations=MAX_ITERATIONS,
             project_config=issue.project_config,
         )
     )

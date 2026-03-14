@@ -22,7 +22,7 @@ class ProjectManagerSettings(BaseSettings):
     PROJECT_IDENTIFIER: Optional[str] = None
 
     # Label that must be present before merging a PR
-    MERGE_REQUIRED_LABEL = "polycode:automerge"
+    MERGE_REQUIRED_LABEL: str = "polycode:automerge"
     WORK_FLOW_START_LABEL: str = "polycode:implement"
 
     # Database Configuration

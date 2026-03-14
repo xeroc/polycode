@@ -27,15 +27,11 @@ class RalphLoopState(BaseFlowModel):
         default=[], description="Ordered user stories"
     )
     agent_output: Optional[str] = Field(default="", description="ralph agent output")
-    current_story_index: int = Field(
-        default=0, description="Index of current story being processed"
-    )
     build_success: bool = Field(default=False, description="Build passed")
     test_success: bool = Field(default=False, description="Build passed")
 
 
 class RalphOutput(BaseModel):
-    status: str = Field(default="done", description="Status: done or retry")
     changes: str = Field(description="What was implemented")
     title: str = Field(description="Commit title with conventional prefix")
     message: str = Field(description="Commit message body")
