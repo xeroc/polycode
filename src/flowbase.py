@@ -45,7 +45,9 @@ class KickoffRepo(BaseModel):
 
 class KickoffIssue(BaseModel):
     id: int = Field(description="Issue ID")
-    flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of the flow that will run")
+    flow_id: uuid.UUID = Field(
+        default=uuid.uuid4(), description="UUID of the flow that will run"
+    )
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
     memory_prefix: str = Field(description="prefix for memory")
@@ -65,33 +67,47 @@ def sanitize_branch_name(name: str) -> str:
 
 
 class BaseFlowModel(BaseModel):
-    project_config: Optional[ProjectConfig] = Field(default=None, description="Description of the project to work on")
+    project_config: Optional[ProjectConfig] = Field(
+        default=None, description="Description of the project to work on"
+    )
     path: str = Field(default="", description="Original Path to repository")
     repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
     task: str = Field(default="", description="Feature development task")
 
     # FIXME: redundant because also part of project_config
-    repo_owner: Optional[str] = Field(default=None, description="GitHub repository owner")
+    repo_owner: Optional[str] = Field(
+        default=None, description="GitHub repository owner"
+    )
     repo_name: Optional[str] = Field(default=None, description="GitHub repository name")
 
     pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id on github")
 
-    planning_comment_id: Optional[int] = Field(default=None, description="ID of the planning progress comment")
-    commit_urls: dict[int, str] = Field(default_factory=dict, description="Story ID to commit URL mapping")
+    planning_comment_id: Optional[int] = Field(
+        default=None, description="ID of the planning progress comment"
+    )
+    commit_urls: dict[int, str] = Field(
+        default_factory=dict, description="Story ID to commit URL mapping"
+    )
 
     commit_title: Optional[str] = Field(
         default=None,
         description="Commit Message title including conventional commit prefix",
     )
-    commit_message: Optional[str] = Field(default=None, description="The body of the commit message")
-    commit_footer: Optional[str] = Field(default=None, description="Commit message footer")
+    commit_message: Optional[str] = Field(
+        default=None, description="The body of the commit message"
+    )
+    commit_footer: Optional[str] = Field(
+        default=None, description="Commit message footer"
+    )
     memory_prefix: str = Field(default="", description="prefix for memory")
 
     test_cmd: Optional[str] = Field(default=None, description="Test command")
-    build_cmd: Optional[str] = Field(default=None, description="Build command from package.json")
+    build_cmd: Optional[str] = Field(
+        default=None, description="Build command from package.json"
+    )
 
 
 class FlowIssueManagement(Flow[T]):
@@ -178,7 +194,9 @@ class FlowIssueManagement(Flow[T]):
             if result.success:
                 logger.info(f"Notification sent via {result.channel_type.value}")
             else:
-                logger.warning(f"Failed to send notification via {result.channel_type.value}: {result.error}")
+                logger.warning(
+                    f"Failed to send notification via {result.channel_type.value}: {result.error}"
+                )
 
     @property
     def _git_repo(self) -> git.Repo:
@@ -198,7 +216,9 @@ class FlowIssueManagement(Flow[T]):
     def pickup_issue(self):
         try:
             update_request_status(SessionLocal, self.state.issue_id, "inprogress")
-            logger.info(f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}")
+            logger.info(
+                f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}"
+            )
         except Exception as e:
             logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
 
@@ -224,7 +244,9 @@ class FlowIssueManagement(Flow[T]):
             logger.info("🏹 Remote develop branch found, using origin/develop")
         else:
             target_remote_branch = default_branch
-            logger.info(f"🏹 No remote develop branch found, using default branch: {default_branch}")
+            logger.info(
+                f"🏹 No remote develop branch found, using default branch: {default_branch}"
+            )
 
         # Check if local develop branch exists
         if "develop" in git_repo.heads:
@@ -246,7 +268,9 @@ class FlowIssueManagement(Flow[T]):
             # Reset to target remote branch
             git_repo.git.reset("--hard", target_remote_branch)
 
-            print(f"Successfully set up develop branch pointing to {target_remote_branch}")
+            print(
+                f"Successfully set up develop branch pointing to {target_remote_branch}"
+            )
         return develop_branch
 
     def _prepare_work_tree(self):
@@ -311,7 +335,9 @@ class FlowIssueManagement(Flow[T]):
 
         commit_message = f"{title}\n\n{body}\n\n{footer}"
         commit = repo.index.commit(commit_message)
-        logger.info(f"🏹 Committed changes: {commit_message.split(chr(10))[0]} ... (#{commit.hexsha})")
+        logger.info(
+            f"🏹 Committed changes: {commit_message.split(chr(10))[0]} ... (#{commit.hexsha})"
+        )
         return commit
 
     def _get_commit_url(self, commit_sha: str) -> str:
@@ -322,18 +348,18 @@ class FlowIssueManagement(Flow[T]):
         repo, *_ = get_github_repo_from_local(self.state.repo)
         logger.info("🏹 Pushing repo ...")
 
-        origin = repo.remote(name="origin")
-        origin.push()
+        branch = repo.active_branch.name
+        repo.git.push("--set-upstream", "origin", branch)
 
     def _post_planning_checklist(self, stories: list, issue_id: int) -> int | None:
         """Post planning checklist to issue and return comment ID."""
         checklist_items = "\n".join(f"- [ ] {story.description}" for story in stories)
-        comment = (
-            f"## 📋 Implementation Plan\n\n{checklist_items}\n\n_Progress will be updated as stories are implemented._"
-        )
+        comment = f"## 📋 Implementation Plan\n\n{checklist_items}\n\n_Progress will be updated as stories are implemented._"
         self._project_manager.add_comment(issue_id, comment)
 
-        comment_id = self._project_manager.get_last_comment_by_user(issue_id, self._project_manager.bot_username)
+        comment_id = self._project_manager.get_last_comment_by_user(
+            issue_id, self._project_manager.bot_username
+        )
         if comment_id:
             logger.info(f"🏹 Posted planning checklist, comment ID: {comment_id}")
         return comment_id
@@ -356,7 +382,9 @@ class FlowIssueManagement(Flow[T]):
             if story.id in completed_story_ids:
                 commit_url = self.state.commit_urls.get(story.id)
                 if commit_url:
-                    checklist_lines.append(f"- [x] {story.description} ([commit]({commit_url}))")
+                    checklist_lines.append(
+                        f"- [x] {story.description} ([commit]({commit_url}))"
+                    )
                 else:
                     checklist_lines.append(f"- [x] {story.description}")
             else:
@@ -366,13 +394,17 @@ class FlowIssueManagement(Flow[T]):
 
         if pr_url:
             if merged:
-                body += f"\n\n---\n\n✅ **Merged** - [PR #{self.state.pr_number}]({pr_url})"
+                body += (
+                    f"\n\n---\n\n✅ **Merged** - [PR #{self.state.pr_number}]({pr_url})"
+                )
             else:
                 body += f"\n\n---\n\n🔍 **Review in progress** - [PR #{self.state.pr_number}]({pr_url})"
         else:
             body += "\n\n_Progress will be updated as stories are implemented._"
 
-        self._project_manager.update_comment(issue_id, self.state.planning_comment_id, body)
+        self._project_manager.update_comment(
+            issue_id, self.state.planning_comment_id, body
+        )
         logger.info(f"🏹 Updated planning checklist for issue #{issue_id}")
 
     def recall_as_markdown_list(self, name: str, **kwargs):
@@ -447,7 +479,9 @@ class FlowIssueManagement(Flow[T]):
             return
 
         # Check if the required label is present
-        if not self._project_manager.has_label(self.state.issue_id, project_settings.MERGE_REQUIRED_LABEL):
+        if not self._project_manager.has_label(
+            self.state.issue_id, project_settings.MERGE_REQUIRED_LABEL
+        ):
             logger.warning(
                 f"⚠️ Issue #{self.state.issue_id} does not have the required label "
                 f"'{project_settings.MERGE_REQUIRED_LABEL}'. Merge aborted."
@@ -499,7 +533,9 @@ class FlowIssueManagement(Flow[T]):
 
         try:
             update_request_status(SessionLocal, self.state.issue_id, "completed")
-            logger.info(f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}")
+            logger.info(
+                f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}"
+            )
         except Exception as e:
             logger.error(f"🚨 Failed to update PostgreSQL status: {e}")
 
@@ -549,7 +585,9 @@ class FlowIssueManagement(Flow[T]):
             text=True,
             timeout=180,
         )
-        logger.info(f"✅ Build verification passed\n{result.stdout[:200] if result.stdout else ''}...")
+        logger.info(
+            f"✅ Build verification passed\n{result.stdout[:200] if result.stdout else ''}..."
+        )
 
     def _test(self):
         if not self.state.test_cmd:
@@ -565,4 +603,6 @@ class FlowIssueManagement(Flow[T]):
             text=True,
             timeout=180,
         )
-        logger.info(f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}...")
+        logger.info(
+            f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}..."
+        )
