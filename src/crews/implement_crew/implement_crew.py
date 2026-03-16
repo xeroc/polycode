@@ -1,8 +1,12 @@
+from pathlib import Path
+
+import yaml
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import FileWriterTool
 
 from glm import GLMJSONLLM
+from solcraft.types import TaskTemplate
 from tools import AgentsMDLoaderTool, DirectoryReadTool, ExecTool, FileReadTool
 
 from .types import ImplementOutput
@@ -10,11 +14,53 @@ from .types import ImplementOutput
 
 @CrewBase
 class ImplementCrew:
-    """Implement Crew - Implement features."""
+    """Flexible Implement Crew that accepts custom task configurations."""
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
     agents_md_map: dict[str, str] | None = None
+    _custom_tasks: dict[str, TaskTemplate] | None = None
+    _base_tasks_config: dict | None = None
+    _loaded_agents_config: dict | None = None
+
+    def _load_base_configs(self):
+        config_path = Path(__file__).parent / "config" / "tasks.yaml"
+        if config_path.exists():
+            with open(config_path, "r", encoding="utf-8") as f:
+                self._base_tasks_config = yaml.safe_load(f)
+        else:
+            self._base_tasks_config = {}
+
+        agents_path = Path(__file__).parent / "config" / "agents.yaml"
+        if agents_path.exists():
+            with open(agents_path, "r", encoding="utf-8") as f:
+                self._loaded_agents_config = yaml.safe_load(f)
+        else:
+            self._loaded_agents_config = {}
+
+    def _get_task_config(self, task_name: str) -> dict:
+        """Get task config, merging custom templates with base configs."""
+        if self._custom_tasks and task_name in self._custom_tasks:
+            template = self._custom_tasks[task_name]
+            config = {
+                "description": template.description,
+                "expected_output": template.expected_output,
+                "agent": template.agent,
+            }
+            if template.context:
+                config["context"] = template.context  # pyright:ignore # ty:ignore
+            return config
+
+        if self._base_tasks_config and task_name in self._base_tasks_config:
+            return self._base_tasks_config[task_name]
+
+        return self.tasks_config[task_name]  # pyright:ignore # ty:ignore
+
+    def _get_agent_config(self, agent_name: str) -> dict:
+        """Get agent config."""
+        if self._loaded_agents_config and agent_name in self._loaded_agents_config:
+            return self._loaded_agents_config[agent_name]
+        return self.agents_config[agent_name]  # pyright:ignore # ty:ignore
 
     @agent
     def developer(self) -> Agent:
@@ -26,12 +72,14 @@ class ImplementCrew:
         ]
 
         if self.agents_md_map:
-            tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
+            tools.append(
+                AgentsMDLoaderTool(agents_md_map=self.agents_md_map)  # ty:ignore
+            )
 
-        return Agent(
-            config=self.agents_config["developer"],  # type: ignore
+        return Agent(  # ty:ignore
+            config=self._get_agent_config("developer"),
             verbose=False,
-            tools=tools,
+            tools=tools,  # ty:ignore
             allow_code_execution=False,
         )
 
@@ -42,8 +90,8 @@ class ImplementCrew:
         if self.agents_md_map:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
 
-        return Agent(
-            config=self.agents_config["consolidator"],  # type: ignore
+        return Agent(  # ty:ignore
+            config=self._get_agent_config("consolidator"),
             verbose=False,
             llm=GLMJSONLLM(),
             tools=tools,
@@ -51,31 +99,39 @@ class ImplementCrew:
 
     @task
     def implement_task(self) -> Task:
-        return Task(
-            config=self.tasks_config["implement_task"],  # type: ignore
+        config = self._get_task_config("implement_task")
+        return Task(  # ty:ignore # pyright:ignore
+            config=config,
         )
 
     @task
     def retrospective(self) -> Task:
-        return Task(
-            config=self.tasks_config["retrospective"],  # type: ignore
+        config = self._get_task_config("retrospective")
+        return Task(  # ty:ignore # pyright:ignore
+            config=config,
         )
 
     @task
     def generate_result(self) -> Task:
-        return Task(
-            config=self.tasks_config["generate_result"],  # type: ignore
+        config = self._get_task_config("generate_result")
+        return Task(  # pyright:ignore # ty:ignore
+            config=config,
             output_pydantic=ImplementOutput,
         )
 
     @crew
-    def crew(self, agents_md_map: dict[str, str] | None = None) -> Crew:
+    def crew(
+        self,
+        agents_md_map: dict[str, str] | None = None,
+        custom_tasks: dict[str, TaskTemplate] | None = None,
+    ) -> Crew:
         self.agents_md_map = agents_md_map or {}
+        if custom_tasks:
+            self._custom_tasks = custom_tasks
 
         return Crew(
-            agents=self.agents,  # type: ignore
-            tasks=self.tasks,  # type: ignore
+            agents=self.agents,  # pyright:ignore # ty:ignore
+            tasks=self.tasks,  # pyright:ignore # ty:ignore
             process=Process.sequential,
             verbose=False,
-            # memory=True,
         )

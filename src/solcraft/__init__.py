@@ -16,7 +16,7 @@ from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
 from project_manager.types import ProjectConfig
 
-from .crews.implement_crew.implement_crew import SolcraftImplementCrew
+from crews.implement_crew.implement_crew import ImplementCrew
 from .task_loader import load_task_templates
 from .types import ImplementOutput, PlanOutput, SolcraftState, TaskTemplate
 
@@ -55,15 +55,13 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
         self.pickup_issue()
 
         if self.state.task_templates:
-            self.task_templates = load_task_templates(
-                self.state.task_templates
-            )
+            self.task_templates = load_task_templates(self.state.task_templates)
             logger.info(f"📄 Loaded {len(self.task_templates)} task templates")
 
     @listen(setup)
     def plan(self):
         """Decompose task into user stories using PlanCrew."""
-        from feature_dev.crews.plan_crew.plan_crew import PlanCrew
+        from crews.plan_crew.plan_crew import PlanCrew
 
         self.discover_agents_md_files()
         self._discover_build_cmd()
@@ -86,7 +84,7 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
             )
         )
 
-        output: PlanOutput = result.pydantic
+        output: PlanOutput = result.pydantic  # ty:ignore # pyright:ignore
         self.state.stories = output.stories
         self.state.build_cmd = output.build_cmd
         self.state.test_cmd = output.test_cmd
@@ -107,10 +105,8 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
                 "build_cmd",
                 "test_cmd",
             ):
-                self.remember(getattr(output, key), scope=f"{scope}/key")
-            logger.info(
-                f"🔖 Stored project details to memory at scope: {scope}"
-            )
+                self.remember(getattr(output, key), scope=f"{scope}/key")  # ty:ignore
+            logger.info(f"🔖 Stored project details to memory at scope: {scope}")
 
         logger.info(f"🔖 Planned {len(output.stories)} stories")
         for story in output.stories:
@@ -136,9 +132,7 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
         for story in self.state.completed_stories or []:
             logger.info(f"  |- ✅ {story.description}")
 
-        if len(self.state.completed_stories or []) == len(
-            self.state.stories or []
-        ):
+        if len(self.state.completed_stories or []) == len(self.state.stories or []):
             return
 
         completed_ids = [x.id for x in self.state.completed_stories or []]
@@ -164,32 +158,36 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
         """Implement a single story with the configured task templates."""
         logger.info(f"   |-⏳ user story:  {story.description}")
 
-        crew = SolcraftImplementCrew(custom_tasks=self.task_templates)
-
-        output = crew.crew(
-            agents_md_map=self.agents_md_map,
-            custom_tasks=self.task_templates,
-        ).kickoff(
-            inputs=dict(
-                task=self.state.task,
-                repo=self.state.repo,
-                branch=self.state.branch,
-                build_cmd=self.state.build_cmd,
-                test_cmd=self.state.test_cmd,
-                current_story=story.model_dump_json(),
-                completed_stories="\n- ".join(
-                    [x.description for x in self.state.completed_stories or []]
-                ),
-                current_story_id=story.id,
-                current_story_title=story.title,
-                architecture=self.recall_as_markdown_list("architecture"),
-                configuration=self.recall_as_markdown_list("configuration"),
-                tech_stack=self.recall_as_markdown_list("tech_stack"),
-                agents_md=self.root_agents_md,
+        output = (
+            ImplementCrew()
+            .crew(
+                agents_md_map=self.agents_md_map,
+                custom_tasks=self.task_templates,
+            )
+            .kickoff(
+                inputs=dict(
+                    task=self.state.task,
+                    repo=self.state.repo,
+                    branch=self.state.branch,
+                    build_cmd=self.state.build_cmd,
+                    test_cmd=self.state.test_cmd,
+                    current_story=story.model_dump_json(),
+                    completed_stories="\n- ".join(
+                        [x.description for x in self.state.completed_stories or []]
+                    ),
+                    current_story_id=story.id,
+                    current_story_title=story.title,
+                    architecture=self.recall_as_markdown_list("architecture"),
+                    configuration=self.recall_as_markdown_list("configuration"),
+                    tech_stack=self.recall_as_markdown_list("tech_stack"),
+                    agents_md=self.root_agents_md,
+                )
             )
         )
 
-        implement_result: ImplementOutput = output.pydantic
+        implement_result: ImplementOutput = (  # ty:ignore
+            output.pydantic  # pyright:ignore
+        )
 
         commit_title = implement_result.title
         commit_message = implement_result.message
