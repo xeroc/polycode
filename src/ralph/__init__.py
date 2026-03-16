@@ -1,6 +1,4 @@
-"""
-
-Ralph Loop - Ralph Loop pattern using CrewAI @router for control flow.
+"""Ralph Loop - Ralph Loop pattern using CrewAI @router for control flow.
 
 Flow: Setup → Plan → Ralph Loop (router-controlled) → Verify → Push → PR
 
@@ -102,6 +100,10 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         for current_story in output.stories:
             logger.info(f"  |- 🔖 {current_story.description}")
 
+        self.state.planning_comment_id = self._post_planning_checklist(
+            output.stories, self.state.issue_id
+        )
+
         num_stories = len(self.state.stories) if self.state.stories else 0
         logger.info(f"\n🔨 Starting Ralph Loop for {num_stories} stories")
 
@@ -115,14 +117,17 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         - Not based on subjective judgment
         """
 
-        unfinished_stories = list(filter(lambda story: not story.completed, self.state.stories or []))
+        unfinished_stories = list(
+            filter(lambda story: not story.completed, self.state.stories or [])
+        )
 
         logger.info(f"Unfinished stories: {len(unfinished_stories)}")
         for story in unfinished_stories:
             logger.info(f"\n📖 Story: {story.title}")
 
             error_context = (
-                "\n\n## Previous Errors:\n" + "\n".join(f"- {err}" for err in story.errors)
+                "\n\n## Previous Errors:\n"
+                + "\n".join(f"- {err}" for err in story.errors)
                 if story.errors
                 else "No previous errors"
             )
@@ -160,16 +165,29 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             logger.warning("✅ Tests succeeded")
 
             logger.info(f"\n💾 Committing story: {story.title}")
-            self._commit_changes(
+            commit = self._commit_changes(
                 title=self.state.commit_title or f"feat: {story.title}",
                 body=self.state.commit_message or story.description,
                 footer=self.state.commit_footer or "",
             )
 
+            if commit:
+                commit_url = self._get_commit_url(commit.hexsha)
+                self.state.commit_urls[story.id] = commit_url
+
             logger.info("✅ Completion")
             logger.info(f"Story '{story.title}' complete - objective criteria verified")
             story.completed = True
             story.errors = []
+
+        self._push_repo()
+
+        completed_ids = [x.id for x in self.state.stories or [] if x.completed]
+        self._update_planning_checklist(
+            self.state.stories or [],
+            completed_ids,
+            self.state.issue_id,
+        )
 
     @listen(implement)
     def verify_build(self):
@@ -179,7 +197,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         try:
             self._build()
         except subprocess.TimeoutExpired:
-            logger.info("⏱️ Build timed out after 180 seconds")
+            logger.info("⏱ Build timed out after 180 seconds")
             self.state.build_success = False
         except subprocess.CalledProcessError as e:
             logger.info(f"❌ Build verification failed:\n{e.stderr}")
@@ -189,24 +207,37 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         try:
             self._test()
         except subprocess.TimeoutExpired:
-            logger.info("⏱️ Test timed out after 180 seconds")
+            logger.info("⏱ Test timed out after 180 seconds")
             self.state.test_success = False
         except subprocess.CalledProcessError as e:
             logger.info(f"❌ Test verification failed:\n{e.stderr}")
             self.state.test_success = False
 
     @listen(verify_build)
-    def push_repo(self):
-        self._push_repo()
-
-    @listen(push_repo)
     def create_pr(self):
         self._create_pr()
+
+        completed_ids = [x.id for x in self.state.stories or [] if x.completed]
+        self._update_planning_checklist(
+            self.state.stories or [],
+            completed_ids,
+            self.state.issue_id,
+            pr_url=self.state.pr_url,
+        )
 
     @listen(create_pr)
     def finish(self):
         """Step 8: Update project status and cleanup worktree."""
         self._merge_branch()
+        if self.state.pr_url:
+            completed_ids = [x.id for x in self.state.stories or [] if x.completed]
+            self._update_planning_checklist(
+                self.state.stories or [],
+                completed_ids,
+                self.state.issue_id,
+                pr_url=self.state.pr_url,
+                merged=True,
+            )
         self._cleanup_worktree()
 
 
