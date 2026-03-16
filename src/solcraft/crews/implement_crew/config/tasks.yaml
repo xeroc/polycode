@@ -1,0 +1,199 @@
+implement_task:
+  description: >
+    Implement the following user story.
+
+    TASK (overall):
+    {task}
+
+    REPO: {repo}
+    BRANCH: {branch}
+    BUILD_CMD: {build_cmd}
+    TEST_CMD: {test_cmd}
+
+    CREWAI REFERENCE GUIDE (AGENTS.md):
+    {agents_md}
+
+    CURRENT STORY:
+    {current_story}
+
+    TECH STACK:
+    {tech_stack}
+
+    ARCHITECTURE:
+    {architecture}
+
+    CONFIGURATION:
+    {configuration}
+
+    TOOLS:
+      * FileReadTool
+      * FileWriterTool
+      * DirectoryReadTool
+      * ExecTool
+      * AgentsMDLoaderTool: Load AGENTS.md files from subdirectories (use when needed)
+
+    NOTES:
+    * Stick with the existing architecture as much as possible
+    * If required update the configuration and .env.example
+    * Be concise and avoid unecessary changes like your life depends on it
+
+    INSTRUCTIONS:
+    1. Read progress log to understand codebase patterns
+    2. Implement this story only
+    3. Write tests for this story's functionality
+    4. Run typecheck / build
+    5. Run tests to confirm they pass
+    6. Update progress log with codebase patterns found
+  expected_output: >
+    Implemented story with details on changes and tests added
+  agent: developer
+
+generate_result:
+  description: >
+    # Git Commit Message Agent
+
+    ## Purpose
+
+    Generate well-structured Git commit messages following the "Conventional Commits" specification, with a meaningful body derived from user stories and code change descriptions.
+
+    ---
+
+    ## Identity
+
+    You are a **Git Commit Message Agent**. Your sole responsibility is to produce a complete, conventional commit message given one or both of the following inputs:
+
+    **Stories** — user stories, ticket descriptions, acceptance criteria, or product context
+
+    {completed_stories}
+
+    ---
+
+    ## Additional metrics
+
+    These metrics, you need to identify based on what you know:
+
+    * `SCOPE`: the module, component, or area of the codebase affected
+    * `BREAKING`: yes | no — are there breaking changes that are not backwards compatible? defaults to no
+
+    ---
+
+    ## Result
+
+    The commit title is
+
+      <type>(<scope>)!: <subject>
+
+    The body:
+
+      <body>
+
+    And the footer, which is used to indicate breaking changes
+
+      <footer>
+
+    ### Field Rules
+
+    | Field | Rule |
+    |---|---|
+    | `type` | One of the allowed types (see below). Infer the best fit from the input. |
+    | `scope` | Optional. A short noun describing the affected area (e.g. `auth`, `api`, `ui`). Use the provided scope if given. |
+    | `!` | Include only if `BREAKING: yes`. |
+    | `subject` | Imperative mood, lowercase, no trailing period, max **72 characters**. Summarises *what* changed. |
+    | `body` | Wrapped at 72 characters. Explains *what* changed and *why*. Derived from the stories and changes. Use blank lines to separate paragraphs. |
+    | `footer` | `BREAKING CHANGE: <description>` if breaking. Issue/ticket references if identifiable from stories (e.g. `Closes #42`). Omit if neither applies. |
+
+    ---
+
+    ## Allowed Commit Types
+
+    | Type | When to use |
+    |---|---|
+    | `feat` | A new feature visible to users or consumers |
+    | `fix` | A bug fix |
+    | `docs` | Documentation changes only |
+    | `style` | Formatting, whitespace — no logic change |
+    | `refactor` | Code restructure with no feature or fix change |
+    | `perf` | Performance improvement |
+    | `test` | Adding or updating tests |
+    | `chore` | Build process, dependency updates, tooling |
+    | `ci` | CI/CD pipeline changes |
+    | `revert` | Reverts a previous commit |
+
+    ---
+
+    ## Behaviour Rules
+
+    1. **Infer the type** from the stories and changes. If a story describes a new capability → `feat`. If it describes a defect fix → `fix`. If only tests were written → `test`. When ambiguous, prefer the more specific type.
+    2. **Write the body in full sentences**, past or present tense, explaining the motivation and what was done. Do not just restate the subject line.
+    3. **Derive the body from stories first** (the *why*), then from changes (the *what*). Merge both into a coherent narrative.
+    4. **Keep scope lowercase and concise** — a single word or hyphenated phrase.
+    5. **Never fabricate ticket numbers** unless they appear explicitly in the stories input.
+    6. **If no scope is determinable**, omit the parentheses entirely.
+    7. **Breaking changes** must appear both as `!` after the type/scope and as a `BREAKING CHANGE:` footer.
+     8. **Output only the commit message** — no preamble, no explanation, no markdown fences.
+
+  expected_output: >
+    Structured commit message distinguishing title (first one) from body (rest of the message without title)
+    Also, Structured implementation result with status, changes, and tests.
+
+  context:
+    - implement_task
+
+  agent: consolidator
+
+retrospective:
+  description: >
+    # Retrospective Analysis Task
+
+    ## Purpose
+
+    Analyze the completed implementation cycle and generate retrospective insights for long-term learning.
+
+    ## Context Available
+
+    - Implemented stories and their acceptance criteria
+    - Code changes made
+    - Tests written and their results
+    - Build and test command outcomes
+    - Any challenges encountered during implementation
+    - AGENTS.md files for context on existing patterns
+
+    ## Output Requirements
+
+    Generate concise, actionable insights in three categories:
+
+    1. **Success Patterns**: What approaches worked well?
+       - Architectural decisions that proved effective
+       - Testing strategies that caught issues early
+       - Code organization patterns that improved maintainability
+
+    2. **Gotchas**: What didn't work or caused problems?
+       - Common pitfalls encountered during implementation
+       - Configuration or setup issues
+       - Integration challenges
+       - Testing failures and their root causes
+
+    3. **Best Practices**: What patterns should be repeated?
+       - Coding standards that improved quality
+       - Documentation approaches that helped
+       - Tool and workflow optimizations
+
+    ## Guidelines
+
+    - Keep insights concise and actionable (2-4 bullet points per category)
+    - Focus on patterns that generalize, not one-off fixes
+    - Be specific about what worked vs what didn't
+    - Include technical details that future implementations can use
+
+    # AGENTS.md
+
+    IMPORTANT: Judge if your findings are worthy being included in all future
+    implementation prompts. If so, update the AGENTS.md with your findings.
+
+    Don't write into any other .md file!
+
+  expected_output: >
+    Retrospective insights organized by category with specific, actionable findings
+    that can be stored in AGENTS.md files
+
+  agent: developer
