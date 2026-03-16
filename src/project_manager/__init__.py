@@ -4,6 +4,7 @@ from .base import ProjectManager
 from .flow_runner import FlowRunner
 from .git_utils import get_github_repo_from_local
 from .github import GitHubProjectManager
+from .github_conversation import GitHubConversationManager
 from .types import (
     Issue,
     IssueStatus,
@@ -15,6 +16,7 @@ from .types import (
 __all__ = [
     "ProjectManager",
     "GitHubProjectManager",
+    "GitHubConversationManager",
     "FlowRunner",
     "Issue",
     "IssueStatus",

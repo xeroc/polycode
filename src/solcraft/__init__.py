@@ -10,13 +10,13 @@ import uuid
 from crewai.flow.flow import listen, start
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
+from crews.implement_crew.implement_crew import ImplementCrew
 from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
 from persistence.postgres import PostgresFlowPersistence
 from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
 from project_manager.types import ProjectConfig
 
-from crews.implement_crew.implement_crew import ImplementCrew
 from .task_loader import load_task_templates
 from .types import ImplementOutput, PlanOutput, SolcraftState, TaskTemplate
 

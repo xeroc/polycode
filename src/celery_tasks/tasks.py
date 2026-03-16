@@ -13,9 +13,9 @@ from flowbase import KickoffIssue, KickoffRepo
 from persistence.celery_tasks import CeleryTask, CeleryTaskTracker
 from persistence.postgres import Base
 from project_manager import StatusMapping
+from project_manager.config import settings as project_settings
 from project_manager.github import GitHubProjectManager
 from project_manager.types import Issue, ProjectConfig
-from project_manager.config import settings as project_settings
 from ralph import kickoff as kickoff_ralph
 
 from . import app, calculate_timeout, get_flow_id

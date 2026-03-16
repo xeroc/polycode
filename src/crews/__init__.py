@@ -1,3 +1,5 @@
+from crews.conversation_crew import ConversationCrew
+from crews.conversation_crew.types import SpecOutput
 from crews.implement_crew import ImplementCrew
 from crews.implement_crew.types import ImplementOutput
 from crews.plan_crew import PlanCrew
@@ -12,6 +14,7 @@ from crews.verify_crew import VerifyCrew
 from crews.verify_crew.types import VerifyOutput
 
 __all__ = [
+    "ConversationCrew",
     "ImplementCrew",
     "ImplementOutput",
     "PlanCrew",
@@ -20,6 +23,7 @@ __all__ = [
     "RalphOutput",
     "ReviewCrew",
     "ReviewOutput",
+    "SpecOutput",
     "Story",
     "TestCrew",
     "TestOutput",

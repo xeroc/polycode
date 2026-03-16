@@ -291,13 +291,9 @@ class FlowIssueManagement(Flow[T]):
         origin = repo.remote(name="origin")
         origin.push()
 
-    def _post_planning_checklist(
-        self, stories: list, issue_id: int
-    ) -> int | None:
+    def _post_planning_checklist(self, stories: list, issue_id: int) -> int | None:
         """Post planning checklist to issue and return comment ID."""
-        checklist_items = "\n".join(
-            f"- [ ] {story.description}" for story in stories
-        )
+        checklist_items = "\n".join(f"- [ ] {story.description}" for story in stories)
         comment = (
             f"## 📋 Implementation Plan\n\n"
             f"{checklist_items}\n\n"
@@ -342,7 +338,9 @@ class FlowIssueManagement(Flow[T]):
 
         if pr_url:
             if merged:
-                body += f"\n\n---\n\n✅ **Merged** - [PR #{self.state.pr_number}]({pr_url})"
+                body += (
+                    f"\n\n---\n\n✅ **Merged** - [PR #{self.state.pr_number}]({pr_url})"
+                )
             else:
                 body += f"\n\n---\n\n🔍 **Review in progress** - [PR #{self.state.pr_number}]({pr_url})"
         else:

@@ -1,0 +1,95 @@
+spec_elicitation_task:
+  description: |
+    ## Requirements Clarification
+
+    ### CURRENT CONTEXT:
+    - Issue Title: {title}
+    - Issue Body: {body}
+    - Conversation History:
+    {conversation_history}
+
+    ### TASK:
+    Based on the current conversation context, either:
+    1. Ask a clarifying question if requirements are unclear
+    2. Propose a final specification if requirements are clear
+
+    ### GUIDELINES:
+    - Ask ONE question at a time
+    - Focus on edge cases, constraints, and acceptance criteria
+    - When proposing a spec, summarize all requirements clearly
+    - Use markdown formatting for readability
+    - Ask human to thumbs up (👍) to approve the specification
+
+    ### OUTPUT:
+    If asking question: A clear, specific question
+    If proposing spec: A complete specification document with:
+    - Feature overview
+    - Detailed requirements
+    - Acceptance criteria
+    - Assumptions (if any)
+  expected_output: |
+    Either:
+    1. A clarifying question
+    2. A complete specification document ready for approval
+  agent: spec_elicitor
+
+story_breakdown_task:
+  description: |
+    ## Story Planning
+
+    ### APPROVED SPECIFICATION:
+    {specification}
+
+    ### TASK:
+    Break down the approved specification into ordered, actionable user stories.
+
+    ### GUIDELINES:
+    - Start with setup/storying stories (infrastructure, data models)
+    - Follow with core feature stories
+    - End with polish/refinement stories
+    - Each story should be independently implementable
+    - Include clear acceptance criteria for each story
+    - Prioritize logically (dependencies first)
+    - Target 3-7 stories (fewer if simple, more if complex)
+
+    ### OUTPUT FORMAT:
+    ## Stories
+
+    1. [Story Title]
+       - Description: ...
+       - Acceptance Criteria: ...
+       - Priority: (high/medium/low)
+
+    [Continue for each story]
+  expected_output: |
+    Numbered list of user stories with titles, descriptions, acceptance criteria, and priorities
+  agent: story_planner
+
+ralph_init_task:
+  description: |
+    ## Ralph Loop Initialization
+
+    ### SPECIFICATION:
+    {specification}
+
+    ### SELECTED STORY:
+    {story}
+
+    ### CONVERSATION CONTEXT:
+    {conversation_summary}
+
+    ### TASK:
+    Prepare comprehensive context for the Ralph development loop.
+
+    ### GUIDELINES:
+    - Include full specification as context
+    - Provide conversation summary for additional context
+    - Highlight relevant constraints and edge cases
+    - Ensure the development agent understands the "why" behind the story
+    - Include any decisions made during conversation
+
+    ### OUTPUT:
+    A complete development brief that includes all context needed for Ralph to execute the story
+  expected_output: |
+    Comprehensive development brief with specification, story details, and conversation context
+  agent: ralph_initializer
