@@ -8,7 +8,7 @@ from crewai_tools import FileWriterTool
 
 from tools import AgentsMDLoaderTool, DirectoryReadTool, ExecTool, FileReadTool
 
-from ...types import RalphOutput
+from .types import RalphOutput
 
 
 @CrewBase

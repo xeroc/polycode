@@ -1,64 +1,71 @@
-from typing import List
-
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from crewai.tools import BaseTool
 from crewai_tools import FileWriterTool
 
 from glm import GLMJSONLLM
-from tools import AgentsMDLoaderTool, DirectoryReadTool, FileReadTool
+from tools import AgentsMDLoaderTool, DirectoryReadTool, ExecTool, FileReadTool
 
-from ...types import PlanOutput
+from .types import ImplementOutput
 
 
 @CrewBase
-class PlanCrew:
-    """Plan Crew - Decompose task into user stories."""
+class ImplementCrew:
+    """Implement Crew - Implement features."""
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
     agents_md_map: dict[str, str] | None = None
 
     @agent
-    def setup(self) -> Agent:
-        tools: List[BaseTool] = [FileReadTool(), DirectoryReadTool(), FileWriterTool()]
+    def developer(self) -> Agent:
+        tools = [
+            FileReadTool(),
+            FileWriterTool(),
+            DirectoryReadTool(),
+            ExecTool(),
+        ]
 
         if self.agents_md_map:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
 
         return Agent(
-            config=self.agents_config["setup"],  # type: ignore
+            config=self.agents_config["developer"],  # type: ignore
             verbose=False,
-            llm=GLMJSONLLM(),
             tools=tools,
             allow_code_execution=False,
         )
 
     @agent
-    def planner(self) -> Agent:
-        tools: List[BaseTool] = []
+    def consolidator(self) -> Agent:
+        tools = []
 
         if self.agents_md_map:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
 
         return Agent(
-            config=self.agents_config["planner"],  # type: ignore
-            llm=GLMJSONLLM(),
+            config=self.agents_config["consolidator"],  # type: ignore
             verbose=False,
+            llm=GLMJSONLLM(),
             tools=tools,
         )
 
     @task
-    def setup_task(self) -> Task:
+    def implement_task(self) -> Task:
         return Task(
-            config=self.tasks_config["setup_task"],  # type: ignore
+            config=self.tasks_config["implement_task"],  # type: ignore
         )
 
     @task
-    def plan_task(self) -> Task:
+    def retrospective(self) -> Task:
         return Task(
-            config=self.tasks_config["plan_task"],  # type: ignore
-            output_pydantic=PlanOutput,
+            config=self.tasks_config["retrospective"],  # type: ignore
+        )
+
+    @task
+    def generate_result(self) -> Task:
+        return Task(
+            config=self.tasks_config["generate_result"],  # type: ignore
+            output_pydantic=ImplementOutput,
         )
 
     @crew
@@ -70,4 +77,5 @@ class PlanCrew:
             tasks=self.tasks,  # type: ignore
             process=Process.sequential,
             verbose=False,
+            # memory=True,
         )

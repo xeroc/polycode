@@ -1,8 +1,9 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-from feature_dev.types import ReviewOutput
 from glm import GLMJSONLLM
+
+from .types import ReviewOutput
 
 
 @CrewBase
@@ -23,7 +24,8 @@ class ReviewCrew:
     @task
     def review_task(self) -> Task:
         return Task(
-            config=self.tasks_config["review_task"], output_pydantic=ReviewOutput  # type: ignore
+            config=self.tasks_config["review_task"],  # pyright:ignore
+            output_pydantic=ReviewOutput,  # type: ignore
         )
 
     @crew

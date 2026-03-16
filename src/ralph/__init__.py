@@ -15,20 +15,22 @@ Ralph Loop mechanism:
 import logging
 import subprocess
 import uuid
-from typing import Literal, cast
+from typing import cast
 
-from crewai.flow.flow import listen, or_, router, start
+from crewai.flow.flow import listen, start
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
+from crews import PlanCrew, RalphCrew
+from crews.plan_crew.types import PlanOutput
+from crews.plan_crew.types import Story as Story
+from crews.ralph_crew.types import RalphOutput
 from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
 from persistence.postgres import PostgresFlowPersistence
 from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
 from project_manager.types import ProjectConfig
 
-from .crews.plan_crew.plan_crew import PlanCrew
-from .crews.ralph_crew.ralph_crew import RalphCrew
-from .types import PlanOutput, RalphLoopState, RalphOutput, Story
+from .types import RalphLoopState
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -113,17 +115,14 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         - Not based on subjective judgment
         """
 
-        unfinished_stories = list(
-            filter(lambda story: not story.completed, self.state.stories or [])
-        )
+        unfinished_stories = list(filter(lambda story: not story.completed, self.state.stories or []))
 
         logger.info(f"Unfinished stories: {len(unfinished_stories)}")
         for story in unfinished_stories:
             logger.info(f"\n📖 Story: {story.title}")
 
             error_context = (
-                "\n\n## Previous Errors:\n"
-                + "\n".join(f"- {err}" for err in story.errors)
+                "\n\n## Previous Errors:\n" + "\n".join(f"- {err}" for err in story.errors)
                 if story.errors
                 else "No previous errors"
             )

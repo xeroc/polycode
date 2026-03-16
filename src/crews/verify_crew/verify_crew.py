@@ -1,9 +1,10 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-from feature_dev.types import VerifyOutput
 from glm import GLMJSONLLM
 from tools import DirectoryReadTool, ExecTool, FileReadTool
+
+from .types import VerifyOutput
 
 
 @CrewBase
