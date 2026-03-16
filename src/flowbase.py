@@ -28,9 +28,9 @@ from persistence.postgres import (
     update_request_status,
 )
 from project_manager import GitHubProjectManager
+from project_manager.config import settings as project_settings
 from project_manager.git_utils import get_github_repo_from_local
 from project_manager.types import ProjectConfig
-from project_manager.config import settings as project_settings
 
 T = TypeVar("T", bound="BaseFlowModel")
 logger = logging.getLogger(__name__)
@@ -82,6 +82,13 @@ class BaseFlowModel(BaseModel):
     pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id on github")
+
+    planning_comment_id: Optional[int] = Field(
+        default=None, description="ID of the planning progress comment"
+    )
+    commit_urls: dict[int, str] = Field(
+        default_factory=dict, description="Story ID to commit URL mapping"
+    )
 
     commit_title: Optional[str] = Field(
         default=None,
@@ -266,13 +273,90 @@ class FlowIssueManagement(Flow[T]):
         commit_message = f"{title}\n\n{body}\n\n{footer}"
         commit = repo.index.commit(commit_message)
         logger.info(
-            f"🏹 Committed changes: {commit_message.split('\n')[0]} ... (#{commit.hexsha})"
+            f"🏹 Committed changes: {commit_message.split(chr(10))[0]} ... (#{commit.hexsha})"
         )
+        return commit
+
+    def _get_commit_url(self, commit_sha: str) -> str:
+        """Get the GitHub URL for a commit."""
+        return (
+            f"https://github.com/{self.state.repo_owner}/{self.state.repo_name}"
+            f"/commit/{commit_sha}"
+        )
+
+    def _push_repo(self):
+        repo, *_ = get_github_repo_from_local(self.state.repo)
+        logger.info("🏹 Pushing repo ...")
+
+        origin = repo.remote(name="origin")
+        origin.push()
+
+    def _post_planning_checklist(
+        self, stories: list, issue_id: int
+    ) -> int | None:
+        """Post planning checklist to issue and return comment ID."""
+        checklist_items = "\n".join(
+            f"- [ ] {story.description}" for story in stories
+        )
+        comment = (
+            f"## 📋 Implementation Plan\n\n"
+            f"{checklist_items}\n\n"
+            f"_Progress will be updated as stories are implemented._"
+        )
+        self._project_manager.add_comment(issue_id, comment)
+
+        comment_id = self._project_manager.get_last_comment_by_user(
+            issue_id, self._project_manager.bot_username
+        )
+        if comment_id:
+            logger.info(f"🏹 Posted planning checklist, comment ID: {comment_id}")
+        return comment_id
+
+    def _update_planning_checklist(
+        self,
+        stories: list,
+        completed_story_ids: list[int],
+        issue_id: int,
+        pr_url: str | None = None,
+        merged: bool = False,
+    ):
+        """Update the planning checklist with progress."""
+        if not self.state.planning_comment_id:
+            logger.warning("No planning comment ID, cannot update checklist")
+            return
+
+        checklist_lines = []
+        for story in stories:
+            if story.id in completed_story_ids:
+                commit_url = self.state.commit_urls.get(story.id)
+                if commit_url:
+                    checklist_lines.append(
+                        f"- [x] {story.description} ([commit]({commit_url}))"
+                    )
+                else:
+                    checklist_lines.append(f"- [x] {story.description}")
+            else:
+                checklist_lines.append(f"- [ ] {story.description}")
+
+        body = "## 📋 Implementation Plan\n\n" + "\n".join(checklist_lines)
+
+        if pr_url:
+            if merged:
+                body += f"\n\n---\n\n✅ **Merged** - [PR #{self.state.pr_number}]({pr_url})"
+            else:
+                body += f"\n\n---\n\n🔍 **Review in progress** - [PR #{self.state.pr_number}]({pr_url})"
+        else:
+            body += "\n\n_Progress will be updated as stories are implemented._"
+
+        self._project_manager.update_comment(
+            issue_id, self.state.planning_comment_id, body
+        )
+        logger.info(f"🏹 Updated planning checklist for issue #{issue_id}")
 
     def recall_as_markdown_list(self, name: str, **kwargs):
         if "scope" not in kwargs:
             kwargs.update(dict(scope=self.state.memory_prefix))
-        conf_recall = self.recall(name, **kwargs)
+        conf_recall = self.recall(name, **kwargs)  # ty:ignore
         return "\n".join(f"- {m.record.content}" for m in conf_recall)
 
     def discover_agents_md_files(self):
@@ -305,13 +389,6 @@ class FlowIssueManagement(Flow[T]):
 
         logger.info(f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}")
         return agents_md_files
-
-    def _push_repo(self):
-        repo, *_ = get_github_repo_from_local(self.state.repo)
-        logger.info("🏹 Pushing repo ...")
-
-        origin = repo.remote(name="origin")
-        origin.push()
 
     def _create_pr(self):
         """Step 6: Create pull request."""
@@ -368,7 +445,15 @@ class FlowIssueManagement(Flow[T]):
         logger.info(
             f"✅ Pull request #{self.state.pr_number} has required label '{project_settings.MERGE_REQUIRED_LABEL}', proceeding with merge"
         )
-        self._project_manager.merge_pull_request(self.state.pr_number)
+        success = self._project_manager.merge_pull_request(self.state.pr_number)
+
+        if success:
+            self._project_manager.add_comment(
+                self.state.issue_id,
+                f"## ✅ Task Completed\n\n"
+                f"Pull request #{self.state.pr_number} has been merged.\n"
+                f"[View merged PR]({self.state.pr_url})",
+            )
 
     def _create_worktree(self, branch_name: str):
         root_git_repo = git.Repo(self.state.path)
@@ -430,11 +515,11 @@ class FlowIssueManagement(Flow[T]):
                     self.state.build_cmd = f"pnpm run-C {self.state.repo} typecheck"
                     logger.info(f"📦 Typecheck command: {self.state.build_cmd}")
             except Exception as e:
-                logger.warn(f"⚠️ Could not read package.json: {e}")
+                logger.warning(f"⚠️ Could not read package.json: {e}")
 
     def _build(self):
         if not self.state.build_cmd:
-            logger.warn("⚠️ No build command, skipping verification")
+            logger.warning("⚠️ No build command, skipping verification")
             return
 
         result = subprocess.run(
@@ -452,7 +537,7 @@ class FlowIssueManagement(Flow[T]):
 
     def _test(self):
         if not self.state.test_cmd:
-            logger.warn("⚠️ No test command, skipping verification")
+            logger.warning("⚠️ No test command, skipping verification")
             return
 
         result = subprocess.run(

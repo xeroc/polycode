@@ -57,8 +57,14 @@ packages = [
 dev = ["ruff>=0.15.4"]
 
 [tool.ruff]
-line-length = 79
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 ignore = ["E501"]
+
+[tool.pycodestyle]
+count = false
+ignore = ["E226", "E302", "E71"]
+max-line-length = 160
+statistics = true

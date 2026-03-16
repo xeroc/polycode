@@ -49,6 +49,80 @@ class GitHubProjectManager(ProjectManager):
         self._project_id: str | None = None
         self._status_field_id: str | None = None
         self._status_options: dict[str, str] | None = None
+        self._bot_username: str | None = None
+
+    @property
+    def bot_username(self) -> str:
+        """Get the authenticated bot username."""
+        if self._bot_username is None:
+            self._bot_username = self.github_client.get_user().login
+        return self._bot_username
+
+    def get_comments(self, issue_number: int) -> list:
+        """Get all comments for an issue.
+
+        Args:
+            issue_number: Issue number
+
+        Returns:
+            List of comments
+        """
+        try:
+            issue = self.repo.get_issue(issue_number)
+            return list(issue.get_comments())
+        except Exception as e:
+            log.error(f"Failed to get comments for issue #{issue_number}: {e}")
+            return []
+
+    def get_last_comment_by_user(self, issue_number: int, username: str) -> int | None:
+        """Get the last comment ID by a specific user.
+
+        Args:
+            issue_number: Issue number
+            username: GitHub username
+
+        Returns:
+            Comment ID if found, None otherwise
+        """
+        try:
+            comments = self.get_comments(issue_number)
+            for comment in reversed(comments):
+                if comment.user and comment.user.login == username:
+                    return comment.id
+            return None
+        except Exception as e:
+            log.error(
+                f"Failed to get last comment by {username} on issue #{issue_number}: {e}"
+            )
+            return None
+
+    def update_comment(self, issue_number: int, comment_id: int, body: str) -> bool:
+        """Update an existing comment.
+
+        Args:
+            issue_number: Issue number
+            comment_id: Comment ID to update
+            body: New comment body
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            issue = self.repo.get_issue(issue_number)
+            for comment in issue.get_comments():
+                if comment.id == comment_id:
+                    comment.edit(body)
+                    log.info(f"Updated comment {comment_id} on issue #{issue_number}")
+                    return True
+            log.warning(
+                f"Comment {comment_id} not found on issue #{issue_number}"
+            )
+            return False
+        except Exception as e:
+            log.error(
+                f"Failed to update comment {comment_id} on issue #{issue_number}: {e}"
+            )
+            return False
 
     @property
     def project_id(self) -> str:

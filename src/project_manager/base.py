@@ -17,6 +17,42 @@ class ProjectManager(ABC):
         self.config = config
 
     @abstractmethod
+    def get_comments(self, issue_number: int) -> list:
+        """Get all comments for an issue.
+
+        Args:
+            issue_number: Issue number
+
+        Returns:
+            List of comments
+        """
+
+    @abstractmethod
+    def get_last_comment_by_user(self, issue_number: int, username: str) -> int | None:
+        """Get the last comment ID by a specific user.
+
+        Args:
+            issue_number: Issue number
+            username: GitHub username
+
+        Returns:
+            Comment ID if found, None otherwise
+        """
+
+    @abstractmethod
+    def update_comment(self, issue_number: int, comment_id: int, body: str) -> bool:
+        """Update an existing comment.
+
+        Args:
+            issue_number: Issue number
+            comment_id: Comment ID to update
+            body: New comment body
+
+        Returns:
+            True if successful, False otherwise
+        """
+
+    @abstractmethod
     def get_open_issues(self) -> list[Issue]:
         """Get all open issues from the repository.
 

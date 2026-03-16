@@ -2,7 +2,6 @@
 Feature Development Flow module.
 """
 
-import os
 import uuid
 
 import git
@@ -101,12 +100,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in output.stories:
             print(f"  |- 🔖 {current_story.description}")
 
-        self._project_manager.add_comment(
-            self.state.issue_id,
-            "\n## 📋 Planning completed\n\n"
-            "Tasks that need implementing:"
-            "\n - [ ] ".join([x.description for x in output.stories]),
-        )
+        self.state.planning_comment_id = self._post_planning_checklist(output.stories, self.state.issue_id)
         return output
 
     @listen(setup)
@@ -137,9 +131,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                         build_cmd=self.state.build_cmd,
                         test_cmd=self.state.test_cmd,
                         current_story=current_story.model_dump_json(),
-                        completed_stories="\n- ".join(
-                            [x.description for x in self.state.completed_stories or []]
-                        ),
+                        completed_stories="\n- ".join([x.description for x in self.state.completed_stories or []]),
                         current_story_id=current_story.id,
                         current_story_title=current_story.title,
                         architecture=self.recall_as_markdown_list("architecture"),
@@ -155,15 +147,16 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
             commit_title = implement_result.title
             commit_message = implement_result.message
             commit_footer = implement_result.footer
-            self._commit_changes(commit_title, commit_message, commit_footer)
+            commit = self._commit_changes(commit_title, commit_message, commit_footer)
+
+            if commit:
+                commit_url = self._get_commit_url(commit.hexsha)
+                self.state.commit_urls[current_story.id] = commit_url
 
             return implement_result
 
-        # TODO:
         completed_ids = [x.id for x in self.state.completed_stories or []]
-        missing_stories = [
-            x for x in self.state.stories or [] if x.id not in completed_ids
-        ]
+        missing_stories = [x for x in self.state.stories or [] if x.id not in completed_ids]
 
         self.state.completed_stories = []
         self.state.changes = []
@@ -172,19 +165,30 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for story in missing_stories or []:
             print(f"  |- Title: {story.title}")
             print(f"  |- Description: {story.description}")
-            # Schedule each chapter writing task
             result = implement_single_story(story)
             self.state.completed_stories.append(story)
             self.state.changes.append(result.changes)
             self.state.tests.append(result.tests)
 
-    @listen(implement_story)
-    def push_repo(self):
-        self._push_repo()
+            self._push_repo()
 
-    @listen(push_repo)
+            completed_ids = [x.id for x in self.state.completed_stories or []]
+            self._update_planning_checklist(
+                self.state.stories or [],
+                completed_ids,
+                self.state.issue_id,
+            )
+
+    @listen(implement_story)
     def create_pr(self):
         self._create_pr()
+        completed_ids = [x.id for x in self.state.completed_stories or []]
+        self._update_planning_checklist(
+            self.state.stories or [],
+            completed_ids,
+            self.state.issue_id,
+            pr_url=self.state.pr_url,
+        )
 
     @listen(implement_story)
     def test_integration(self):
@@ -244,9 +248,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                     changes=self.state.changes,
                     test_cmd=self.state.test_cmd,
                     current_story=self.state.current_story,
-                    completed_stories=[
-                        x.description for x in self.state.completed_stories or []
-                    ],
+                    completed_stories=[x.description for x in self.state.completed_stories or []],
                 )
             )
         )
@@ -305,6 +307,15 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
     def finish(self):
         """Step 8: Update project status and cleanup worktree."""
         self._merge_branch()
+        if self.state.pr_url:
+            completed_ids = [x.id for x in self.state.completed_stories or []]
+            self._update_planning_checklist(
+                self.state.stories or [],
+                completed_ids,
+                self.state.issue_id,
+                pr_url=self.state.pr_url,
+                merged=True,
+            )
         self._cleanup_worktree()
 
 
