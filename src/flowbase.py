@@ -69,9 +69,7 @@ class BaseFlowModel(BaseModel):
         default=None, description="Description of the project to work on"
     )
     path: str = Field(default="", description="Original Path to repository")
-    repo: str = Field(
-        default="", description="Path to repository in a worktree"
-    )
+    repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
     task: str = Field(default="", description="Feature development task")
 
@@ -79,13 +77,9 @@ class BaseFlowModel(BaseModel):
     repo_owner: Optional[str] = Field(
         default=None, description="GitHub repository owner"
     )
-    repo_name: Optional[str] = Field(
-        default=None, description="GitHub repository name"
-    )
+    repo_name: Optional[str] = Field(default=None, description="GitHub repository name")
 
-    pr_number: Optional[int] = Field(
-        default=None, description="Pull request number"
-    )
+    pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id on github")
 
@@ -144,27 +138,19 @@ class FlowIssueManagement(Flow[T]):
             raise ValueError("project_config required!")
 
         try:
-            ensure_request_exists(
-                SessionLocal, self.state.issue_id, self.state.task
-            )
-            logger.info(
-                f"🏹 Ensured request exists for issue #{self.state.issue_id}"
-            )
+            ensure_request_exists(SessionLocal, self.state.issue_id, self.state.task)
+            logger.info(f"🏹 Ensured request exists for issue #{self.state.issue_id}")
         except Exception as e:
             logger.error(f"🚨 Failed to ensure request exists: {e}")
 
     def pickup_issue(self):
         try:
-            update_request_status(
-                SessionLocal, self.state.issue_id, "inprogress"
-            )
+            update_request_status(SessionLocal, self.state.issue_id, "inprogress")
             logger.info(
                 f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}"
             )
         except Exception as e:
-            logger.error(
-                f"🚨 Failed to update PostgreSQL status to inprogress: {e}"
-            )
+            logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
 
     def _list_git_tree(self):
         return self._git_repo.git.ls_files()
@@ -180,12 +166,9 @@ class FlowIssueManagement(Flow[T]):
         default_branch = git_repo.remotes.origin.refs.HEAD.reference
 
         # Check if remote develop branch exists
-        remote_develop_exists = hasattr(
-            git_repo.remotes.origin.refs, "develop"
-        )
+        remote_develop_exists = hasattr(git_repo.remotes.origin.refs, "develop")
 
         # Determine which branch to use
-        branch_name = "develop"  # Still call it develop locally
         if remote_develop_exists:
             target_remote_branch = git_repo.remotes.origin.refs.develop
             logger.info("🏹 Remote develop branch found, using origin/develop")
@@ -195,29 +178,29 @@ class FlowIssueManagement(Flow[T]):
                 f"🏹 No remote develop branch found, using default branch: {default_branch}"
             )
 
-    # Check if local develop branch exists
-    if "develop" in git_repo.heads:
-        develop_branch = git_repo.heads.develop
-    else:
-        # Create local develop branch tracking the target remote branch
-        develop_branch = git_repo.create_head("develop", target_remote_branch)
+        # Check if local develop branch exists
+        if "develop" in git_repo.heads:
+            develop_branch = git_repo.heads.develop
+        else:
+            # Create local develop branch tracking the target remote branch
+            develop_branch = git_repo.create_head("develop", target_remote_branch)
 
-    # Checkout develop branch
-    develop_branch.checkout()
+        # Checkout develop branch
+        develop_branch.checkout()
 
-    # Ensure develop branch is tracking the correct remote (origin)
-    if "origin" in git_repo.remotes:
-        origin = git_repo.remotes.origin
-        if "develop" in origin.refs:
-            # Ensure develop branch tracks origin/develop
-            develop_branch.set_tracking_branch(origin.refs.develop)
+        # Ensure develop branch is tracking the correct remote (origin)
+        if "origin" in git_repo.remotes:
+            origin = git_repo.remotes.origin
+            if "develop" in origin.refs:
+                # Ensure develop branch tracks origin/develop
+                develop_branch.set_tracking_branch(origin.refs.develop)
 
-        # Reset to target remote branch
-        git_repo.git.reset("--hard", target_remote_branch)
+            # Reset to target remote branch
+            git_repo.git.reset("--hard", target_remote_branch)
 
-        print(
-            f"Successfully set up develop branch pointing to {target_remote_branch}"
-        )
+            print(
+                f"Successfully set up develop branch pointing to {target_remote_branch}"
+            )
         return develop_branch
 
     def _prepare_work_tree(self):
@@ -236,18 +219,14 @@ class FlowIssueManagement(Flow[T]):
 
         logger.info("🏹 Preparing work tree ...")
         if not os.path.exists(self.state.path):
-            logger.info(
-                f"🚨 Repository not found at {self.state.path}, cloning..."
-            )
+            logger.info(f"🚨 Repository not found at {self.state.path}, cloning...")
             parent_dir = os.path.dirname(self.state.path)
             if parent_dir:
                 os.makedirs(parent_dir, exist_ok=True)
             # TODO: this requires setting up a ssh alias!
             repo_url = f"github:{self.state.repo_owner}/{self.state.repo_name}"
             git.Repo.clone_from(repo_url, self.state.path)
-            logger.info(
-                f"🏹 Cloned repository from {repo_url} to {self.state.path}"
-            )
+            logger.info(f"🏹 Cloned repository from {repo_url} to {self.state.path}")
 
         self._setup_develop_branch()
         self._create_worktree(branch_name)
@@ -324,9 +303,7 @@ class FlowIssueManagement(Flow[T]):
             self.root_agents_md = agents_md_files[first_path]
             logger.info(f"📕 Using {first_path} as root AGENTS.md")
 
-        logger.info(
-            f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}"
-        )
+        logger.info(f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}")
         return agents_md_files
 
     def _push_repo(self):
@@ -355,9 +332,7 @@ class FlowIssueManagement(Flow[T]):
         # Get diff between two branches
         self.state.pr_url = pr.html_url
         self.state.pr_number = pr.number
-        logger.info(
-            f"🏹 PR {self.state.pr_number} created: {self.state.pr_url}"
-        )
+        logger.info(f"🏹 PR {self.state.pr_number} created: {self.state.pr_url}")
 
         self._project_manager.add_comment(
             self.state.issue_id,
@@ -413,16 +388,12 @@ class FlowIssueManagement(Flow[T]):
 
     def _cleanup_worktree(self):
         try:
-            self._project_manager.update_issue_status(
-                self.state.issue_id, "Done"
-            )
+            self._project_manager.update_issue_status(self.state.issue_id, "Done")
         except Exception as e:
             logger.info(f"🚨 Failed to update project status to Done: {e}")
 
         try:
-            update_request_status(
-                SessionLocal, self.state.issue_id, "completed"
-            )
+            update_request_status(SessionLocal, self.state.issue_id, "completed")
             logger.info(
                 f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}"
             )
@@ -453,17 +424,11 @@ class FlowIssueManagement(Flow[T]):
                     pkg = json.load(f)
                 scripts = pkg.get("scripts", {})
                 if "build" in scripts:
-                    self.state.build_cmd = (
-                        f"pnpm run -C {self.state.repo} build"
-                    )
+                    self.state.build_cmd = f"pnpm run -C {self.state.repo} build"
                     logger.info(f"📦 Build command: {self.state.build_cmd}")
                 elif "typecheck" in scripts:
-                    self.state.build_cmd = (
-                        f"pnpm run-C {self.state.repo} typecheck"
-                    )
-                    logger.info(
-                        f"📦 Typecheck command: {self.state.build_cmd}"
-                    )
+                    self.state.build_cmd = f"pnpm run-C {self.state.repo} typecheck"
+                    logger.info(f"📦 Typecheck command: {self.state.build_cmd}")
             except Exception as e:
                 logger.warn(f"⚠️ Could not read package.json: {e}")
 
