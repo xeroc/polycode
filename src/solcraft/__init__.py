@@ -10,7 +10,6 @@ import uuid
 from crewai.flow.flow import listen, start
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
-from crews.implement_crew.implement_crew import ImplementCrew
 from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
 from persistence.postgres import PostgresFlowPersistence
 from project_manager import StatusMapping
@@ -114,9 +113,9 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
 
         self._project_manager.add_comment(
             self.state.issue_id,
-            "\n## 📋 Planning completed\n\n"
-            "Tasks that need implementing:"
-            "\n - [ ] ".join([x.description for x in output.stories]),
+            "\n## 📋 Planning completed\n\nTasks that need implementing:\n - [ ] ".join(
+                [x.description for x in output.stories]
+            ),
         )
         return output
 
@@ -136,9 +135,7 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
             return
 
         completed_ids = [x.id for x in self.state.completed_stories or []]
-        missing_stories = [
-            x for x in self.state.stories or [] if x.id not in completed_ids
-        ]
+        missing_stories = [x for x in self.state.stories or [] if x.id not in completed_ids]
 
         self.state.completed_stories = []
         self.state.changes = []
@@ -156,6 +153,8 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
 
     def _implement_single_story(self, story) -> ImplementOutput:
         """Implement a single story with the configured task templates."""
+        from crews.implement_crew.implement_crew import ImplementCrew
+
         logger.info(f"   |-⏳ user story:  {story.description}")
 
         output = (
@@ -172,9 +171,7 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
                     build_cmd=self.state.build_cmd,
                     test_cmd=self.state.test_cmd,
                     current_story=story.model_dump_json(),
-                    completed_stories="\n- ".join(
-                        [x.description for x in self.state.completed_stories or []]
-                    ),
+                    completed_stories="\n- ".join([x.description for x in self.state.completed_stories or []]),
                     current_story_id=story.id,
                     current_story_title=story.title,
                     architecture=self.recall_as_markdown_list("architecture"),
