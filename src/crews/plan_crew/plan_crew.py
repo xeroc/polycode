@@ -10,6 +10,14 @@ from tools import AgentsMDLoaderTool, DirectoryReadTool, FileReadTool
 
 from .types import PlanOutput
 
+# from crews.streaming import create_streaming_llm
+# self._streaming_llm = create_streaming_llm(
+#     model=self.model,
+#     session_id=self.session_id,
+#     room=self.room,
+#     task_id=self.task_id,
+# )
+
 
 @CrewBase
 class PlanCrew:
@@ -30,6 +38,7 @@ class PlanCrew:
             config=self.agents_config["setup"],  # type: ignore
             verbose=False,
             llm=GLMJSONLLM(),
+            # llm=self._streaming_llm,
             tools=tools,
             allow_code_execution=False,
         )
