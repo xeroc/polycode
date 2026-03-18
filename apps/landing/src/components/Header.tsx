@@ -1,5 +1,4 @@
 import { ThemeToggle } from "./ThemeToggle";
-import { ChevronDown } from "lucide-react";
 
 const navItems = [
   { label: "Features", href: "#features" },
