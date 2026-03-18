@@ -32,17 +32,16 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
-          cache-dependency-path: ./pnpm-lock.yaml
+          cache-dependency-path: apps/landing/pnpm-lock.yaml
 
       - name: Build App
         run: pnpm run build
         env:
-          NEXT_PUBLIC_N8N_WEBHOOK_URL: https://n8n.chainsquad.com/webhook/95df7a1f-3fee-4109-aed6-62d7f7a2f76b
-          VITE_N8N_WEBHOOK_URL: https://n8n.chainsquad.com/webhook-test/95df7a1f-3fee-4109-aed6-62d7f7a2f76b
+          VITE_N8N_WEBHOOK_URL: https://n8n.chainsquad.com/webhook/b95ac3dc-efd0-4acf-b0e8-1c554d341cf1
 
       - name: Deploy to external repository
         uses: peaceiris/actions-gh-pages@v3
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./apps/landing/dist
