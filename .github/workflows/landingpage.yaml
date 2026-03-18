@@ -1,0 +1,49 @@
+name: Build and Deploy Landingpage
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+defaults:
+  run:
+    working-directory: apps/landing
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: ./pnpm-lock.yaml
+
+      - name: Build App
+        run: pnpm run build
+        env:
+          NEXT_PUBLIC_N8N_WEBHOOK_URL: https://n8n.chainsquad.com/webhook/95df7a1f-3fee-4109-aed6-62d7f7a2f76b
+          VITE_N8N_WEBHOOK_URL: https://n8n.chainsquad.com/webhook-test/95df7a1f-3fee-4109-aed6-62d7f7a2f76b
+
+      - name: Deploy to external repository
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/master'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./apps/landing/dist
+          cname: polycod.ing
