@@ -5,9 +5,6 @@ Provides tree-sitter (structural) and LSP (semantic) analysis capabilities.
 
 from pathlib import Path
 
-# Context management
-from tools.code_analysis.context_manager import CodeContext
-
 # Language support
 from tools.code_analysis.language_support import (
     EXTENSION_MAP,
@@ -15,6 +12,8 @@ from tools.code_analysis.language_support import (
     LanguageSupport,
     get_language_support,
 )
+
+from tools.code_analysis.context_manager import CodeContext
 
 # LSP tools
 from tools.code_analysis.lsp.base import BaseLSPTool, LSPToolInput, PositionInput
@@ -131,7 +130,9 @@ def create_lsp_tools(project_root: str | Path) -> list:
     ]
 
 
-def create_tree_sitter_tools(project_root: str | Path, include_lsp: bool = True) -> list:
+def create_tree_sitter_tools(
+    project_root: str | Path, include_lsp: bool = True
+) -> list:
     """Create all code analysis tools for a project.
 
     Args:

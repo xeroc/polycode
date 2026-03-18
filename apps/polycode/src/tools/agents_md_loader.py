@@ -26,15 +26,11 @@ class AgentsMDLoaderTool(BaseTool):
         self.description = (
             "Load AGENTS.md content from a specific subdirectory. "
             "Use this to access project-specific CrewAI patterns and guidelines "
-            "from subdirectories when needed. Available AGENTS.md files: "
-            + "\n - ".join(self.agents_md_map.keys())
+            "from subdirectories when needed. Available AGENTS.md files: " + "\n - ".join(self.agents_md_map.keys())
         )
 
     def _run(self, relative_path: str) -> str:
         if relative_path in self.agents_md_map:
             return f"Content of {relative_path}:\n\n{self.agents_md_map[relative_path]}"
         available = "\n".join(f"  - {path}" for path in self.agents_md_map.keys())
-        return (
-            f"AGENTS.md not found at '{relative_path}'.\n"
-            f"Available AGENTS.md files:\n{available}"
-        )
+        return f"AGENTS.md not found at '{relative_path}'.\nAvailable AGENTS.md files:\n{available}"

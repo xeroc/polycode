@@ -7,12 +7,23 @@ tools for Polycode agents.
 import logging
 import os
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
-import pluggy
+if TYPE_CHECKING:
+    import pluggy
 
-from modules.context import ModuleContext
-from modules.hooks import FlowPhase, hookimpl
+if TYPE_CHECKING:
+    from modules.hooks import FlowPhase, hookimpl
+
+if TYPE_CHECKING:
+    pass
+
+if TYPE_CHECKING:
+    from modules.context import ModuleContext
+
+# Use MC as type for on_load signature but use string literal for register_hooks
+# to avoid TYPE_CHECKING issues with forward reference
+
 
 log = logging.getLogger(__name__)
 
@@ -40,16 +51,14 @@ class CodeAnalysisModule:
         - Initialize tree-sitter parsers
         """
         config = context.get_module_config("code_analysis")
-        project_root = config.get("project_root", context.project_root)
+        project_root = config.get("project_root", getattr(context, "project_root", None))
 
-        # Ensure project_root is set
         if not project_root:
             project_root = os.getcwd()
 
         cls._project_root = Path(project_root)
         log.info(f"📊 Code analysis module initialized with project_root={project_root}")
 
-        # Pre-warm tree-sitter parsers for common languages
         from tools.code_analysis.language_support import get_language_support
 
         lang_support = get_language_support()
@@ -57,7 +66,7 @@ class CodeAnalysisModule:
         log.info(f"📊 Available tree-sitter grammars: {available}")
 
     @classmethod
-    def register_hooks(cls, hook_manager: pluggy.PluginManager) -> None:
+    def register_hooks(cls, hook_manager: "pluggy.PluginManager") -> None:
         """Register code analysis hooks.
 
         Hooks provide automatic code analysis at flow phases:
@@ -102,15 +111,13 @@ class CodeAnalysisHooks:
             phase: Current flow phase
             flow_id: Flow instance identifier
             state: Flow state (read-only)
-            result: Result from the phase method (if any)
+            result: Result from phase method (if any)
         """
         if phase == FlowPhase.POST_IMPLEMENT:
             log.debug(f"📊 Code analysis hook: {phase} for flow {flow_id}")
-            # Could analyze changed files here
 
         elif phase == FlowPhase.PRE_COMMIT:
             log.debug(f"📊 Code analysis hook: {phase} for flow {flow_id}")
-            # Could run diagnostics on staged files
 
     @hookimpl
     def on_flow_error(self, flow_id: str, state: object, error: Exception) -> bool | None:
@@ -125,5 +132,4 @@ class CodeAnalysisHooks:
         return None
 
 
-# Module-level export
 MODULE = CodeAnalysisModule
