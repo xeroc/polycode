@@ -1,0 +1,40 @@
+analyze_execution:
+  description: >
+    Analyze the flow execution data to identify successes and failures.
+    Consider: test results, build status, retry count, duration,
+    error messages, and any available code diff context.
+  expected_output: >
+    A markdown analysis with sections:
+    - What Worked: List of successful patterns or outcomes
+    - What Failed: List of failures, errors, or blockers
+    - Root Causes: Analysis of why failures occurred
+    - Metrics: Key performance metrics (time, retries, etc.)
+  agent: retro_analyst
+
+generate_improvements:
+  description: >
+    Based on the analysis, generate actionable improvements.
+    Each improvement should be specific, measurable, and address
+    root causes identified. Focus on workflow optimizations,
+    tooling improvements, and process changes.
+  expected_output: >
+    A list of 3-5 actionable improvement suggestions,
+    each with a title and detailed description.
+  agent: retro_analyst
+  context: [analyze_execution]
+
+finalize_retro:
+  description: >
+    Combine analysis and improvements into a structured retro document.
+    Ensure the retro is complete, well-organized, and provides
+    clear next steps. Assign appropriate retro_type: success, failure,
+    partial, or anomaly.
+  expected_output: >
+    A complete RetroEntry JSON object with all fields populated:
+    - what_worked: List of successes
+    - what_failed: List of failures
+    - root_causes: List of root causes
+    - actionable_improvements: List of improvements with priorities
+    - retro_type: success/failure/partial/anomaly
+  agent: retro_analyst
+  context: [generate_improvements]

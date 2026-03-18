@@ -67,4 +67,4 @@ repos:
       - id: pyright
         additional_dependencies: []
         language: system
-        entry: uv run pyright
+        entry: bash -c 'cd apps/polycode && exec uv run pyright'
