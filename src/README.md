@@ -1,57 +1,132 @@
-# {{crew_name}} Crew
+# Polycode Source
 
-Welcome to the {{crew_name}} Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+Multi-agent AI development automation powered by [CrewAI](https://crewai.com).
+
+## Structure
+
+```
+src/
+├── ralph/                    # Ralph Flow - fast iterative development
+│   ├── crews/
+│   │   ├── plan_crew/        # Issue decomposition
+│   │   └── ralph_crew/       # Implementation with verification loop
+│   └── __init__.py           # Ralph flow definition
+├── feature_dev/               # Feature Dev Flow - comprehensive feature development
+│   ├── crews/
+│   │   ├── plan_crew/
+│   │   ├── implement_crew/
+│   │   ├── verify_crew/
+│   │   ├── test_crew/
+│   │   └── review_crew/
+│   └── __init__.py
+├── github_app/                # GitHub App webhook server
+│   ├── app.py                # FastAPI application
+│   ├── handlers.py            # Webhook event handlers
+│   └── ...
+├── project_manager/           # Project management abstraction
+│   ├── base.py               # Abstract ProjectManager interface
+│   ├── github.py             # GitHub Projects V2 implementation
+│   ├── flow_runner.py         # Flow execution orchestration
+│   ├── flow_state.py         # State persistence
+│   ├── webhook.py            # FastAPI webhook server
+│   └── cli.py               # CLI commands
+├── celery_tasks/             # Async task processing
+├── persistence/              # Database layer (PostgreSQL)
+├── tools/                   # Custom CrewAI tools
+└── flowbase.py              # Base flow classes
+```
 
 ## Installation
 
-Ensure you have Python >=3.10 <3.14 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
-
-First, if you haven't already, install uv:
+Ensure you have Python >=3.10 <3.14 installed. This project uses [UV](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-pip install uv
+# Install dependencies
+uv sync
+
+# Configure environment
+cp .env.example .env
+# Edit .env with OPENAI_API_KEY, GITHUB_TOKEN, DATABASE_URL, etc.
 ```
 
-Next, navigate to your project directory and install the dependencies:
-
-(Optional) Lock the dependencies and install them by using the CLI command:
+## Running Flows Locally
 
 ```bash
-crewai install
+# Run Ralph Flow (interactive)
+uv run ralph
+
+# Run Feature Dev example
+uv run example
+
+# Run project manager CLI
+python -m project_manager.cli --help
 ```
 
-### Customizing
-
-**Add your `OPENAI_API_KEY` into the `.env` file**
-
-- Modify `src/static_site_flow/config/agents.yaml` to define your agents
-- Modify `src/static_site_flow/config/tasks.yaml` to define your tasks
-- Modify `src/static_site_flow/crew.py` to add your own logic, tools and specific args
-- Modify `src/static_site_flow/main.py` to add custom inputs for your agents and tasks
-
-## Running the Project
-
-To kickstart your flow and begin execution, run this from the root folder of your project:
+## Webhook Development
 
 ```bash
-crewai run
+# Start webhook server
+export GITHUB_TOKEN=ghp_xxx
+export REPO_OWNER=xeroc
+export REPO_NAME=demo
+export PROJECT_IDENTIFIER=1
+export GITHUB_WEBHOOK_SECRET=your-secret
+
+uv run uvicorn github_app.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-This command initializes the static_site_flow Flow as defined in your configuration.
+Webhook will be available at `http://localhost:8000/webhook/github`
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
+## Testing
 
-## Understanding Your Crew
+```bash
+# Run all tests
+uv run pytest
 
-The static_site_flow Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
+# Run specific test file
+uv run pytest tests/test_ralph.py
 
-## Support
+# Run tests matching pattern
+uv run pytest -k "label"
 
-For support, questions, or feedback regarding the {{crew_name}} Crew or crewAI.
+# Verbose output
+uv run pytest -v
+```
 
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
+## Development
 
-Let's create wonders together with the power and simplicity of crewAI.
+```bash
+# Linting
+uv run ruff check .              # Check for lint errors
+uv run ruff check --fix .        # Auto-fix lint errors
+uv run ruff format .             # Format code
+
+# Type checking
+uv run pyright                 # Type check (via pre-commit)
+
+# Pre-commit hooks
+pre-commit run --all-files       # Run all hooks
+```
+
+## CrewAI Patterns
+
+This project uses modern CrewAI patterns. See `/home/xeroc/projects/polycode/src/AGENTS.md` for complete reference.
+
+Key patterns used:
+
+- **`@CrewBase` decorator** on crew classes
+- **YAML configuration** for agents and tasks
+- **Flow orchestration** with `@start`, `@listen`, `@router` decorators
+- **Structured state** using Pydantic models
+- **Human-in-the-loop** with `@human_feedback` decorator
+
+## Documentation
+
+- [PROJECT.md](../../PROJECT.md) - Project vision and roadmap
+- [README.md](../../README.md) - Main project README
+- [project_manager/README.md](./project_manager/README.md) - Project manager docs
+- [src/AGENTS.md](./AGENTS.md) - CrewAI reference guide
+
+## License
+
+MIT
