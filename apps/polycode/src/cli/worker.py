@@ -16,10 +16,16 @@ worker_app = typer.Typer(help="Celery worker management commands")
 
 @worker_app.command("start")
 def worker_start(
-    queues: str = typer.Option("celery,default", "--queues", "-q", help="Comma-separated queue names"),
-    concurrency: int = typer.Option(0, "--concurrency", "-c", help="Number of worker processes (0 = auto)"),
+    queues: str = typer.Option(
+        "celery,default", "--queues", "-q", help="Comma-separated queue names"
+    ),
+    concurrency: int = typer.Option(
+        0, "--concurrency", "-c", help="Number of worker processes (0 = auto)"
+    ),
     loglevel: str = typer.Option("info", "--loglevel", "-l", help="Log level"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
 ) -> None:
     """Start Celery worker for processing async tasks.
 
@@ -31,7 +37,7 @@ def worker_start(
         cli.utils.setup_logging("DEBUG")
 
     queues_list = [q.strip() for q in queues.split(",") if q.strip()]
-    concurrency_str = str(concurrency) if concurrency > 0 else "auto"
+    concurrency_str = str(concurrency) if concurrency > 0 else 10
 
     print_info("⚙️ Starting Celery worker")
     print_info(f"   Queues: {', '.join(queues_list)}")
@@ -40,6 +46,9 @@ def worker_start(
 
     try:
         from celery_tasks import app as celery_app
+        from celery_tasks import worker
+
+        assert worker
 
         celery_app.worker_main(
             [
@@ -62,7 +71,9 @@ def worker_start(
 
 @worker_app.command("status")
 def worker_status(
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
 ) -> None:
     """Check Celery worker status using inspect.
 
@@ -103,7 +114,9 @@ def worker_status(
                 console.print(f"  {worker_name}:")
                 for key, value in stat.items():
                     if key == "pool":
-                        console.print(f"    Pool: {value.get('max-concurrency', 'N/A')} processes")
+                        console.print(
+                            f"    Pool: {value.get('max-concurrency', 'N/A')} processes"
+                        )
 
         print_success("Worker status check complete")
 
