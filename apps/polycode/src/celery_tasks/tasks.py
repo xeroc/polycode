@@ -9,6 +9,7 @@ from celery import current_task
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from bootstrap import init_plugins
 from flowbase import KickoffIssue, KickoffRepo
 from persistence.celery_tasks import CeleryTask, CeleryTaskTracker
 from persistence.postgres import Base
@@ -22,6 +23,9 @@ from . import app, calculate_timeout, get_flow_id
 from .celery_config import settings
 
 log = logging.getLogger(__name__)
+
+# Initialize plugin system at module level (runs once when worker starts)
+init_plugins()
 
 _persistence_tracker = None
 
@@ -77,10 +81,7 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
     task_id = current_task.request.id  # type: ignore
     flow_id = get_flow_id()
 
-    log.info(
-        f"Starting feature dev flow for issue #{issue_number}, "
-        f"task_id: {task_id}, flow_id: {flow_id}"
-    )
+    log.info(f"Starting feature dev flow for issue #{issue_number}, task_id: {task_id}, flow_id: {flow_id}")
 
     try:
         update_task_started(task_id)
@@ -125,9 +126,7 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
 
         log.info(f"Feature dev flow completed for issue #{issue_number}")
         update_status_task(project_config_dict, issue_number, "In review")
-        update_task_completed(
-            project_config_dict, task_id, "Feature development completed"
-        )
+        update_task_completed(project_config_dict, task_id, "Feature development completed")
 
         return {
             "status": "success",
@@ -147,10 +146,7 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
         retry_count = self.request.retries
         if retry_count < self.max_retries:
             timeout = calculate_timeout(retry_count)
-            log.info(
-                f"Retrying feature dev for issue #{issue_number}, "
-                f"attempt {retry_count + 1}/{self.max_retries}"
-            )
+            log.info(f"Retrying feature dev for issue #{issue_number}, attempt {retry_count + 1}/{self.max_retries}")
             raise self.retry(exc=e, countdown=timeout)
 
         return {
@@ -192,9 +188,7 @@ def update_task_started(task_id: str) -> None:
 
 
 @app.task()
-def update_task_completed(
-    _project_config_dict: dict, task_id: str, result: str | None = None
-) -> None:
+def update_task_completed(_project_config_dict: dict, task_id: str, result: str | None = None) -> None:
     """Mark task as completed in database.
 
     Args:
@@ -206,9 +200,7 @@ def update_task_completed(
 
 
 @app.task()
-def update_task_failed(
-    _project_config_dict: dict, task_id: str, error_message: str
-) -> None:
+def update_task_failed(_project_config_dict: dict, task_id: str, error_message: str) -> None:
     """Mark task as failed in database.
 
     Args:
@@ -220,9 +212,7 @@ def update_task_failed(
 
 
 @app.task()
-def update_status_task(
-    project_config_dict: dict, issue_number: int, status: str
-) -> bool:
+def update_status_task(project_config_dict: dict, issue_number: int, status: str) -> bool:
     """Update GitHub issue status in project board.
 
     Args:
@@ -296,9 +286,7 @@ def flow_heartbeat_task() -> dict[str, Any]:
         Session = sessionmaker(bind=engine)
 
         with Session() as session:
-            running_tasks_data = (
-                session.query(CeleryTask).filter(CeleryTask.status == "running").all()
-            )
+            running_tasks_data = session.query(CeleryTask).filter(CeleryTask.status == "running").all()
 
             for task in running_tasks_data:
                 running_tasks.append(task.task_id)
@@ -308,15 +296,10 @@ def flow_heartbeat_task() -> dict[str, Any]:
                     age = (now - task.started_at).total_seconds()
 
                     if age > 7200:
-                        log.warning(
-                            f"Task {task.task_id} appears stuck, " f"age: {age} seconds"
-                        )
+                        log.warning(f"Task {task.task_id} appears stuck, age: {age} seconds")
                         timed_out_tasks.append(task.task_id)
 
-        log.info(
-            f"Heartbeat: {len(running_tasks)} running tasks, "
-            f"{len(timed_out_tasks)} potential timeouts"
-        )
+        log.info(f"Heartbeat: {len(running_tasks)} running tasks, {len(timed_out_tasks)} potential timeouts")
 
         return {
             "status": "success",
@@ -454,9 +437,7 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
             label_name = label.get("name") if label else None
 
             if label_name == project_settings.WORK_FLOW_START_LABEL:
-                log.info(
-                    f"Label '{project_settings.WORK_FLOW_START_LABEL}' added to issue #{issue_number}"
-                )
+                log.info(f"Label '{project_settings.WORK_FLOW_START_LABEL}' added to issue #{issue_number}")
 
                 add_issue_to_project_task(config.model_dump(), issue_obj)
                 updated = update_status_task(config.model_dump(), issue_number, "Ready")
@@ -499,10 +480,7 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
         retry_count = self.request.retries
         if retry_count < self.max_retries:
             timeout = 60 * (retry_count + 1)
-            log.info(
-                f"Retrying webhook processing, "
-                f"attempt {retry_count + 1}/{self.max_retries}"
-            )
+            log.info(f"Retrying webhook processing, attempt {retry_count + 1}/{self.max_retries}")
             raise self.retry(exc=e, countdown=timeout)
 
         return {

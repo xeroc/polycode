@@ -161,6 +161,11 @@ def github_issue_cmd(issue_number: int, verbose: bool) -> None:
     """
     setup_logging(verbose)
 
+    # Initialize plugin system (channels, hooks)
+    from bootstrap import init_plugins
+
+    init_plugins()
+
     manager = create_manager_from_env()
     click.echo(f"Processing issue #{issue_number}...")
 

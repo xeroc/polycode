@@ -8,6 +8,7 @@ import logging
 import os
 from typing import Any
 
+import pluggy
 from sqlalchemy import create_engine
 
 from modules.context import ModuleContext
@@ -76,3 +77,39 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     log.info(f"🚀 Bootstrap complete: {module_count} modules, {model_count} tables")
 
     return context
+
+
+def init_plugins() -> pluggy.PluginManager:
+    """Lightweight plugin initialization for CLI/Celery entry points.
+
+    Registers the channels module and triggers channel self-registration
+    by importing channel implementations.
+
+    This is a minimal bootstrap that doesn't require database setup.
+    Use bootstrap() for full application initialization.
+
+    Returns:
+        Configured plugin manager with channels hooks registered.
+
+    Example:
+
+        from bootstrap import init_plugins
+        pm = init_plugins()
+        # Now channel notifications will work during flow execution
+    """
+    from modules.hooks import get_plugin_manager
+
+    pm = get_plugin_manager()
+
+    # Register channels module (this registers ChannelHooks)
+    from channels import ChannelsPolycodeModule
+
+    ChannelsPolycodeModule.register_hooks(pm)
+
+    # Import channel implementations to trigger self-registration
+    import channels.github  # noqa: F401
+    import channels.redis  # noqa: F401
+
+    log.info("🔌 Plugin system initialized (channels active)")
+
+    return pm
