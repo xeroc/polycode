@@ -64,19 +64,12 @@ class ProjectManagerHooks:
 
         pm = self._get_pm(state.project_config)
 
-        if event == FlowEvent.PR_CREATED:
-            self._handle_create_pr(state, pm)
-        elif event == FlowEvent.PR_MERGED:
-            self._handle_merge(state, pm)
-        elif event == FlowEvent.ISSUE_UPDATED:
-            if label == "pickup":
-                self._handle_review_start(state, pm)
-            elif label == "cleanup":
-                self._handle_cleanup(state, pm)
-        elif event == FlowEvent.CHECKLIST_POSTED:
-            self._handle_planning_comment(state, pm, result)
-        elif event == FlowEvent.CHECKLIST_UPDATED:
-            self._handle_update_checklist(state, pm, result)
+        if event == FlowEvent.FLOW_STARTED:
+            self._handle_flow_started(state, pm)
+        elif event == FlowEvent.STORY_COMPLETED:
+            self._handle_story_completed(state, pm, result)
+        elif event == FlowEvent.FLOW_FINISHED:
+            self._handle_flow_finished(state, pm)
 
     def _handle_review_start(self, state: Any, pm: "ProjectManager") -> None:
         """Update issue status to 'In review' when review phase starts.
@@ -286,3 +279,86 @@ class ProjectManagerHooks:
 
         pm.update_comment(issue_id, planning_comment_id, body)
         log.info(f"🏹 Updated planning checklist for issue #{issue_id}")
+
+    def _handle_flow_started(self, state: Any, pm: "ProjectManager") -> None:
+        """Handle flow start - post initial planning checklist.
+
+        Args:
+            state: Flow state
+            pm: Project manager instance
+        """
+        issue_id = getattr(state, "issue_id", 0)
+        if not issue_id:
+            return
+
+        log.info(f"🚀 Flow started for issue #{issue_id}")
+
+    def _handle_story_completed(self, state: Any, pm: "ProjectManager", story: Any) -> None:
+        """Handle story completion - update checklist item.
+
+        Args:
+            state: Flow state
+            pm: Project manager instance
+            story: Completed story object
+        """
+        issue_id = getattr(state, "issue_id", 0)
+        planning_comment_id = getattr(state, "planning_comment_id", None)
+
+        if not issue_id or not planning_comment_id:
+            return
+
+        stories = getattr(state, "stories", [])
+        completed_ids = [s.id for s in stories if s.completed]
+
+        # Update checklist
+        self._handle_update_checklist(
+            state,
+            pm,
+            {
+                "stories": stories,
+                "completed_ids": completed_ids,
+                "pr_url": None,
+                "merged": False,
+            },
+        )
+
+        log.info(f"✅ Updated checklist for story: {story.title if hasattr(story, 'title') else 'unknown'}")
+
+    def _handle_flow_finished(self, state: Any, pm: "ProjectManager") -> None:
+        """Handle flow finish - create PR, merge, update final checklist, cleanup.
+
+        Args:
+            state: Flow state
+            pm: Project manager instance
+        """
+        issue_id = getattr(state, "issue_id", 0)
+        if not issue_id:
+            return
+
+        # Create PR
+        self._handle_create_pr(state, pm)
+
+        # Merge PR (if approved)
+        self._handle_merge(state, pm)
+
+        # Final checklist update with PR link
+        stories = getattr(state, "stories", [])
+        completed_ids = [s.id for s in stories if s.completed]
+        pr_url = getattr(state, "pr_url", None)
+
+        if pr_url:
+            self._handle_update_checklist(
+                state,
+                pm,
+                {
+                    "stories": stories,
+                    "completed_ids": completed_ids,
+                    "pr_url": pr_url,
+                    "merged": True,
+                },
+            )
+
+        # Update issue status to Done
+        self._handle_cleanup(state, pm)
+
+        log.info(f"🏁 Flow finished for issue #{issue_id}")

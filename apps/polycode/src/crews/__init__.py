@@ -1,3 +1,4 @@
+from crews.base import PolycodeCrew
 from crews.conversation_crew import ConversationCrew
 from crews.conversation_crew.types import SpecOutput
 from crews.implement_crew import ImplementCrew
@@ -19,6 +20,7 @@ __all__ = [
     "ImplementOutput",
     "PlanCrew",
     "PlanOutput",
+    "PolycodeCrew",
     "RalphCrew",
     "RalphOutput",
     "ReviewCrew",

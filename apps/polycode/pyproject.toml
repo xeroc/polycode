@@ -42,6 +42,7 @@ dependencies = [
 
 [project.scripts]
 polycode = "cli.main:app"
+example = "ralph:example"
 
 [build-system]
 requires = ["hatchling"]

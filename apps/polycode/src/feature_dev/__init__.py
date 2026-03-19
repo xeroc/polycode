@@ -51,9 +51,10 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         """Step 1: Plan - decompose task into user stories."""
         print("📑 Planning feature into user stories")
 
-        # Discover AGENTS.md files
         self.discover_agents_md_files()
         self._setup()
+
+        self._emit(FlowEvent.FLOW_STARTED, label="feature_dev")
 
         if self.state.stories:
             return
@@ -74,7 +75,6 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         output: PlanOutput = result.pydantic  # type: ignore
         self.state.stories = output.stories
 
-        # output: SetupOutput = result.tasks_output[0].pydantic  # type: ignore
         self.state.build_cmd = output.build_cmd
         self.state.test_cmd = output.test_cmd
         self.state.baseline = output.baseline
@@ -101,7 +101,6 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in output.stories:
             print(f"  |- 🔖 {current_story.description}")
 
-        self.state.planning_comment_id = self._post_planning_checklist(output.stories, self.state.issue_id)
         return output
 
     @listen(setup)
@@ -274,8 +273,6 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         repo = git.Repo(self.state.repo)
         merge_base = repo.merge_base("develop", self.state.branch)[0]
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
-
-        self._emit(FlowEvent.PR_CREATED, label="review")
 
         output = (
             ReviewCrew()

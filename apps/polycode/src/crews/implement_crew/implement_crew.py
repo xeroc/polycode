@@ -1,10 +1,13 @@
 from pathlib import Path
+from typing import List
 
 import yaml
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.project import agent, crew, task
 from crewai_tools import FileWriterTool
 
+from crews.base import PolycodeCrew
 from glm import GLMJSONLLM
 from solcraft.types import TaskTemplate
 from tools import AgentsMDLoaderTool, DirectoryReadTool, ExecTool, FileReadTool
@@ -12,9 +15,12 @@ from tools import AgentsMDLoaderTool, DirectoryReadTool, ExecTool, FileReadTool
 from .types import ImplementOutput
 
 
-@CrewBase
-class ImplementCrew:
+class ImplementCrew(PolycodeCrew):
     """Flexible Implement Crew that accepts custom task configurations."""
+
+    crew_label = "implement"
+    agents: List[BaseAgent]
+    tasks: List[Task]
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
@@ -72,9 +78,7 @@ class ImplementCrew:
         ]
 
         if self.agents_md_map:
-            tools.append(
-                AgentsMDLoaderTool(agents_md_map=self.agents_md_map)  # ty:ignore
-            )
+            tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))  # ty:ignore
 
         return Agent(  # ty:ignore
             config=self._get_agent_config("developer"),

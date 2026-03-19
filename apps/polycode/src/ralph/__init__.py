@@ -1,30 +1,29 @@
-"""Ralph Loop - Ralph Loop pattern using CrewAI @router for control flow.
+"""Ralph Loop - Simplified event-driven flow.
 
-Flow: Setup → Plan → Ralph Loop (router-controlled) → Verify → Push → PR
+Flow: Setup → Plan → Implement (per-story) → Verify → Finish
 
-Ralph Loop mechanism:
-  1. Completion Promise: Agent outputs `<promise>COMPLETE</promise>` when objective
-     criteria are met (tests passing, build succeeding, linter clean, etc.)
-  2. Stop Hook: Router scans agent output for exact completion promise string
-  3. Per-Story Commits: Each story is committed immediately upon completion
-  4. Agent receives previous_errors context for smarter retries
+Events:
+  - FLOW_STARTED: Emitted at flow start (triggers gitcore/project_manager setup hooks)
+  - CREW_FINISHED: Emitted after each crew via PolycodeCrew @after_kickoff
+  - STORY_COMPLETED: Emitted after each story (triggers commit/push/checklist hooks)
+  - FLOW_FINISHED: Emitted after verify (triggers PR/merge/cleanup hooks)
 """
+
+from crewai import Flow
 
 import logging
 import subprocess
 import uuid
 from typing import cast
 
-from crewai.events.utils.console_formatter import set_suppress_console_output
 from crewai.flow.flow import listen, start
-from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
 from crews import PlanCrew, RalphCrew
-from crews.plan_crew.types import PlanOutput, Story
+from crews.plan_crew.types import PlanOutput
 from crews.ralph_crew.types import RalphOutput
 from flowbase import FlowIssueManagement, KickoffIssue
 from gitcore import sanitize_branch_name
-from persistence.postgres import PostgresFlowPersistence
+from modules.hooks import FlowEvent
 from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
 from project_manager.types import ProjectConfig
@@ -32,63 +31,42 @@ from project_manager.types import ProjectConfig
 from .types import RalphLoopState
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-DATABASE_URL = project_settings.DATABASE_URL
-if DATABASE_URL and DATABASE_URL.startswith("postgres"):
-    logger.info("📊 Connecting persistence with postgres")
-    persistence = PostgresFlowPersistence(connection_string=DATABASE_URL)
-else:
-    persistence = SQLiteFlowPersistence()
-
-set_suppress_console_output(True)
 
 
-@persist(persistence=persistence, verbose=False)
 class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
-    """
-    Ralph Loop Flow - externally verified completion with per-story commits.
+    """Ralph Loop Flow - simplified event-driven architecture.
 
-    Ralph Loop mechanism:
-    - Agent outputs completion promise when objective criteria are met
-    - Stop hook scans output for exact string match (case-sensitive)
-    - Router routes based on completion promise presence
-    - Agent receives previous_errors for smarter iteration
-    - Each story is committed immediately upon completion
-    - Runs per-story with individual iteration tracking
+    Delegates git operations, PR management, and checklist updates to plugin hooks.
+    Flow focuses on orchestration and crew execution.
     """
-
-    agents_md_map: dict[str, str] = {}
-    root_agents_md: str = ""
 
     @start()
     def setup(self):
+        """Initialize flow and emit FLOW_STARTED event."""
         logger.info("🚀 Ralph Loop starting...")
+        self._emit(FlowEvent.FLOW_STARTED, label="ralph")
         self._setup()
-        # self._prepare_work_tree()
-        self.pickup_issue()
 
     @listen(setup)
     def plan(self):
-        """Create a single story from the 120-char prompt."""
+        """Create stories from the prompt.
 
-        self.discover_agents_md_files()
-        self._discover_build_cmd()
-
+        PlanCrew emits CREW_FINISHED event via PolycodeCrew @after_kickoff.
+        """
         if self.state.stories:
             return
 
-        logger.info("📝 Planning story from prompt...")
+        logger.info("📝 Planning stories from prompt...")
 
         result = (
             PlanCrew()
-            .crew(agents_md_map=self.agents_md_map)
+            .crew(agents_md_map=self._agents_md_map)
             .kickoff(
                 inputs=dict(
                     task=self.state.task[:120],
                     repo=self.state.repo,
                     branch=self.state.branch,
-                    agents_md=self.root_agents_md,
+                    agents_md=self._root_agents_md,
                     file_in_repos=self.git_operations.list_tree(),
                 )
             )
@@ -103,21 +81,18 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         for current_story in output.stories:
             logger.info(f"  |- 🔖 {current_story.description}")
 
-        self.state.planning_comment_id = self._post_planning_checklist(output.stories, self.state.issue_id)
-
         num_stories = len(self.state.stories) if self.state.stories else 0
-        logger.info(f"\n🔨 Starting Ralph Loop for {num_stories} stories")
+        logger.info(f"\n🔨 Starting implementation for {num_stories} stories")
 
     @listen(plan)
     def implement(self):
-        """
-        Single iteration of Ralph Loop for current story per story
+        """Implement each story and emit STORY_COMPLETED events.
 
-        Agent is instructed to output completion promise ONLY when:
-        - All objective criteria are met (tests pass, build succeeds, etc.)
-        - Not based on subjective judgment
+        RalphCrew emits CREW_FINISHED event via PolycodeCrew @after_kickoff.
+        STORY_COMPLETED event triggers:
+          - gitcore hook: commit + push
+          - project_manager hook: update checklist item
         """
-
         unfinished_stories = list(filter(lambda story: not story.completed, self.state.stories or []))
 
         logger.info(f"Unfinished stories: {len(unfinished_stories)}")
@@ -132,7 +107,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
             result = (
                 RalphCrew()
-                .crew(agents_md_map=self.agents_md_map)
+                .crew(agents_md_map=self._agents_md_map)
                 .kickoff(
                     inputs=dict(
                         task=self.state.task[:120],
@@ -141,7 +116,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
                         branch=self.state.branch,
                         test_cmd=self.state.test_cmd,
                         build_cmd=self.state.build_cmd,
-                        agents_md=self.root_agents_md,
+                        agents_md=self._root_agents_md,
                         previous_errors=error_context,
                     )
                 )
@@ -162,37 +137,12 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
             logger.warning("✅ Tests succeeded")
 
-            logger.info(f"\n💾 Committing story: {story.title}")
-            commit = self._commit_changes(
-                title=self.state.commit_title or f"feat: {story.title}",
-                body=self.state.commit_message or story.description,
-                footer=self.state.commit_footer or "",
-            )
-
-            if commit:
-                commit_url = self.git_operations.get_commit_url(commit.hexsha)
-                self.state.commit_urls[story.id] = commit_url
-
-            logger.info("✅ Completion")
-            logger.info(f"Story '{story.title}' complete - objective criteria verified")
+            # Emit STORY_COMPLETED - hooks will handle commit/push/checklist
+            logger.info(f"✅ Story '{story.title}' complete")
             story.completed = True
             story.errors = []
 
-            self._push_repo()
-
-            completed_ids = [x.id for x in self.state.stories or [] if x.completed]
-            self._update_planning_checklist(
-                self.state.stories or [],
-                completed_ids,
-                self.state.issue_id,
-            )
-
-        completed_ids = [x.id for x in self.state.stories or [] if x.completed]
-        self._update_planning_checklist(
-            self.state.stories or [],
-            completed_ids,
-            self.state.issue_id,
-        )
+            self._emit(FlowEvent.STORY_COMPLETED, result=story, label=str(story.id))
 
     @listen(implement)
     def verify_build(self):
@@ -218,49 +168,22 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             logger.info(f"❌ Test verification failed:\n{e.stderr}")
             self.state.test_success = False
 
-    @listen(verify_build)
-    def create_pr(self):
-        self._create_pr()
-
-        completed_ids = [x.id for x in self.state.stories or [] if x.completed]
-        self._update_planning_checklist(
-            self.state.stories or [],
-            completed_ids,
-            self.state.issue_id,
-            pr_url=self.state.pr_url,
-        )
-
-    @listen(create_pr)
-    def finish(self):
-        """Step 8: Update project status and cleanup worktree."""
-        self._merge_branch()
-        if self.state.pr_url:
-            completed_ids = [x.id for x in self.state.stories or [] if x.completed]
-            self._update_planning_checklist(
-                self.state.stories or [],
-                completed_ids,
-                self.state.issue_id,
-                pr_url=self.state.pr_url,
-                merged=True,
-            )
-        self._cleanup_worktree()
+        # Emit FLOW_FINISHED - hooks will handle PR/merge/cleanup
+        logger.info("🏁 Flow finished - emitting FLOW_FINISHED event")
+        self._emit(FlowEvent.FLOW_FINISHED, label="ralph")
 
 
 def kickoff(issue: KickoffIssue):
-    """
-    Run Ralph Loop with externally verified completion criteria.
+    """Run Ralph Loop with event-driven architecture.
 
     Args:
-        task: Max 120 character prompt describing the change
-        repo: Path to the repository
-        branch: Branch name (default: ralph-loop)
+        issue: Issue details including title, body, repository info
 
-    Ralph Loop mechanism:
-        - Completion promise: Agent outputs `<promise>COMPLETE</promise>` when completed
-        - Stop hook: Router scans output for exact string match (case-sensitive)
-        - Objective verification: Agent only outputs promise when criteria are met
-          (tests passing, build succeeding, linter clean, etc.)
-        - Per-story commits: Each story is committed immediately upon completion
+    Events emitted:
+        - FLOW_STARTED: At flow start
+        - CREW_FINISHED: After each crew (plan, implement)
+        - STORY_COMPLETED: After each story implementation
+        - FLOW_FINISHED: After final verification
     """
     flow = RalphLoopFlow()
     inputs = dict(
@@ -278,9 +201,13 @@ def kickoff(issue: KickoffIssue):
 
 
 def example():
+    from cli.utils import setup_logging
+
+    setup_logging("INFO")
+
     repo_owner = "chainsquad"
     repo_name = "chaoscraft"
-    issue_id = 17
+    issue_id = 19
     task = "Make the dancing robot smaller on desktop screens."
     path = f"/home/xeroc/projects/{repo_owner}/{repo_name}"
     branch = "smaller-robot"
@@ -293,7 +220,6 @@ def example():
         project_identifier="1",
         status_mapping=StatusMapping(),
     )
-    # id = "888a8fb6-e86d-457a-a2ea-a8e858b1d3f2"
     flow = RalphLoopFlow()
     flow.kickoff(
         inputs=dict(
@@ -310,9 +236,7 @@ def example():
 
 
 def plot():
-    """
-    Plot the flow.
-    """
+    """Plot the flow."""
     flow = RalphLoopFlow()
     flow.plot()
 

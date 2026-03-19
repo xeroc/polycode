@@ -1,10 +1,12 @@
 """Retro Crew - CrewAI crew for generating structured retrospectives."""
 
+from crews import PolycodeCrew
+
 import logging
 from typing import TYPE_CHECKING
 
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewai.project import agent, crew, task
 
 from retro.types import RetroEntry
 
@@ -15,8 +17,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-@CrewBase
-class RetroCrew:
+class RetroCrew(PolycodeCrew):
     """CrewAI crew for retrospective analysis and generation."""
 
     agents_config = "config/agents.yaml"
@@ -41,9 +42,7 @@ class RetroCrew:
     @task
     def generate_improvements(self) -> Task:
         """Generate actionable improvements."""
-        config = self.tasks_config[  # pyright:ignore # ty:ignore
-            "generate_improvements"
-        ]
+        config = self.tasks_config["generate_improvements"]  # pyright:ignore # ty:ignore
         return Task(  # ty:ignore
             config=config,
             context=[self.analyze_execution()],  # pyright:ignore

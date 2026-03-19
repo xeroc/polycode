@@ -23,34 +23,29 @@ hookimpl = pluggy.HookimplMarker(POLYCODE_NS)
 
 
 class FlowEvent(StrEnum):
-    """Flow orchestration events - plugins hook into these.
+    """Flow lifecycle events.
 
-    Crew-level lifecycle (PRE_PLAN, POST_PLAN, etc.) is handled by CrewAI's
-    @before_kickoff and @after_kickoff decorators. These events are for
-    orchestration concerns outside of crews.
+    Simplified event-based hook system. Plugins filter by event + label.
 
-    Use the 'label' parameter for context (e.g., "plan", "implement").
+    Labels provide context:
+    - CREW_FINISHED: "plan", "implement", "review"
+    - STORY_COMPLETED: story.id or story.title
+    - FLOW_STARTED/FINISHED: flow name (e.g., "ralph")
+
+    Crew-level lifecycle (@before_kickoff, @after_kickoff) is handled by
+    PolycodeCrew base class which emits CREW_FINISHED events.
     """
 
-    FLOW_START = "flow_start"
-    FLOW_COMPLETE = "flow_complete"
+    FLOW_STARTED = "flow_started"
+    FLOW_FINISHED = "flow_finished"
     FLOW_ERROR = "flow_error"
 
-    GIT_COMMIT = "git_commit"
-    GIT_PUSH = "git_push"
-
-    PR_CREATED = "pr_created"
-    PR_MERGED = "pr_merged"
-
-    ISSUE_UPDATED = "issue_updated"
-    WORKTREE_CLEANUP = "worktree_cleanup"
-
-    CHECKLIST_POSTED = "checklist_posted"
-    CHECKLIST_UPDATED = "checklist_updated"
+    CREW_FINISHED = "crew_finished"
+    STORY_COMPLETED = "story_completed"
 
 
 class FlowHookSpec:
-    """Hook specifications for flow orchestration events.
+    """Hook specifications for flow lifecycle events.
 
     Implementations use the @hookimpl decorator from modules/hooks.py.
 
@@ -61,10 +56,16 @@ class FlowHookSpec:
         class MyHooks:
             @hookimpl
             def on_flow_event(self, event, flow_id, state, result=None, label=""):
-                if event == FlowEvent.GIT_COMMIT:
-                    print(f"Commit {result} made in flow {flow_id}")
-                if event == FlowEvent.FLOW_COMPLETE:
-                    print(f"Flow {flow_id} finished successfully")
+                if event == FlowEvent.CREW_FINISHED and label == "plan":
+                    print(f"Planning crew finished in flow {flow_id}")
+
+                if event == FlowEvent.STORY_COMPLETED:
+                    # Commit and push changes
+                    self.git_ops.commit_and_push(state, result)
+
+                if event == FlowEvent.FLOW_FINISHED:
+                    # Create PR, merge, cleanup
+                    self.finalize_flow(flow_id, state)
     """
 
     @hookspec
@@ -76,23 +77,14 @@ class FlowHookSpec:
         result: object | None = None,
         label: str = "",
     ) -> None:
-        """Called at each flow orchestration event.
+        """Called at each flow lifecycle event.
 
         Args:
-            event: Which event is firing.
+            event: Which event is firing (FLOW_STARTED, CREW_FINISHED, etc.).
             flow_id: Unique flow identifier.
             state: The flow's state model (read-only reference).
-            result: Event-specific result (e.g., commit sha, pr url).
-            label: Optional context label (e.g., "plan", "implement").
-        """
-        ...
-
-    @hookspec
-    def on_flow_error(self, flow_id: str, state: object, error: Exception) -> bool | None:
-        """Called on unhandled flow exception.
-
-        Return True to suppress the exception and allow flow to continue.
-        Return None or False to let the exception propagate.
+            result: Event-specific result (e.g., Story object, crew output).
+            label: Context label (e.g., "plan", "implement", "ralph").
         """
         ...
 

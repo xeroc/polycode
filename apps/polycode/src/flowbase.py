@@ -5,6 +5,12 @@ Generic flow orchestration that delegates project-specific operations (PR, merge
 to plugin hooks. This module has no knowledge of GitHub or any specific provider.
 """
 
+from project_manager.config import settings
+
+from crewai.flow.persistence import SQLiteFlowPersistence
+from crewai.events.utils.console_formatter import set_suppress_console_output
+from persistence import PostgresFlowPersistence
+
 import json
 import logging
 import subprocess
@@ -35,6 +41,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T", bound="BaseFlowModel")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class KickoffRepo(BaseModel):
@@ -78,6 +85,17 @@ class BaseFlowModel(BaseModel):
     build_cmd: Optional[str] = Field(default=None, description="Build command from package.json")
 
 
+DATABASE_URL = settings.DATABASE_URL
+if DATABASE_URL and DATABASE_URL.startswith("postgres"):
+    logger.info("📊 Connecting persistence with postgres")
+    persistence = PostgresFlowPersistence(connection_string=DATABASE_URL)
+else:
+    persistence = SQLiteFlowPersistence()
+
+set_suppress_console_output(True)
+
+
+# @persist(persistence=persistence, verbose=False)
 class FlowIssueManagement(Flow[T]):
     """Generic base class that passes type parameter to Flow."""
 
@@ -132,7 +150,7 @@ class FlowIssueManagement(Flow[T]):
         return GitOperations.from_flow_state(self.state, self._pm)
 
     def _setup(self):
-        self._emit(FlowEvent.FLOW_START, label="setup")
+        """Initialize flow - prepare worktree and discover project structure."""
         worktree_path = self.git_operations.prepare_worktree()
         self.state.repo = worktree_path
         if not self.state.project_config:
@@ -144,53 +162,14 @@ class FlowIssueManagement(Flow[T]):
         except Exception as e:
             logger.error(f"🚨 Failed to ensure request exists: {e}")
 
-    def pickup_issue(self):
         try:
             update_request_status(SessionLocal, self.state.issue_id, "inprogress")
-            logger.info(f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}")
+            logger.info(f"🏹 Set request status to inprogress for issue #{self.state.issue_id}")
         except Exception as e:
-            logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
-        self._emit(FlowEvent.ISSUE_UPDATED, result="inprogress", label="pickup")
+            logger.error(f"🚨 Failed to update status to inprogress: {e}")
 
-    def _commit_changes(self, title: str, body="", footer=""):
-        commit = self.git_operations.commit(title, body, footer)
-        self._emit(FlowEvent.GIT_COMMIT, result=commit.hexsha if commit else None, label="implement")
-        return commit
-
-    def _push_repo(self):
-        self._emit(FlowEvent.GIT_PUSH, label="implement")
-        self.git_operations.push()
-        self._emit(FlowEvent.GIT_PUSH, label="implement")
-
-    def _post_planning_checklist(self, stories: list, issue_id: int) -> int | None:
-        """Post planning checklist to issue.
-
-        Delegates to project_manager module via hooks.
-        """
-        self._emit(FlowEvent.CHECKLIST_POSTED, result=stories, label="plan")
-        self._emit(FlowEvent.CHECKLIST_POSTED, result=stories, label="plan")
-        return getattr(self.state, "planning_comment_id", None)
-
-    def _update_planning_checklist(
-        self,
-        stories: list,
-        completed_story_ids: list[int],
-        issue_id: int,
-        pr_url: str | None = None,
-        merged: bool = False,
-    ):
-        """Update the planning checklist with progress.
-
-        Delegates to project_manager module via hooks.
-        """
-        data = {
-            "stories": stories,
-            "completed_ids": completed_story_ids,
-            "pr_url": pr_url,
-            "merged": merged,
-        }
-        self._emit(FlowEvent.CHECKLIST_UPDATED, result=data, label="plan")
-        self._emit(FlowEvent.CHECKLIST_UPDATED, result=data, label="plan")
+        self.discover_agents_md_files()
+        self._discover_build_cmd()
 
     def recall_as_markdown_list(self, name: str, **kwargs):
         if "scope" not in kwargs:
@@ -226,39 +205,6 @@ class FlowIssueManagement(Flow[T]):
 
         logger.info(f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}")
         return agents_md_files
-
-    def _create_pr(self):
-        """Create pull request.
-
-        Delegates to project_manager module via hooks.
-        """
-        self._emit(FlowEvent.PR_CREATED, label="publish")
-        logger.info("🏹 Creating pull request (via hook)")
-        self._emit(FlowEvent.PR_CREATED, label="publish")
-
-    def _merge_branch(self):
-        """Merge the pull request.
-
-        Delegates to project_manager module via hooks.
-        """
-        self._emit(FlowEvent.PR_MERGED, label="publish")
-        logger.info("🏹 Processing merge (via hook)")
-        self._emit(FlowEvent.PR_MERGED, label="publish")
-
-    def _cleanup_worktree(self):
-        """Cleanup worktree and update issue status.
-
-        Delegates issue status update to project_manager via FLOW_COMPLETE hook.
-        """
-        self._emit(FlowEvent.WORKTREE_CLEANUP, label="cleanup")
-        try:
-            update_request_status(SessionLocal, self.state.issue_id, "completed")
-            logger.info(f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}")
-        except Exception as e:
-            logger.error(f"🚨 Failed to update PostgreSQL status: {e}")
-
-        self.git_operations.cleanup()
-        self._emit(FlowEvent.FLOW_COMPLETE, label="cleanup")
 
     def _discover_build_cmd(self):
         """Discover build command from package.json."""

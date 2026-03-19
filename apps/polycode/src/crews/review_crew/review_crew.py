@@ -1,14 +1,21 @@
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from typing import List
 
+from crewai import Agent, Crew, Process, Task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.project import agent, crew, task
+
+from crews.base import PolycodeCrew
 from glm import GLMJSONLLM
 
 from .types import ReviewOutput
 
 
-@CrewBase
-class ReviewCrew:
+class ReviewCrew(PolycodeCrew):
     """Review Crew - Review pull requests."""
+
+    crew_label = "review"
+    agents: List[BaseAgent]
+    tasks: List[Task]
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"

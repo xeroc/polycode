@@ -116,33 +116,25 @@ class ChannelHooks:
             Notification or None if event doesn't need notification
         """
         event_messages = {
-            FlowEvent.FLOW_START: (
-                "Flow started",
+            FlowEvent.FLOW_STARTED: (
+                f"Flow started: {label}" if label else "Flow started",
                 NotificationLevel.INFO,
             ),
-            FlowEvent.GIT_COMMIT: (
-                f"Committed changes: {result[:7] if result else 'unknown'}",
+            FlowEvent.STORY_COMPLETED: (
+                f"Story completed: {label}" if label else "Story completed",
                 NotificationLevel.SUCCESS,
             ),
-            FlowEvent.GIT_PUSH: (
-                "Changes pushed to remote",
-                NotificationLevel.SUCCESS,
-            ),
-            FlowEvent.PR_CREATED: (
-                f"Pull request created: {getattr(state, 'pr_url', 'N/A')}",
-                NotificationLevel.SUCCESS,
-            ),
-            FlowEvent.PR_MERGED: (
-                "Pull request merged successfully",
+            FlowEvent.FLOW_FINISHED: (
+                f"Flow finished: {getattr(state, 'pr_url', 'N/A')}",
                 NotificationLevel.SUCCESS,
             ),
             FlowEvent.FLOW_ERROR: (
                 f"Flow error: {result}",
                 NotificationLevel.ERROR,
             ),
-            FlowEvent.FLOW_COMPLETE: (
-                "Flow completed successfully",
-                NotificationLevel.SUCCESS,
+            FlowEvent.CREW_FINISHED: (
+                f"Crew finished: {label}" if label else "Crew finished",
+                NotificationLevel.INFO,
             ),
         }
 

@@ -1,27 +1,24 @@
 from typing import List
 
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.project import agent, crew, task
 from crewai.tools import BaseTool
 from crewai_tools import FileWriterTool
 
+from crews.base import PolycodeCrew
 from glm import GLMJSONLLM
 from tools import AgentsMDLoaderTool, DirectoryReadTool, FileReadTool
 
 from .types import PlanOutput
 
-# from crews.streaming import create_streaming_llm
-# self._streaming_llm = create_streaming_llm(
-#     model=self.model,
-#     session_id=self.session_id,
-#     room=self.room,
-#     task_id=self.task_id,
-# )
 
-
-@CrewBase
-class PlanCrew:
+class PlanCrew(PolycodeCrew):
     """Plan Crew - Decompose task into user stories."""
+
+    crew_label = "plan"
+    agents: List[BaseAgent]
+    tasks: List[Task]
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"

@@ -1,15 +1,22 @@
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from typing import List
 
+from crewai import Agent, Crew, Process, Task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.project import agent, crew, task
+
+from crews.base import PolycodeCrew
 from glm import GLMJSONLLM
 from tools import DirectoryReadTool, ExecTool, FileReadTool
 
 from .types import VerifyOutput
 
 
-@CrewBase
-class VerifyCrew:
+class VerifyCrew(PolycodeCrew):
     """Verify Crew - Verify implementation."""
+
+    crew_label = "verify"
+    agents: List[BaseAgent]
+    tasks: List[Task]
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"

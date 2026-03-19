@@ -2,15 +2,17 @@ from typing import List
 
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.project import CrewBase, agent, crew, task
+from crewai.project import agent, crew, task
+
+from crews.base import PolycodeCrew
 
 from .types import SpecOutput
 
 
-@CrewBase
-class ConversationCrew:
+class ConversationCrew(PolycodeCrew):
     """Conversation-driven specification crew."""
 
+    crew_label = "conversation"
     agents: List[BaseAgent]
     tasks: List[Task]
 

@@ -15,31 +15,19 @@ class TestFlowEvents:
 
     def test_event_types_exist(self):
         """Verify all FlowEvent types exist."""
-        assert hasattr(FlowEvent, "FLOW_START")
-        assert hasattr(FlowEvent, "FLOW_COMPLETE")
+        assert hasattr(FlowEvent, "FLOW_STARTED")
+        assert hasattr(FlowEvent, "FLOW_FINISHED")
         assert hasattr(FlowEvent, "FLOW_ERROR")
-        assert hasattr(FlowEvent, "GIT_COMMIT")
-        assert hasattr(FlowEvent, "GIT_PUSH")
-        assert hasattr(FlowEvent, "PR_CREATED")
-        assert hasattr(FlowEvent, "PR_MERGED")
-        assert hasattr(FlowEvent, "ISSUE_UPDATED")
-        assert hasattr(FlowEvent, "WORKTREE_CLEANUP")
-        assert hasattr(FlowEvent, "CHECKLIST_POSTED")
-        assert hasattr(FlowEvent, "CHECKLIST_UPDATED")
+        assert hasattr(FlowEvent, "CREW_FINISHED")
+        assert hasattr(FlowEvent, "STORY_COMPLETED")
 
     def test_event_values(self):
         """Verify event string values."""
-        assert FlowEvent.FLOW_START == "flow_start"
-        assert FlowEvent.FLOW_COMPLETE == "flow_complete"
+        assert FlowEvent.FLOW_STARTED == "flow_started"
+        assert FlowEvent.FLOW_FINISHED == "flow_finished"
         assert FlowEvent.FLOW_ERROR == "flow_error"
-        assert FlowEvent.GIT_COMMIT == "git_commit"
-        assert FlowEvent.GIT_PUSH == "git_push"
-        assert FlowEvent.PR_CREATED == "pr_created"
-        assert FlowEvent.PR_MERGED == "pr_merged"
-        assert FlowEvent.ISSUE_UPDATED == "issue_updated"
-        assert FlowEvent.WORKTREE_CLEANUP == "worktree_cleanup"
-        assert FlowEvent.CHECKLIST_POSTED == "checklist_posted"
-        assert FlowEvent.CHECKLIST_UPDATED == "checklist_updated"
+        assert FlowEvent.CREW_FINISHED == "crew_finished"
+        assert FlowEvent.STORY_COMPLETED == "story_completed"
 
     def test_label_parameter(self):
         """Test that events can have optional labels."""
@@ -47,7 +35,7 @@ class TestFlowEvents:
 
         pm = get_plugin_manager()
         pm.hook.on_flow_event(
-            event=FlowEvent.GIT_COMMIT,
+            event=FlowEvent.FLOW_STARTED,
             flow_id="test-flow",
             state=MagicMock(),
             result="abc123",

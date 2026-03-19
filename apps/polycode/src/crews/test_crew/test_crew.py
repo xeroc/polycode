@@ -1,15 +1,22 @@
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from typing import List
 
+from crewai import Agent, Crew, Process, Task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.project import agent, crew, task
+
+from crews.base import PolycodeCrew
 from glm import GLMJSONLLM
 from tools import DirectoryReadTool, ExecTool, FileReadTool
 
 from .types import TestOutput
 
 
-@CrewBase
-class TestCrew:
+class TestCrew(PolycodeCrew):
     """Test Crew - Integration and E2E testing."""
+
+    crew_label = "test"
+    agents: List[BaseAgent]
+    tasks: List[Task]
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
