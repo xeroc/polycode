@@ -103,6 +103,42 @@ class ProjectManager(ABC):
             True if successful, False otherwise
         """
 
+    @abstractmethod
+    def has_label(self, issue_number: int, label_name: str) -> bool:
+        """Check if an issue/PR has a specific label.
+
+        Args:
+            issue_number: Issue or PR number
+            label_name: Name of the label to check for
+
+        Returns:
+            True if label is present
+        """
+
+    @abstractmethod
+    def merge_pull_request(
+        self,
+        pr_number: int,
+        commit_message: str | None = None,
+        merge_method: str = "merge",
+    ) -> bool:
+        """Merge a pull request.
+
+        Args:
+            pr_number: Pull request number
+            commit_message: Optional custom commit message for the merge
+            merge_method: Merge method - "merge", "squash", or "rebase"
+
+        Returns:
+            True if successful
+        """
+
+    @property
+    @abstractmethod
+    def bot_username(self) -> str:
+        """Get the authenticated bot username."""
+        ...
+
     def find_project_item(self, issue_number: int) -> ProjectItem | None:
         """Find a project item by issue number.
 

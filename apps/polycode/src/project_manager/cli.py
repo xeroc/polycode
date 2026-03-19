@@ -55,9 +55,7 @@ def create_manager_from_env() -> GitHubProjectManager:
     project_identifier = settings.PROJECT_IDENTIFIER
 
     if not repo_owner or not repo_name or not project_identifier:
-        raise ValueError(
-            "Missing required environment variables: REPO_OWNER, REPO_NAME, PROJECT_IDENTIFIER"
-        )
+        raise ValueError("Missing required environment variables: REPO_OWNER, REPO_NAME, PROJECT_IDENTIFIER")
 
     status_mapping = StatusMapping(
         todo=os.environ.get("STATUS_TODO", "Todo"),
@@ -144,9 +142,7 @@ def webhook(host: str, port: int, verbose: bool) -> None:
     else:
         manager = create_manager_from_env()
         click.echo("Mode: Legacy (single repo)")
-        click.echo(
-            f"Repository: {manager.config.repo_owner}/{manager.config.repo_name}"
-        )
+        click.echo(f"Repository: {manager.config.repo_owner}/{manager.config.repo_name}")
         click.echo(f"Project: {manager.config.project_identifier}")
         click.echo(f"Webhook endpoint: http://{host}:{port}/webhook/github")
 
@@ -168,9 +164,7 @@ def github_issue_cmd(issue_number: int, verbose: bool) -> None:
     manager = create_manager_from_env()
     click.echo(f"Processing issue #{issue_number}...")
 
-    in_progress_status = manager.config.status_mapping.to_provider_status(
-        IssueStatus.IN_PROGRESS
-    )
+    in_progress_status = manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
 
     success = manager.update_issue_status(issue_number, in_progress_status)
 
@@ -192,9 +186,7 @@ def status(verbose: bool) -> None:
 
     items = manager.get_project_items()
     ready_status = manager.config.status_mapping.to_provider_status(IssueStatus.READY)
-    in_progress_status = manager.config.status_mapping.to_provider_status(
-        IssueStatus.IN_PROGRESS
-    )
+    in_progress_status = manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
 
     ready = [item for item in items if item.status == ready_status]
     in_progress = [item for item in items if item.status == in_progress_status]

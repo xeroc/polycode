@@ -56,8 +56,10 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     module_registry.discover()
 
     from gitcore import GitcoreModule
+    from project_manager import ProjectManagerModule
 
     module_registry.register_builtin(GitcoreModule)  # type: ignore[arg-type]
+    module_registry.register_builtin(ProjectManagerModule)  # type: ignore[arg-type]
 
     ModelRegistry.create_all(engine)
 

@@ -8,8 +8,6 @@ Modules register hook implementations via @hookimpl decorator.
 
 from enum import StrEnum
 from typing import TYPE_CHECKING
-from enum import StrEnum
-from typing import TYPE_CHECKING
 
 import pluggy
 
@@ -17,10 +15,6 @@ POLYCODE_NS = "polycode"
 
 if TYPE_CHECKING:
     pass
-
-import pluggy
-
-POLYCODE_NS = "polycode"
 
 hookspec = pluggy.HookspecMarker(POLYCODE_NS)
 hookimpl = pluggy.HookimplMarker(POLYCODE_NS)
@@ -62,6 +56,11 @@ class FlowPhase(StrEnum):
 
     ON_ERROR = "on_error"
     ON_COMPLETE = "on_complete"
+
+    PRE_PLANNING_COMMENT = "pre_planning_comment"
+    POST_PLANNING_COMMENT = "post_planning_comment"
+    PRE_UPDATE_CHECKLIST = "pre_update_checklist"
+    POST_UPDATE_CHECKLIST = "post_update_checklist"
 
 
 class FlowHookSpec:
@@ -109,9 +108,7 @@ class FlowHookSpec:
         ...
 
     @hookspec
-    def on_flow_error(
-        self, flow_id: str, state: object, error: Exception
-    ) -> bool | None:
+    def on_flow_error(self, flow_id: str, state: object, error: Exception) -> bool | None:
         """Called on unhandled flow exception.
 
         Return True to suppress the exception and allow flow to continue.
@@ -120,9 +117,7 @@ class FlowHookSpec:
         ...
 
     @hookspec(firstresult=True)
-    def should_skip_phase(
-        self, phase: FlowPhase, flow_id: str, state: object
-    ) -> bool | None:
+    def should_skip_phase(self, phase: FlowPhase, flow_id: str, state: object) -> bool | None:
         """Allow modules to skip a phase.
 
         Return True to skip the phase. firstresult=True means
@@ -131,9 +126,7 @@ class FlowHookSpec:
         ...
 
     @hookspec
-    def modify_state(
-        self, phase: FlowPhase, flow_id: str, state: object
-    ) -> None:
+    def modify_state(self, phase: FlowPhase, flow_id: str, state: object) -> None:
         """Allow modules to mutate flow state between phases.
 
         State is a mutable Pydantic model. Changes persist to next phase.

@@ -55,9 +55,7 @@ class ConversationFlow(FlowIssueManagement[ConversationFlowState]):
         if not crew:
             return
 
-        history = "\n\n".join(
-            f"**{msg.author}**: {msg.content}" for msg in self.state.messages
-        )
+        history = "\n\n".join(f"**{msg.author}**: {msg.content}" for msg in self.state.messages)
 
         crew_instance = crew.crew()
         result = crew_instance.kickoff(
@@ -141,10 +139,7 @@ class ConversationFlow(FlowIssueManagement[ConversationFlowState]):
 
         for story in stories:
             self.state.stories.append(story)
-            stories_text += (
-                f" - [{' ' if story.completed else 'x'}] {story.description}\n\n"
-                f"---\n\n"
-            )
+            stories_text += f" - [{' ' if story.completed else 'x'}] {story.description}\n\n---\n\n"
 
         stories_text += "\nPlease review these stories. **Add 👍 to this comment when you approve the plan.**"
 
@@ -172,9 +167,7 @@ class ConversationFlow(FlowIssueManagement[ConversationFlowState]):
 
         logger.info(f"🚀 Initializing Ralph for story: {next_story.title}")
 
-        conversation_summary = "\n".join(
-            f"- {msg.author}: {msg.content}" for msg in self.state.messages[-5:]
-        )
+        conversation_summary = "\n".join(f"- {msg.author}: {msg.content}" for msg in self.state.messages[-5:])
 
         if self.conversation_crew:
             crew_instance = self.conversation_crew.crew()

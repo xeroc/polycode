@@ -112,12 +112,8 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
         for story in output.stories:
             logger.info(f"  |- 🔖 {story.description}")
 
-        self._project_manager.add_comment(
-            self.state.issue_id,
-            "\n## 📋 Planning completed\n\nTasks that need implementing:\n - [ ] ".join(
-                [x.description for x in output.stories]
-            ),
-        )
+        # Planning comment is now handled via hooks (PRE/POST_PLANNING_COMMENT)
+        self._post_planning_checklist(output.stories, self.state.issue_id)
         return output
 
     @listen(plan)
@@ -136,9 +132,7 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
             return
 
         completed_ids = [x.id for x in self.state.completed_stories or []]
-        missing_stories = [
-            x for x in self.state.stories or [] if x.id not in completed_ids
-        ]
+        missing_stories = [x for x in self.state.stories or [] if x.id not in completed_ids]
 
         self.state.completed_stories = []
         self.state.changes = []
@@ -174,9 +168,7 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
                     build_cmd=self.state.build_cmd,
                     test_cmd=self.state.test_cmd,
                     current_story=story.model_dump_json(),
-                    completed_stories="\n- ".join(
-                        [x.description for x in self.state.completed_stories or []]
-                    ),
+                    completed_stories="\n- ".join([x.description for x in self.state.completed_stories or []]),
                     current_story_id=story.id,
                     current_story_title=story.title,
                     architecture=self.recall_as_markdown_list("architecture"),

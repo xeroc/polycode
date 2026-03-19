@@ -5,6 +5,8 @@ Provides tree-sitter (structural) and LSP (semantic) analysis capabilities.
 
 from pathlib import Path
 
+from tools.code_analysis.context_manager import CodeContext
+
 # Language support
 from tools.code_analysis.language_support import (
     EXTENSION_MAP,
@@ -12,8 +14,6 @@ from tools.code_analysis.language_support import (
     LanguageSupport,
     get_language_support,
 )
-
-from tools.code_analysis.context_manager import CodeContext
 
 # LSP tools
 from tools.code_analysis.lsp.base import BaseLSPTool, LSPToolInput, PositionInput

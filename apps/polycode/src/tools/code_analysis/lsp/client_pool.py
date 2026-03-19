@@ -130,7 +130,7 @@ class LSPClient:
                 await self.send_notification("initialized", {})
                 return True
 
-            log.error(f"🚨 LSP initialization failed: no result")
+            log.error("🚨 LSP initialization failed: no result")
             return False
 
         except Exception as e:

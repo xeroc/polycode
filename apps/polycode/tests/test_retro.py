@@ -1,11 +1,11 @@
 """Test retro module functionality."""
 
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-from retro import GitNotes, init_db
-
 import subprocess
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from retro import GitNotes, init_db
 from retro.persistence import RetroStore
 from retro.types import RetroEntry
 

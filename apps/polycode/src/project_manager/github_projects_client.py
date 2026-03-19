@@ -111,7 +111,8 @@ class GitHubProjectsClient:
         """
         project_id: str | None = None
         if project_number is not None:
-            query = """
+            query = (
+                """
             query($owner: String!, $projectNumber: Int!) {
                 repository(owner: $owner, name: "%s") {
                     projectV2(number: $projectNumber) {
@@ -119,10 +120,10 @@ class GitHubProjectsClient:
                     }
                 }
             }
-            """ % self.repo_name
-            result = self._query(
-                query, {"owner": owner, "projectNumber": project_number}
+            """
+                % self.repo_name
             )
+            result = self._query(query, {"owner": owner, "projectNumber": project_number})
             node = result.data["repository"].get("projectV2")
             if node is not None:
                 project_id = node["id"]
@@ -142,11 +143,7 @@ class GitHubProjectsClient:
             """
             result = self._query(query, {"owner": owner})
             if result.data.get("organization", {}):
-                nodes = (
-                    result.data.get("organization", {})
-                    .get("projectsV2", {})
-                    .get("nodes")
-                )
+                nodes = result.data.get("organization", {}).get("projectsV2", {}).get("nodes")
                 if nodes:
                     project_id = nodes[0]["id"]
 
@@ -254,9 +251,7 @@ class GitHubProjectsClient:
             }
         }
         """
-        result = self._query(
-            query, {"projectId": project_id, "contentId": issue_node_id}
-        )
+        result = self._query(query, {"projectId": project_id, "contentId": issue_node_id})
         return result.data["addProjectV2ItemById"]["item"]["id"]
 
     def get_status_field_id(self, project_id: str) -> tuple[str, dict[str, str]]:

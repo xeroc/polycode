@@ -36,13 +36,9 @@ class FlowRunner:
             True if a flow is running, False otherwise
         """
         items = self.manager.get_project_items()
-        in_progress_status = self.manager.config.status_mapping.to_provider_status(
-            IssueStatus.IN_PROGRESS
-        )
+        in_progress_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
 
-        in_progress_items = [
-            item for item in items if item.status == in_progress_status
-        ]
+        in_progress_items = [item for item in items if item.status == in_progress_status]
         return len(in_progress_items) > 0
 
     def get_running_flow(self) -> ProjectItem | None:
@@ -52,9 +48,7 @@ class FlowRunner:
             ProjectItem if a flow is running, None otherwise
         """
         items = self.manager.get_project_items()
-        in_progress_status = self.manager.config.status_mapping.to_provider_status(
-            IssueStatus.IN_PROGRESS
-        )
+        in_progress_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
 
         for item in items:
             if item.status == in_progress_status:
@@ -101,17 +95,11 @@ class FlowRunner:
             log.warning(f"Issue #{issue_number} not found in project")
             return False
 
-        ready_status = self.manager.config.status_mapping.to_provider_status(
-            IssueStatus.READY
-        )
-        in_progress_status = self.manager.config.status_mapping.to_provider_status(
-            IssueStatus.IN_PROGRESS
-        )
+        ready_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.READY)
+        in_progress_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
 
         if item.status != ready_status:
-            log.info(
-                f"Issue #{issue_number} not ready (status: {item.status}), skipping"
-            )
+            log.info(f"Issue #{issue_number} not ready (status: {item.status}), skipping")
             return False
 
         success = self.manager.update_issue_status(issue_number, in_progress_status)
@@ -149,9 +137,7 @@ class FlowRunner:
             True if flow was triggered, False if no ready issues
         """
         items = self.manager.get_project_items()
-        ready_status = self.manager.config.status_mapping.to_provider_status(
-            IssueStatus.READY
-        )
+        ready_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.READY)
 
         ready_items = [item for item in items if item.status == ready_status]
         if not ready_items:

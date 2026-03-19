@@ -1,9 +1,13 @@
 """
 Feature Development Flow module.
+
+Generic flow orchestration that delegates project-specific operations (PR, merge, issue management)
+to plugin hooks. This module has no knowledge of GitHub or any specific provider.
 """
 
 import json
 import logging
+import subprocess
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, TypeVar
@@ -27,9 +31,6 @@ from persistence.postgres import (
     ensure_request_exists,
     update_request_status,
 )
-from project_manager import GitHubProjectManager
-from project_manager.config import settings as project_settings
-from project_manager.git_utils import get_github_repo_from_local
 from project_manager.types import ProjectConfig
 
 if TYPE_CHECKING:
@@ -61,12 +62,12 @@ class BaseFlowModel(BaseModel):
     branch: str = Field(default="", description="Feature branch name")
     task: str = Field(default="", description="Feature development task")
 
-    repo_owner: Optional[str] = Field(default=None, description="GitHub repository owner")
-    repo_name: Optional[str] = Field(default=None, description="GitHub repository name")
+    repo_owner: Optional[str] = Field(default=None, description="Repository owner")
+    repo_name: Optional[str] = Field(default=None, description="Repository name")
 
     pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
-    issue_id: int = Field(default=0, description="issue id on github")
+    issue_id: int = Field(default=0, description="issue id")
 
     planning_comment_id: Optional[int] = Field(default=None, description="ID of the planning progress comment")
     commit_urls: dict[int, str] = Field(default_factory=dict, description="Story ID to commit URL mapping")
@@ -84,7 +85,7 @@ class BaseFlowModel(BaseModel):
 
 
 class FlowIssueManagement(Flow[T]):
-    """Generic base class that passes type parameter to Flow"""
+    """Generic base class that passes type parameter to Flow."""
 
     _pm: "pluggy.PluginManager | None" = None
 
@@ -137,13 +138,6 @@ class FlowIssueManagement(Flow[T]):
                 state=self.state,
             )
         )
-
-    @property
-    def _project_manager(self) -> GitHubProjectManager:
-        """Get GitHub project manager (for backwards compatibility)."""
-        if not self.state.project_config:
-            raise ValueError("projet_config not specified!")
-        return GitHubProjectManager(self.state.project_config)
 
     @property
     def _channels(self) -> ChannelDispatcher | None:
@@ -245,7 +239,7 @@ class FlowIssueManagement(Flow[T]):
         return commit
 
     def _get_commit_url(self, commit_sha: str) -> str:
-        """Get the GitHub URL for a commit."""
+        """Get the URL for a commit."""
         return self.git_operations.get_commit_url(commit_sha)
 
     def _push_repo(self):
@@ -254,17 +248,14 @@ class FlowIssueManagement(Flow[T]):
         self._emit(FlowPhase.POST_PUSH)
 
     def _post_planning_checklist(self, stories: list, issue_id: int) -> int | None:
-        """Post planning checklist to issue and return comment ID."""
-        checklist_items = "\n".join(f"- [ ] {story.description}" for story in stories)
-        comment = (
-            f"## 📋 Implementation Plan\n\n{checklist_items}\n\n_Progress will be updated as stories are implemented._"
-        )
-        self._project_manager.add_comment(issue_id, comment)
+        """Post planning checklist to issue.
 
-        comment_id = self._project_manager.get_last_comment_by_user(issue_id, self._project_manager.bot_username)
-        if comment_id:
-            logger.info(f"🏹 Posted planning checklist, comment ID: {comment_id}")
-        return comment_id
+        Delegates to project_manager module via hooks.
+        Emits PRE_PLANNING_COMMENT/POST_PLANNING_COMMENT with stories as result.
+        """
+        self._emit(FlowPhase.PRE_PLANNING_COMMENT, result=stories)
+        self._emit(FlowPhase.POST_PLANNING_COMMENT, result=stories)
+        return getattr(self.state, "planning_comment_id", None)
 
     def _update_planning_checklist(
         self,
@@ -274,34 +265,19 @@ class FlowIssueManagement(Flow[T]):
         pr_url: str | None = None,
         merged: bool = False,
     ):
-        """Update the planning checklist with progress."""
-        if not self.state.planning_comment_id:
-            logger.warning("No planning comment ID, cannot update checklist")
-            return
+        """Update the planning checklist with progress.
 
-        checklist_lines = []
-        for story in stories:
-            if story.id in completed_story_ids:
-                commit_url = self.state.commit_urls.get(story.id)
-                if commit_url:
-                    checklist_lines.append(f"- [x] {story.description} ([commit]({commit_url}))")
-                else:
-                    checklist_lines.append(f"- [x] {story.description}")
-            else:
-                checklist_lines.append(f"- [ ] {story.description}")
-
-        body = "## 📋 Implementation Plan\n\n" + "\n".join(checklist_lines)
-
-        if pr_url:
-            if merged:
-                body += f"\n\n---\n\n✅ **Merged** - [PR #{self.state.pr_number}]({pr_url})"
-            else:
-                body += f"\n\n---\n\n🔍 **Review in progress** - [PR #{self.state.pr_number}]({pr_url})"
-        else:
-            body += "\n\n_Progress will be updated as stories are implemented._"
-
-        self._project_manager.update_comment(issue_id, self.state.planning_comment_id, body)
-        logger.info(f"🏹 Updated planning checklist for issue #{issue_id}")
+        Delegates to project_manager module via hooks.
+        Emits PRE_UPDATE_CHECKLIST/POST_UPDATE_CHECKLIST with checklist data as result.
+        """
+        data = {
+            "stories": stories,
+            "completed_ids": completed_story_ids,
+            "pr_url": pr_url,
+            "merged": merged,
+        }
+        self._emit(FlowPhase.PRE_UPDATE_CHECKLIST, result=data)
+        self._emit(FlowPhase.POST_UPDATE_CHECKLIST, result=data)
 
     def recall_as_markdown_list(self, name: str, **kwargs):
         if "scope" not in kwargs:
@@ -339,81 +315,31 @@ class FlowIssueManagement(Flow[T]):
         return agents_md_files
 
     def _create_pr(self):
-        """Step 6: Create pull request."""
+        """Create pull request.
+
+        Delegates to project_manager module via hooks.
+        Emits PRE_PR/POST_PR hooks - project_manager handles PR creation.
+        """
         self._emit(FlowPhase.PRE_PR)
-        logger.info("🏹 Creating pull request")
-        if self.state.pr_number:
-            self._emit(FlowPhase.POST_PR)
-            return
-
-        _, github_repo, _ = get_github_repo_from_local(self.state.repo)
-
-        pr = github_repo.create_pull(
-            title=self.state.commit_title or self.state.task,
-            body=f"{self.state.commit_message or ''}\n\n{self.state.commit_footer or ''}",
-            head=self.state.branch,
-            base="develop",
-        )
-
-        self.state.pr_url = pr.html_url
-        self.state.pr_number = pr.number
-        logger.info(f"🏹 PR {self.state.pr_number} created: {self.state.pr_url}")
-
-        self._project_manager.add_comment(
-            self.state.issue_id,
-            f"## 🔍 Review Started\n\n"
-            f"Pull request #{self.state.pr_number} is now under review.\n"
-            f"[View PR]({self.state.pr_url})",
-        )
-
-        self._emit(FlowPhase.POST_PR, result=pr)
+        logger.info("🏹 Creating pull request (via hook)")
+        self._emit(FlowPhase.POST_PR)
 
     def _merge_branch(self):
-        """Merge the pull request only if the required label is present."""
+        """Merge the pull request.
+
+        Delegates to project_manager module via hooks.
+        Emits PRE_MERGE/POST_MERGE hooks - project_manager handles merge logic.
+        """
         self._emit(FlowPhase.PRE_MERGE)
-
-        if not self.state.pr_number:
-            logger.warning("⚠️ No PR number set, skipping merge")
-            self._emit(FlowPhase.POST_MERGE)
-            return
-
-        if not self._project_manager.has_label(self.state.issue_id, project_settings.MERGE_REQUIRED_LABEL):
-            logger.warning(
-                f"⚠️ Issue #{self.state.issue_id} does not have the required label "
-                f"'{project_settings.MERGE_REQUIRED_LABEL}'. Merge aborted."
-            )
-            self._project_manager.add_comment(
-                self.state.issue_id,
-                f"## ⚠️ Merge Blocked\n\n"
-                f"Pull request #{self.state.pr_number} cannot be merged because. The issue {self.state.issue_id} does not have "
-                f"the required label: `{project_settings.MERGE_REQUIRED_LABEL}`.\n\n"
-                f"Please add the label and try again.",
-            )
-            self._emit(FlowPhase.POST_MERGE)
-            return
-
-        logger.info(
-            f"✅ Pull request #{self.state.pr_number} has required label '{project_settings.MERGE_REQUIRED_LABEL}', proceeding with merge"
-        )
-        success = self._project_manager.merge_pull_request(self.state.pr_number)
-
-        if success:
-            self._project_manager.add_comment(
-                self.state.issue_id,
-                f"## ✅ Task Completed\n\n"
-                f"Pull request #{self.state.pr_number} has been merged.\n"
-                f"[View merged PR]({self.state.pr_url})",
-            )
-
+        logger.info("🏹 Processing merge (via hook)")
         self._emit(FlowPhase.POST_MERGE)
 
     def _cleanup_worktree(self):
-        self._emit(FlowPhase.PRE_CLEANUP)
+        """Cleanup worktree and update issue status.
 
-        try:
-            self._project_manager.update_issue_status(self.state.issue_id, "Done")
-        except Exception as e:
-            logger.info(f"🚨 Failed to update project status to Done: {e}")
+        Delegates issue status update to project_manager via POST_CLEANUP hook.
+        """
+        self._emit(FlowPhase.PRE_CLEANUP)
 
         try:
             update_request_status(SessionLocal, self.state.issue_id, "completed")
@@ -450,8 +376,6 @@ class FlowIssueManagement(Flow[T]):
             logger.warning("⚠️ No build command, skipping verification")
             return
 
-        import subprocess
-
         result = subprocess.run(
             self.state.build_cmd,
             shell=True,
@@ -467,8 +391,6 @@ class FlowIssueManagement(Flow[T]):
         if not self.state.test_cmd:
             logger.warning("⚠️ No test command, skipping verification")
             return
-
-        import subprocess
 
         result = subprocess.run(
             self.state.test_cmd,

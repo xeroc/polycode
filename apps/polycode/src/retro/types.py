@@ -1,7 +1,8 @@
 """Retro module data models."""
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 now = lambda: datetime.now(UTC)

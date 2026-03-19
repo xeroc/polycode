@@ -4,7 +4,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ProjectManagerSettings(BaseSettings):
-
     DATA_PATH: str = "/data"
 
     GITHUB_APP_ID: Optional[str] = None
@@ -28,9 +27,7 @@ class ProjectManagerSettings(BaseSettings):
     # Database Configuration
     DATABASE_URL: str = "sqlite:///polycode.db"
 
-    model_config = SettingsConfigDict(
-        extra="ignore", env_file=".env", case_sensitive=True
-    )
+    model_config = SettingsConfigDict(extra="ignore", env_file=".env", case_sensitive=True)
 
 
 settings = ProjectManagerSettings()  # pyright:ignore # ty:ignore

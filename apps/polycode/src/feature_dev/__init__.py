@@ -24,6 +24,7 @@ from crews.test_crew.types import TestOutput
 from crews.verify_crew.types import VerifyOutput
 from flowbase import FlowIssueManagement, KickoffIssue
 from gitcore import sanitize_branch_name
+from modules.hooks import FlowPhase
 from persistence import PostgresFlowPersistence
 from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
@@ -100,9 +101,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in output.stories:
             print(f"  |- 🔖 {current_story.description}")
 
-        self.state.planning_comment_id = self._post_planning_checklist(
-            output.stories, self.state.issue_id
-        )
+        self.state.planning_comment_id = self._post_planning_checklist(output.stories, self.state.issue_id)
         return output
 
     @listen(setup)
@@ -133,9 +132,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                         build_cmd=self.state.build_cmd,
                         test_cmd=self.state.test_cmd,
                         current_story=current_story.model_dump_json(),
-                        completed_stories="\n- ".join(
-                            [x.description for x in self.state.completed_stories or []]
-                        ),
+                        completed_stories="\n- ".join([x.description for x in self.state.completed_stories or []]),
                         current_story_id=current_story.id,
                         current_story_title=current_story.title,
                         architecture=self.recall_as_markdown_list("architecture"),
@@ -160,9 +157,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
             return implement_result
 
         completed_ids = [x.id for x in self.state.completed_stories or []]
-        missing_stories = [
-            x for x in self.state.stories or [] if x.id not in completed_ids
-        ]
+        missing_stories = [x for x in self.state.stories or [] if x.id not in completed_ids]
 
         self.state.completed_stories = []
         self.state.changes = []
@@ -254,9 +249,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                     changes=self.state.changes,
                     test_cmd=self.state.test_cmd,
                     current_story=self.state.current_story,
-                    completed_stories=[
-                        x.description for x in self.state.completed_stories or []
-                    ],
+                    completed_stories=[x.description for x in self.state.completed_stories or []],
                 )
             )
         )
@@ -282,10 +275,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         merge_base = repo.merge_base("develop", self.state.branch)[0]
         self.state.diff = repo.git.diff(merge_base, self.state.branch)
 
-        try:
-            self._project_manager.update_issue_status(self.state.issue_id, "In review")
-        except Exception as e:
-            print(f"🚨 Failed to update project status: {e}")
+        self._emit(FlowPhase.PRE_REVIEW)
 
         output = (
             ReviewCrew()

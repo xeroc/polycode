@@ -1,6 +1,6 @@
 """GitHub App database models using shared PostgreSQL base."""
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any, Optional
 
 from sqlalchemy import Index

@@ -23,6 +23,6 @@ warnings.warn(
 )
 
 # Re-export for backward compatibility (will be removed)
-from github_app.app import app as webhook_app
+from github_app.app import app as webhook_app  # noqa: E402
 
 __all__ = ["webhook_app"]

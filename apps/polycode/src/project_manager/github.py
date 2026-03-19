@@ -36,16 +36,12 @@ class GitHubProjectManager(ProjectManager):
 
         token = config.token or settings.GITHUB_TOKEN
         if not token:
-            raise ValueError(
-                "GitHub token must be provided via config or GITHUB_TOKEN env var"
-            )
+            raise ValueError("GitHub token must be provided via config or GITHUB_TOKEN env var")
 
         self.token = token
         self.github_client = github.Github(auth=github.Auth.Token(token))
         self.projects_client = GitHubProjectsClient(token, config.repo_name)
-        self.repo = self.github_client.get_repo(
-            f"{self.config.repo_owner}/{self.config.repo_name}"
-        )
+        self.repo = self.github_client.get_repo(f"{self.config.repo_owner}/{self.config.repo_name}")
         self._project_id: str | None = None
         self._status_field_id: str | None = None
         self._status_options: dict[str, str] | None = None
@@ -91,9 +87,7 @@ class GitHubProjectManager(ProjectManager):
                     return comment.id
             return None
         except Exception as e:
-            log.error(
-                f"Failed to get last comment by {username} on issue #{issue_number}: {e}"
-            )
+            log.error(f"Failed to get last comment by {username} on issue #{issue_number}: {e}")
             return None
 
     def update_comment(self, issue_number: int, comment_id: int, body: str) -> bool:
@@ -114,37 +108,25 @@ class GitHubProjectManager(ProjectManager):
                     comment.edit(body)
                     log.info(f"Updated comment {comment_id} on issue #{issue_number}")
                     return True
-            log.warning(
-                f"Comment {comment_id} not found on issue #{issue_number}"
-            )
+            log.warning(f"Comment {comment_id} not found on issue #{issue_number}")
             return False
         except Exception as e:
-            log.error(
-                f"Failed to update comment {comment_id} on issue #{issue_number}: {e}"
-            )
+            log.error(f"Failed to update comment {comment_id} on issue #{issue_number}: {e}")
             return False
 
     @property
     def project_id(self) -> str:
         """Lazy-load project ID."""
         if self._project_id is None:
-            project_number = (
-                int(self.config.project_identifier)
-                if self.config.project_identifier
-                else None
-            )
-            self._project_id = self.projects_client.get_project_id(
-                self.config.repo_owner, project_number
-            )
+            project_number = int(self.config.project_identifier) if self.config.project_identifier else None
+            self._project_id = self.projects_client.get_project_id(self.config.repo_owner, project_number)
         return self._project_id
 
     @property
     def status_field_info(self) -> tuple[str, dict[str, str]]:
         """Lazy-load status field ID and options."""
         if self._status_field_id is None or self._status_options is None:
-            self._status_field_id, self._status_options = (
-                self.projects_client.get_status_field_id(self.project_id)
-            )
+            self._status_field_id, self._status_options = self.projects_client.get_status_field_id(self.project_id)
         return self._status_field_id, self._status_options
 
     def get_open_issues(self) -> list[Issue]:
@@ -202,9 +184,7 @@ class GitHubProjectManager(ProjectManager):
             return None
 
         try:
-            item_id = self.projects_client.add_issue_to_project(
-                self.project_id, issue.node_id
-            )
+            item_id = self.projects_client.add_issue_to_project(self.project_id, issue.node_id)
             log.info(f"Added issue #{issue.number} to project")
             return item_id
         except Exception as e:
@@ -228,14 +208,10 @@ class GitHubProjectManager(ProjectManager):
 
         field_id, options = self.status_field_info
         if status not in options:
-            log.warning(
-                f"Status '{status}' not found in project options: {list(options.keys())}"
-            )
+            log.warning(f"Status '{status}' not found in project options: {list(options.keys())}")
             return False
 
-        success = self.projects_client.update_item_status(
-            self.project_id, item.id, field_id, options[status]
-        )
+        success = self.projects_client.update_item_status(self.project_id, item.id, field_id, options[status])
         if success:
             log.info(f"Updated issue #{issue_number} to '{status}'")
         return success
@@ -319,22 +295,15 @@ class GitHubProjectManager(ProjectManager):
                 return False
 
             if commit_message:
-                result = pr.merge(
-                    commit_message=commit_message, merge_method=merge_method
-                )
+                result = pr.merge(commit_message=commit_message, merge_method=merge_method)
             else:
                 result = pr.merge(merge_method=merge_method)
 
             if result.merged:
-                log.info(
-                    f"Successfully merged pull request #{pr_number} "
-                    f"into {pr.base.ref} using {merge_method}"
-                )
+                log.info(f"Successfully merged pull request #{pr_number} into {pr.base.ref} using {merge_method}")
                 return True
             else:
-                log.error(
-                    f"Failed to merge pull request #{pr_number}: {result.message}"
-                )
+                log.error(f"Failed to merge pull request #{pr_number}: {result.message}")
                 return False
 
         except Exception as e:

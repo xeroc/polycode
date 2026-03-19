@@ -11,9 +11,7 @@ log = logging.getLogger(__name__)
 class GitHubConversationManager(GitHubProjectManager):
     """GitHub manager with conversation and reaction support."""
 
-    def get_comment_reactions(
-        self, issue_number: int, comment_id: int
-    ) -> list[dict]:
+    def get_comment_reactions(self, issue_number: int, comment_id: int) -> list[dict]:
         """Get reactions on a specific comment.
 
         Args:
@@ -33,26 +31,18 @@ class GitHubConversationManager(GitHubProjectManager):
                     {
                         "user": reaction.user.login if reaction.user else None,
                         "content": reaction.content,
-                        "created_at": (
-                            reaction.created_at.isoformat()
-                            if reaction.created_at
-                            else None
-                        ),
+                        "created_at": (reaction.created_at.isoformat() if reaction.created_at else None),
                     }
                 )
 
-            log.info(
-                f"Found {len(reactions)} reactions on comment {comment_id}"
-            )
+            log.info(f"Found {len(reactions)} reactions on comment {comment_id}")
             return reactions
 
         except Exception as e:
             log.error(f"Failed to get reactions on comment {comment_id}: {e}")
             return []
 
-    def has_thumbs_up_reaction(
-        self, issue_number: int, comment_id: int
-    ) -> bool:
+    def has_thumbs_up_reaction(self, issue_number: int, comment_id: int) -> bool:
         """Check if a comment has a thumbs up reaction from the issue author.
 
         Args:
@@ -69,24 +59,17 @@ class GitHubConversationManager(GitHubProjectManager):
             reactions = self.get_comment_reactions(issue_number, comment_id)
 
             for reaction in reactions:
-                if (
-                    reaction["content"] == "+1"
-                    and reaction["user"] == issue_author
-                ):
+                if reaction["content"] == "+1" and reaction["user"] == issue_author:
                     log.info(f"Thumbs up from {issue_author} detected")
                     return True
 
             return False
 
         except Exception as e:
-            log.error(
-                f"Failed to check thumbs up on comment {comment_id}: {e}"
-            )
+            log.error(f"Failed to check thumbs up on comment {comment_id}: {e}")
             return False
 
-    def get_latest_comments(
-        self, issue_number: int, since_id: Optional[int] = None
-    ) -> list[dict]:
+    def get_latest_comments(self, issue_number: int, since_id: Optional[int] = None) -> list[dict]:
         """Get latest comments on an issue.
 
         Args:
@@ -105,20 +88,14 @@ class GitHubConversationManager(GitHubProjectManager):
                     continue
 
                 # Check for thumbs up reaction
-                has_thumbs_up = self.has_thumbs_up_reaction(
-                    issue_number, comment.id
-                )
+                has_thumbs_up = self.has_thumbs_up_reaction(issue_number, comment.id)
 
                 comments.append(
                     {
                         "id": comment.id,
                         "user": comment.user.login if comment.user else None,
                         "body": comment.body,
-                        "created_at": (
-                            comment.created_at.isoformat()
-                            if comment.created_at
-                            else None
-                        ),
+                        "created_at": (comment.created_at.isoformat() if comment.created_at else None),
                         "thumbs_up": has_thumbs_up,
                     }
                 )
@@ -149,11 +126,7 @@ class GitHubConversationManager(GitHubProjectManager):
                     {
                         "user": reaction.user.login if reaction.user else None,
                         "content": reaction.content,
-                        "created_at": (
-                            reaction.created_at.isoformat()
-                            if reaction.created_at
-                            else None
-                        ),
+                        "created_at": (reaction.created_at.isoformat() if reaction.created_at else None),
                     }
                 )
 
