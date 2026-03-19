@@ -19,9 +19,7 @@ class DirectoryReadToolSchema(FixedDirectoryReadToolSchema):
 
 class DirectoryReadTool(BaseTool):
     name: str = "List files in directory"
-    description: str = (
-        "A tool that can be used to recursively list a directory's content."
-    )
+    description: str = "A tool that can be used to recursively list a directory's content."
     args_schema: type[BaseModel] = DirectoryReadToolSchema
     directory: str | None = None
 

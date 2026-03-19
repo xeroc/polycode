@@ -18,7 +18,6 @@ class DefinitionToolInput(PositionInput):
     """Input schema for definition tool."""
 
 
-
 class DefinitionTool(BaseLSPTool):
     """Go to definition of symbol at position.
 

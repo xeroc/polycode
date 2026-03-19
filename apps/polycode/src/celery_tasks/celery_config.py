@@ -5,7 +5,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class CelerySettings(BaseSettings):
-
     # Celery Configuration
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
@@ -23,18 +22,14 @@ class CelerySettings(BaseSettings):
     REDIS_PORT: int
     REDIS_DB: int = 0
 
-    model_config = SettingsConfigDict(
-        extra="ignore", env_file=".env", case_sensitive=True
-    )
+    model_config = SettingsConfigDict(extra="ignore", env_file=".env", case_sensitive=True)
 
 
 settings = CelerySettings()  # pyright:ignore # ty:ignore
 
 
 broker_url = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-result_backend = (
-    f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-)
+result_backend = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
 
 
 app = Celery(__name__)

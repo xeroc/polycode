@@ -58,7 +58,7 @@ class PatternAnalyzer:
         counter = Counter(all_failures)
         top_failures = [item for item, count in counter.most_common(5)]
 
-        logger.info(f"🔴 Top failures: {[ f[:40] for f in top_failures ]}")
+        logger.info(f"🔴 Top failures: {[f[:40] for f in top_failures]}")
         return top_failures
 
     def _extract_success_factors(self, retros: list[RetroEntry]) -> list[str]:
@@ -96,19 +96,11 @@ class PatternAnalyzer:
         if not with_duration:
             return {"message": "No duration data available"}
 
-        durations = [
-            r.time_to_completion_seconds
-            for r in with_duration
-            if r.time_to_completion_seconds
-        ]
+        durations = [r.time_to_completion_seconds for r in with_duration if r.time_to_completion_seconds]
         avg_duration = sum(durations) / len(durations)
 
         with_retries = [r for r in retros if r.retry_count > 0]
-        avg_retries = (
-            sum(r.retry_count for r in with_retries) / len(with_retries)
-            if with_retries
-            else 0
-        )
+        avg_retries = sum(r.retry_count for r in with_retries) / len(with_retries) if with_retries else 0
 
         trends = {
             "avg_duration_seconds": avg_duration,
@@ -118,9 +110,7 @@ class PatternAnalyzer:
             "total_analyzed": len(retros),
         }
 
-        logger.info(
-            f"⏱️ Avg duration: {avg_duration:.1f}s, Avg retries: {avg_retries:.1f}"
-        )
+        logger.info(f"⏱️ Avg duration: {avg_duration:.1f}s, Avg retries: {avg_retries:.1f}")
         return trends
 
     def _analyze_build_patterns(self, retros: list[RetroEntry]) -> dict:
@@ -144,9 +134,7 @@ class PatternAnalyzer:
         }
 
         if with_build_times:
-            build_times = [
-                r.build_duration_ms for r in with_build_times if r.build_duration_ms
-            ]
+            build_times = [r.build_duration_ms for r in with_build_times if r.build_duration_ms]
             patterns["avg_build_ms"] = sum(build_times) / len(build_times)
             patterns["max_build_ms"] = max(build_times)
             patterns["min_build_ms"] = min(build_times)
@@ -154,9 +142,7 @@ class PatternAnalyzer:
         logger.info(f"🔨 Failure rate: {patterns['failure_rate']:.1%}")
         return patterns
 
-    def generate_context_injection(
-        self, repo_owner: str, repo_name: str, limit: int = 5
-    ) -> str:
+    def generate_context_injection(self, repo_owner: str, repo_name: str, limit: int = 5) -> str:
         """Generate context for next flow based on past retros.
 
         Args:
@@ -224,9 +210,7 @@ class PatternAnalyzer:
         if trends["build_patterns"]:
             build = trends["build_patterns"]
             if isinstance(build, dict) and build.get("failure_rate", 0) > 0.3:
-                suggestions.append(
-                    "Improve build reliability (30%+ failure rate detected)"
-                )
+                suggestions.append("Improve build reliability (30%+ failure rate detected)")
 
         logger.info(f"💡 Generated {len(suggestions)} improvement suggestions")
         return suggestions

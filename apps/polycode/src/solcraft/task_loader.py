@@ -27,9 +27,7 @@ def parse_task_template_from_markdown(content: str) -> TaskTemplate | None:
     # Expected Output
     What the output should look like
     """
-    frontmatter_pattern = re.compile(
-        r"^---\s*\n(.*?)\n---\s*\n(.*)$", re.DOTALL
-    )
+    frontmatter_pattern = re.compile(r"^---\s*\n(.*?)\n---\s*\n(.*)$", re.DOTALL)
     match = frontmatter_pattern.match(content.strip())
 
     if not match:
@@ -98,9 +96,7 @@ def load_task_templates(paths: list[str]) -> dict[str, TaskTemplate]:
         template = load_task_template(path)
         if template:
             templates[template.name] = template
-            logger.info(
-                f"📄 Loaded task template: {template.name} from {path}"
-            )
+            logger.info(f"📄 Loaded task template: {template.name} from {path}")
 
     return templates
 

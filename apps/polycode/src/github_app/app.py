@@ -29,9 +29,7 @@ app = FastAPI(
     version="2.0.0",
 )
 
-redis_client = Redis(
-    host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB
-)
+redis_client = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB)
 
 github_auth = GitHubAppAuth(
     app_id=settings.GITHUB_APP_ID,
@@ -157,9 +155,7 @@ async def list_installations():
                     "id": inst.installation_id,
                     "account": inst.account_login,
                     "active": inst.is_active,
-                    "repos_count": len(
-                        inst.repositories.get("repos", []) if inst.repositories else []
-                    ),
+                    "repos_count": len(inst.repositories.get("repos", []) if inst.repositories else []),
                 }
                 for inst in installations
             ]

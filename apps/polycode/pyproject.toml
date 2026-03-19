@@ -34,13 +34,14 @@ dependencies = [
     "tree-sitter-rust>=0.23.0",
     "tree-sitter-go>=0.23.0",
     "pygls>=1.3.0",
+    "typer>=0.23.1",
+    "rich>=14.3.3",
+    "tqdm>=4.67.3",
+    "alive-progress==3.3.0",
 ]
 
 [project.scripts]
-watch-repo = "project_manager.cli:cli"
-webhook-server = "project_manager.cli:cli"
-github-issue = "project_manager.cli:cli"
-socketio-server = "channels.stream.server_app:run"
+polycode = "cli.main:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -54,6 +55,7 @@ packages = [
     "src/project_manager",
     "src/persistence",
     "src/celery_tasks",
+    "src/cli",
 ]
 
 [dependency-groups]

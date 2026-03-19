@@ -18,16 +18,13 @@ from sqlalchemy.orm import (
 from sqlalchemy.sql.expression import text
 from sqlalchemy.types import JSON, DateTime, Integer, String, TypeDecorator
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://user:password@localhost:5432/chaoscraft"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/chaoscraft")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 class Base(DeclarativeBase):
     """SQLAlchemy declarative base."""
-
 
 
 class JSONType(TypeDecorator):
@@ -52,9 +49,7 @@ class Payments(Base):
     currency: Mapped[str] = mapped_column()
     payment_method: Mapped[str] = mapped_column()
     status: Mapped[str] = mapped_column()
-    created_at: Mapped[datetime | None] = mapped_column(
-        server_default=text("CURRENT_TIMESTAMP")
-    )
+    created_at: Mapped[datetime | None] = mapped_column(server_default=text("CURRENT_TIMESTAMP"))
     verified_at: Mapped[datetime | None] = mapped_column(default=None)
 
 
@@ -68,9 +63,7 @@ class Requests(Base):
     request_text: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
     commit: Mapped[str] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 def update_request_status(
@@ -90,11 +83,7 @@ def update_request_status(
         True if a row was updated, False otherwise
     """
     with session() as sess:
-        result = (
-            sess.query(Requests)
-            .filter_by(issue_number=issue_number)
-            .update({"status": status, "commit": commit})
-        )
+        result = sess.query(Requests).filter_by(issue_number=issue_number).update({"status": status, "commit": commit})
         sess.commit()
         return result > 0
 
@@ -129,9 +118,7 @@ def ensure_request_exists(
             currency="USD",
             payment_method="none",
         )
-        new_request = Requests(
-            issue_number=issue_number, request_text=body, status=status
-        )
+        new_request = Requests(issue_number=issue_number, request_text=body, status=status)
         sess.add(new_payment)
         sess.commit()
         sess.add(new_request)
@@ -162,9 +149,7 @@ class PendingFeedback(Base):
     flow_uuid: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     context_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
     state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (Index("idx_pending_feedback_uuid", "flow_uuid"),)
 
@@ -253,10 +238,7 @@ class PostgresFlowPersistence(FlowPersistence):
         """
         with self.Session() as session:
             state = (
-                session.query(FlowState)
-                .filter(FlowState.flow_uuid == flow_uuid)
-                .order_by(FlowState.id.desc())
-                .first()
+                session.query(FlowState).filter(FlowState.flow_uuid == flow_uuid).order_by(FlowState.id.desc()).first()
             )
 
         if state:
@@ -284,11 +266,7 @@ class PostgresFlowPersistence(FlowPersistence):
         self.save_state(flow_uuid, context.method_name, state_data)
 
         with self.Session() as session:
-            existing = (
-                session.query(PendingFeedback)
-                .filter(PendingFeedback.flow_uuid == flow_uuid)
-                .first()
-            )
+            existing = session.query(PendingFeedback).filter(PendingFeedback.flow_uuid == flow_uuid).first()
 
             if existing:
                 existing.context_json = context.to_dict()
@@ -319,11 +297,7 @@ class PostgresFlowPersistence(FlowPersistence):
             None otherwise.
         """
         with self.Session() as session:
-            pending = (
-                session.query(PendingFeedback)
-                .filter(PendingFeedback.flow_uuid == flow_uuid)
-                .first()
-            )
+            pending = session.query(PendingFeedback).filter(PendingFeedback.flow_uuid == flow_uuid).first()
 
         if pending:
             context = PendingFeedbackContext.from_dict(pending.context_json)
@@ -337,9 +311,7 @@ class PostgresFlowPersistence(FlowPersistence):
             flow_uuid: Unique identifier for the flow instance
         """
         with self.Session() as session:
-            session.query(PendingFeedback).filter(
-                PendingFeedback.flow_uuid == flow_uuid
-            ).delete()
+            session.query(PendingFeedback).filter(PendingFeedback.flow_uuid == flow_uuid).delete()
             session.commit()
 
     def _to_dict(self, state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
@@ -359,6 +331,4 @@ class PostgresFlowPersistence(FlowPersistence):
         elif isinstance(state_data, dict):
             return state_data
         else:
-            raise ValueError(
-                f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
-            )
+            raise ValueError(f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}")

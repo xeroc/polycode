@@ -29,16 +29,12 @@ class RetroEntry(BaseModel):
 
     story_id: Optional[int] = Field(default=None, description="Story ID if flow-based")
 
-    story_title: Optional[str] = Field(
-        default=None, description="Story title if flow-based"
-    )
+    story_title: Optional[str] = Field(default=None, description="Story title if flow-based")
 
     repo_owner: str = Field(description="GitHub repository owner")
     repo_name: str = Field(description="GitHub repository name")
 
-    timestamp: datetime = Field(
-        default_factory=now, description="When retro was generated"
-    )
+    timestamp: datetime = Field(default_factory=now, description="When retro was generated")
 
     retro_type: str = Field(description="Type: success, failure, partial, anomaly")
 
@@ -46,31 +42,19 @@ class RetroEntry(BaseModel):
 
     what_failed: list[str] = Field(default_factory=list, description="What didn't work")
 
-    root_causes: list[str] = Field(
-        default_factory=list, description="Root causes identified"
-    )
+    root_causes: list[str] = Field(default_factory=list, description="Root causes identified")
 
-    actionable_improvements: list[ActionableItem] = Field(
-        default_factory=list, description="Concrete improvements"
-    )
+    actionable_improvements: list[ActionableItem] = Field(default_factory=list, description="Concrete improvements")
 
-    time_to_completion_seconds: Optional[int] = Field(
-        default=None, description="Duration in seconds"
-    )
+    time_to_completion_seconds: Optional[int] = Field(default=None, description="Duration in seconds")
 
     retry_count: int = Field(default=0, description="Retry iterations")
 
-    test_coverage_impact: Optional[float] = Field(
-        default=None, description="Test coverage change percentage"
-    )
+    test_coverage_impact: Optional[float] = Field(default=None, description="Test coverage change percentage")
 
-    build_duration_ms: Optional[int] = Field(
-        default=None, description="Build duration in milliseconds"
-    )
+    build_duration_ms: Optional[int] = Field(default=None, description="Build duration in milliseconds")
 
-    test_duration_ms: Optional[int] = Field(
-        default=None, description="Test duration in milliseconds"
-    )
+    test_duration_ms: Optional[int] = Field(default=None, description="Test duration in milliseconds")
 
 
 class RetroQuery(BaseModel):

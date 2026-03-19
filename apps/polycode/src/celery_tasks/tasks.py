@@ -43,8 +43,8 @@ def get_persistence_tracker():
             pool_pre_ping=True,
             pool_recycle=3600,
         )
-        Session = sessionmaker(bind=engine)
-        _persistence_tracker = CeleryTaskTracker(Session)
+        session = sessionmaker(bind=engine)
+        _persistence_tracker = CeleryTaskTracker(session)
         log.info("Creating tables ...")
         Base.metadata.create_all(engine)
 
@@ -283,9 +283,9 @@ def flow_heartbeat_task() -> dict[str, Any]:
 
         connection_string = settings.DATABASE_URL
         engine = create_engine(connection_string)
-        Session = sessionmaker(bind=engine)
+        session = sessionmaker(bind=engine)
 
-        with Session() as session:
+        with session() as session:
             running_tasks_data = session.query(CeleryTask).filter(CeleryTask.status == "running").all()
 
             for task in running_tasks_data:

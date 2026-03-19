@@ -18,9 +18,7 @@ class InstallationManager:
         self.db_session = db_session
         self.github_auth = github_auth
 
-    def register_installation(
-        self, installation_data: Dict[str, Any]
-    ) -> GitHubAppInstallation:
+    def register_installation(self, installation_data: Dict[str, Any]) -> GitHubAppInstallation:
         """Register or update a GitHub App installation."""
         installation_id = installation_data["id"]
 
@@ -63,10 +61,7 @@ class InstallationManager:
         self.db_session.add(installation)
         self.db_session.commit()
 
-        logger.info(
-            f"Registered installation {installation_id} "
-            f"for {installation_data['account']['login']}"
-        )
+        logger.info(f"Registered installation {installation_id} for {installation_data['account']['login']}")
 
         return installation
 
@@ -125,9 +120,7 @@ class InstallationManager:
             .first()
         )
 
-    def list_installations(
-        self, active_only: bool = True
-    ) -> List[GitHubAppInstallation]:
+    def list_installations(self, active_only: bool = True) -> List[GitHubAppInstallation]:
         """List all installations."""
         query = self.db_session.query(GitHubAppInstallation)
 
@@ -175,9 +168,7 @@ class InstallationManager:
         self.db_session.add(webhook)
         self.db_session.commit()
 
-        logger.info(
-            f"Registered webhook for {target_repo} (installation: {installation_id})"
-        )
+        logger.info(f"Registered webhook for {target_repo} (installation: {installation_id})")
 
         return webhook
 
@@ -191,9 +182,7 @@ class InstallationManager:
         query = self.db_session.query(GitHubWebhookRegistration)
 
         if installation_id:
-            query = query.filter(
-                GitHubWebhookRegistration.installation_id == installation_id
-            )
+            query = query.filter(GitHubWebhookRegistration.installation_id == installation_id)
 
         if target_repo:
             query = query.filter(GitHubWebhookRegistration.target_repo == target_repo)
@@ -206,9 +195,7 @@ class InstallationManager:
     def deactivate_webhook(self, webhook_id: int) -> bool:
         """Deactivate a webhook."""
         webhook = (
-            self.db_session.query(GitHubWebhookRegistration)
-            .filter(GitHubWebhookRegistration.id == webhook_id)
-            .first()
+            self.db_session.query(GitHubWebhookRegistration).filter(GitHubWebhookRegistration.id == webhook_id).first()
         )
 
         if not webhook:

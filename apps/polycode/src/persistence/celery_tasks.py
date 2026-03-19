@@ -22,15 +22,9 @@ class CeleryTask(Base):
     flow_id: Mapped[str] = mapped_column(String(255), nullable=False)
     task_type: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     result: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -88,9 +82,7 @@ class CeleryTaskTracker:
             task_id: Celery task ID
         """
         with self.Session() as session:
-            task = (
-                session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
-            )
+            task = session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
             if task:
                 task.status = "running"
                 task.started_at = datetime.now(timezone.utc)
@@ -104,9 +96,7 @@ class CeleryTaskTracker:
             result: Optional result data
         """
         with self.Session() as session:
-            task = (
-                session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
-            )
+            task = session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
             if task:
                 task.status = "completed"
                 task.completed_at = datetime.now(timezone.utc)
@@ -121,9 +111,7 @@ class CeleryTaskTracker:
             error_message: Error message
         """
         with self.Session() as session:
-            task = (
-                session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
-            )
+            task = session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
             if task:
                 task.status = "failed"
                 task.completed_at = datetime.now(timezone.utc)
@@ -137,9 +125,7 @@ class CeleryTaskTracker:
             task_id: Celery task ID
         """
         with self.Session() as session:
-            task = (
-                session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
-            )
+            task = session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
             if task:
                 task.retry_count += 1
                 session.commit()
@@ -154,9 +140,7 @@ class CeleryTaskTracker:
             CeleryTask if found, None otherwise
         """
         with self.Session() as session:
-            return (
-                session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
-            )
+            return session.query(CeleryTask).filter(CeleryTask.task_id == task_id).first()
 
     def get_flow_tasks(self, flow_id: str) -> list[CeleryTask]:
         """Get all tasks for a flow.
@@ -168,12 +152,7 @@ class CeleryTaskTracker:
             List of CeleryTask objects
         """
         with self.Session() as session:
-            return (
-                session.query(CeleryTask)
-                .filter(CeleryTask.flow_id == flow_id)
-                .order_by(CeleryTask.created_at)
-                .all()
-            )
+            return session.query(CeleryTask).filter(CeleryTask.flow_id == flow_id).order_by(CeleryTask.created_at).all()
 
     def cleanup_completed_tasks(self, days_old: int = 7) -> int:
         """Delete completed/failed tasks older than specified days.

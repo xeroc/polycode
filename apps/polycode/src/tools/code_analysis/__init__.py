@@ -130,9 +130,7 @@ def create_lsp_tools(project_root: str | Path) -> list:
     ]
 
 
-def create_tree_sitter_tools(
-    project_root: str | Path, include_lsp: bool = True
-) -> list:
+def create_tree_sitter_tools(project_root: str | Path, include_lsp: bool = True) -> list:
     """Create all code analysis tools for a project.
 
     Args:

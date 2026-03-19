@@ -145,13 +145,12 @@ class FlowIssueManagement(Flow[T]):
     @property
     def git_operations(self) -> GitOperations:
         """Get git operations instance for this flow."""
-        if self._git_ops is None:
-            self._git_ops = GitOperations.from_flow_state(self.state, self._pm)
-        return self._git_ops
+        return GitOperations.from_flow_state(self.state, self._pm)
 
     def _setup(self):
         self._emit(FlowPhase.PRE_SETUP)
-        self._prepare_work_tree()
+        worktree_path = self.git_operations.prepare_worktree()
+        self.state.repo = worktree_path
         if not self.state.project_config:
             raise ValueError("project_config required!")
 
@@ -170,10 +169,6 @@ class FlowIssueManagement(Flow[T]):
             )
         except Exception as e:
             logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
-
-    def _prepare_work_tree(self):
-        worktree_path = self.git_operations.prepare_worktree()
-        self.state.repo = worktree_path
 
     def _commit_changes(self, title: str, body="", footer=""):
         self._emit(FlowPhase.PRE_COMMIT)

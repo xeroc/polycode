@@ -14,7 +14,9 @@ class WorktreeConfig:
     branch_name: str
     base_branch: str = "develop"
     worktrees_dir: str | None = None
-    symlink_deps: list[str] = field(default_factory=lambda: ["node_modules", ".venv", ".env"])
+    symlink_deps: list[str] = field(
+        default_factory=lambda: ["node_modules", ".venv", ".env"]
+    )
 
 
 @dataclass
@@ -56,7 +58,9 @@ class GitContext:
         return git.Repo(self.repo_path)
 
     def get_commit_url(self, commit_sha: str) -> str:
-        return f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{commit_sha}"
+        return (
+            f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{commit_sha}"
+        )
 
     @classmethod
     def from_flow_state(cls, state: Any) -> "GitContext":

@@ -43,9 +43,7 @@ class GitHubAppWebhookHandler:
     def validate_signature(self, payload: bytes, signature: str) -> bool:
         """Validate GitHub webhook signature (from project_manager/webhook.py)."""
         if not self.webhook_secret:
-            logger.warning(
-                "No webhook secret configured, skipping signature validation"
-            )
+            logger.warning("No webhook secret configured, skipping signature validation")
             return True
 
         if not signature.startswith("sha256="):
@@ -54,9 +52,7 @@ class GitHubAppWebhookHandler:
 
         expected_signature = signature[7:]
 
-        mac = hmac.new(
-            self.webhook_secret.encode(), msg=payload, digestmod=hashlib.sha256
-        )
+        mac = hmac.new(self.webhook_secret.encode(), msg=payload, digestmod=hashlib.sha256)
         computed_signature = mac.hexdigest()
 
         return hmac.compare_digest(computed_signature, expected_signature)
@@ -116,9 +112,7 @@ class GitHubAppWebhookHandler:
             "events": hook.get("events", []) if hook else [],
         }
 
-    async def _handle_installation_event(
-        self, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _handle_installation_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle installation lifecycle events."""
         action = payload.get("action")
         installation = payload.get("installation", {})
@@ -134,9 +128,7 @@ class GitHubAppWebhookHandler:
 
         return {"status": "processed", "action": action}
 
-    async def _handle_issue_event(
-        self, installation_id: int, payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _handle_issue_event(self, installation_id: int, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle issue events - uses FlowRunner for concurrent flow management.
 
         This method:
@@ -150,10 +142,7 @@ class GitHubAppWebhookHandler:
         repo_slug = repo.get("full_name")
         issue_number = issue.get("number")
 
-        logger.info(
-            f"Processing issue event: {action} on {repo_slug}#{issue_number} "
-            f"(installation: {installation_id})"
-        )
+        logger.info(f"Processing issue event: {action} on {repo_slug}#{issue_number} (installation: {installation_id})")
 
         if action not in ["opened", "reopened", "labeled"]:
             return {
@@ -192,9 +181,7 @@ class GitHubAppWebhookHandler:
                 return {
                     "status": "already_running",
                     "message": (
-                        f"Flow already running for issue #{current.issue_number}"
-                        if current
-                        else "Flow already running"
+                        f"Flow already running for issue #{current.issue_number}" if current else "Flow already running"
                     ),
                     "repo": repo_slug,
                     "issue": issue_number,
@@ -211,9 +198,7 @@ class GitHubAppWebhookHandler:
         # Delegate to existing Celery task which handles all the logic
         return await self._delegate_to_celery(payload, installation_id)
 
-    async def _delegate_to_celery(
-        self, payload: Dict[str, Any], installation_id: int
-    ) -> Dict[str, Any]:
+    async def _delegate_to_celery(self, payload: Dict[str, Any], installation_id: int) -> Dict[str, Any]:
         """Delegate to existing process_github_webhook_task."""
         from celery_tasks.tasks import process_github_webhook_task
 

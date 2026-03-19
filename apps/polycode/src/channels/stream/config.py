@@ -13,9 +13,7 @@ class StreamConfig(BaseModel):
     redis_password: str | None = None
     channel_prefix: str = "polycode_stream"
 
-    model_config = SettingsConfigDict(
-        extra="ignore", env_file=".env", case_sensitive=True
-    )
+    model_config = SettingsConfigDict(extra="ignore", env_file=".env", case_sensitive=True)
 
 
 settings = StreamConfig()

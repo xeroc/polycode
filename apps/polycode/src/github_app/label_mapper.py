@@ -13,9 +13,7 @@ class LabelFlowMapper:
     def __init__(self, db_session: Session):
         self.db_session = db_session
 
-    def get_flow_for_label(
-        self, installation_id: int, label_name: str, repo_slug: str
-    ) -> Optional[LabelFlowMapping]:
+    def get_flow_for_label(self, installation_id: int, label_name: str, repo_slug: str) -> Optional[LabelFlowMapping]:
         mappings = (
             self.db_session.query(LabelFlowMapping)
             .filter(
@@ -37,14 +35,11 @@ class LabelFlowMapper:
                 return mapping
 
         logger.debug(
-            f"No flow mapping found for label '{label_name}' in repo '{repo_slug}' "
-            f"(installation: {installation_id})"
+            f"No flow mapping found for label '{label_name}' in repo '{repo_slug}' (installation: {installation_id})"
         )
         return None
 
-    def _matches_repo_pattern(
-        self, pattern: Optional[str], repo_slug: str
-    ) -> bool:
+    def _matches_repo_pattern(self, pattern: Optional[str], repo_slug: str) -> bool:
         if not pattern:
             return True
 
@@ -79,15 +74,9 @@ class LabelFlowMapper:
 
         return mapping
 
-    def update_mapping(
-        self, mapping_id: int, **kwargs
-    ) -> Optional[LabelFlowMapping]:
+    def update_mapping(self, mapping_id: int, **kwargs) -> Optional[LabelFlowMapping]:
         """Update an existing mapping."""
-        mapping = (
-            self.db_session.query(LabelFlowMapping)
-            .filter(LabelFlowMapping.id == mapping_id)
-            .first()
-        )
+        mapping = self.db_session.query(LabelFlowMapping).filter(LabelFlowMapping.id == mapping_id).first()
 
         if not mapping:
             return None
@@ -102,11 +91,7 @@ class LabelFlowMapper:
 
     def delete_mapping(self, mapping_id: int) -> bool:
         """Delete a label-to-flow mapping."""
-        mapping = (
-            self.db_session.query(LabelFlowMapping)
-            .filter(LabelFlowMapping.id == mapping_id)
-            .first()
-        )
+        mapping = self.db_session.query(LabelFlowMapping).filter(LabelFlowMapping.id == mapping_id).first()
 
         if not mapping:
             return False
@@ -117,17 +102,11 @@ class LabelFlowMapper:
         logger.info(f"Deleted label-flow mapping {mapping_id}")
         return True
 
-    def list_mappings(
-        self, installation_id: Optional[int] = None
-    ) -> list[LabelFlowMapping]:
+    def list_mappings(self, installation_id: Optional[int] = None) -> list[LabelFlowMapping]:
         """List all label-to-flow mappings, optionally filtered by installation."""
-        query = self.db_session.query(LabelFlowMapping).filter(
-            LabelFlowMapping.is_active.is_(True)
-        )
+        query = self.db_session.query(LabelFlowMapping).filter(LabelFlowMapping.is_active.is_(True))
 
         if installation_id:
-            query = query.filter(
-                LabelFlowMapping.installation_id == installation_id
-            )
+            query = query.filter(LabelFlowMapping.installation_id == installation_id)
 
         return query.order_by(LabelFlowMapping.priority.desc()).all()

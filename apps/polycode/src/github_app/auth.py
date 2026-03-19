@@ -41,9 +41,7 @@ class GitHubAppAuth:
         if self.redis_client:
             cached_token = self._get_cached_token(installation_id)
             if cached_token:
-                logger.debug(
-                    f"Using cached installation token for installation {installation_id}"
-                )
+                logger.debug(f"Using cached installation token for installation {installation_id}")
                 return cached_token
 
         jwt_token = self.generate_jwt()
@@ -65,9 +63,7 @@ class GitHubAppAuth:
             if token and self.redis_client and expires_at:
                 self._cache_token(installation_id, token, expires_at)
 
-            logger.info(
-                f"Obtained installation token for installation {installation_id}"
-            )
+            logger.info(f"Obtained installation token for installation {installation_id}")
             return token
 
         except requests.exceptions.RequestException as e:
@@ -172,8 +168,6 @@ class GitHubAppAuth:
         import hashlib
         import hmac
 
-        expected_signature = hmac.new(
-            secret.encode(), payload.encode(), hashlib.sha256
-        ).hexdigest()
+        expected_signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
         return hmac.compare_digest(f"sha256={expected_signature}", signature)

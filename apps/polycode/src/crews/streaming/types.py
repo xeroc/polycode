@@ -27,9 +27,7 @@ class StreamToken(BaseModel):
     session_id: str = Field(..., description="Session/flow identifier")
     room: str = Field(..., description="Repo Room (repo_owner/repo_name)")
     token: str = Field(..., description="The token text")
-    agent_role: str | None = Field(
-        default=None, description="Agent generating the token"
-    )
+    agent_role: str | None = Field(default=None, description="Agent generating the token")
     task_id: str | None = Field(default=None, description="Current task ID")
 
 

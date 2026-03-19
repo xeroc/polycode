@@ -5,16 +5,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class GLMSettings(BaseSettings):
-
     # Celery Configuration
     OPENAI_API_KEY: str
     OPENAI_MODEL: str = "glm-5"
     # OPENAI_BASE_URL: str = "https://api.z.ai/api/coding/paas/v4/chat/completions"
     OPENAI_BASE_URL: str = "https://api.z.ai/api/coding/paas/v4"
 
-    model_config = SettingsConfigDict(
-        extra="ignore", env_file=".env", case_sensitive=True
-    )
+    model_config = SettingsConfigDict(extra="ignore", env_file=".env", case_sensitive=True)
 
 
 settings = GLMSettings()  # pyright:ignore # ty:ignore

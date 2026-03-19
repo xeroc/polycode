@@ -45,9 +45,7 @@ def test_discovery_function():
         (tmpdir_path / "src").mkdir()
         (tmpdir_path / "src" / "AGENTS.md").write_text("# Src\n\nSrc content")
         (tmpdir_path / "src" / "crews").mkdir()
-        (tmpdir_path / "src" / "crews" / "AGENTS.md").write_text(
-            "# Crews\n\nCrews content"
-        )
+        (tmpdir_path / "src" / "crews" / "AGENTS.md").write_text("# Crews\n\nCrews content")
 
         # Simulate discovery
         agents_md_map = {}

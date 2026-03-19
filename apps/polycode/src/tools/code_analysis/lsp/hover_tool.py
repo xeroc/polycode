@@ -18,7 +18,6 @@ class HoverToolInput(PositionInput):
     """Input schema for hover tool."""
 
 
-
 class HoverTool(BaseLSPTool):
     """Get type information and documentation at a cursor position.
 

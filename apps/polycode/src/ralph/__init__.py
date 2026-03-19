@@ -20,7 +20,8 @@ from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
 from crews import PlanCrew, RalphCrew
 from crews.plan_crew.types import PlanOutput
-from crews.plan_crew.types import Story as Story
+from crewai.events.utils.console_formatter import set_suppress_console_output
+from crews.plan_crew.types import Story
 from crews.ralph_crew.types import RalphOutput
 from flowbase import FlowIssueManagement, KickoffIssue
 from gitcore import sanitize_branch_name
@@ -40,6 +41,8 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres"):
     persistence = PostgresFlowPersistence(connection_string=DATABASE_URL)
 else:
     persistence = SQLiteFlowPersistence()
+
+set_suppress_console_output(True)
 
 
 @persist(persistence=persistence, verbose=False)
@@ -259,19 +262,18 @@ def kickoff(issue: KickoffIssue):
         - Per-story commits: Each story is committed immediately upon completion
     """
     flow = RalphLoopFlow()
-    flow.kickoff(
-        inputs=dict(
-            id=str(issue.flow_id),
-            issue_id=issue.id,
-            task=f"{issue.title}\n\n{issue.body}",
-            path=f"{project_settings.DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
-            branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
-            memory_prefix=f"{issue.repository.owner}/{issue.repository.repository}",
-            repo_owner=issue.repository.owner,
-            repo_name=issue.repository.repository,
-            project_config=issue.project_config,
-        )
+    inputs = dict(
+        id=str(issue.flow_id),
+        issue_id=issue.id,
+        task=f"{issue.title}\n\n{issue.body}",
+        path=f"{project_settings.DATA_PATH}/{issue.repository.owner}/{issue.repository.repository}",
+        branch=f"{issue.id}-{sanitize_branch_name(issue.title)}",
+        memory_prefix=f"{issue.repository.owner}/{issue.repository.repository}",
+        repo_owner=issue.repository.owner,
+        repo_name=issue.repository.repository,
+        project_config=issue.project_config,
     )
+    flow.kickoff(inputs=inputs)
 
 
 def example():

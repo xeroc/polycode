@@ -246,9 +246,7 @@ class ExecTool(BaseTool):
 
         return None
 
-    def is_command_safe(
-        self, command: str, cwd: Optional[str] = None
-    ) -> tuple[bool, str]:
+    def is_command_safe(self, command: str, cwd: Optional[str] = None) -> tuple[bool, str]:
         """Check if command is safe to execute.
 
         Returns:

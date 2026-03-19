@@ -18,23 +18,15 @@ class GitHubAppInstallation(Base):
     __tablename__ = "github_app_installations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    installation_id: Mapped[int] = mapped_column(
-        Integer, unique=True, nullable=False, index=True
-    )
+    installation_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
     account_id: Mapped[int] = mapped_column(Integer, nullable=False)
     account_login: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     account_type: Mapped[str] = mapped_column(String(50), nullable=False)
     app_id: Mapped[int] = mapped_column(Integer, nullable=False)
     installation_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    token_expires_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
-    )
-    repositories: Mapped[Optional[dict[str, Any]]] = mapped_column(
-        JSONType, nullable=True
-    )
-    permissions: Mapped[Optional[dict[str, Any]]] = mapped_column(
-        JSONType, nullable=True
-    )
+    token_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    repositories: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONType, nullable=True)
+    permissions: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONType, nullable=True)
     events: Mapped[Optional[list[str]]] = mapped_column(JSONType, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now, nullable=False)
@@ -101,15 +93,11 @@ class FlowExecution(Base):
     issue_number: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     flow_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     trigger_label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(50), default="pending", nullable=False, index=True
-    )
+    status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False, index=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    flow_metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(
-        JSONType, nullable=True
-    )
+    flow_metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONType, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
