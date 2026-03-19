@@ -7,7 +7,7 @@ operations like PR creation, merging, and issue management.
 import logging
 from typing import TYPE_CHECKING, Any, Callable
 
-from modules.hooks import FlowPhase, hookimpl
+from modules.hooks import FlowEvent, hookimpl
 
 if TYPE_CHECKING:
     from project_manager.base import ProjectManager
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 class ProjectManagerHooks:
     """Hook implementations for GitHub project management.
 
-    This class handles all GitHub-specific operations triggered by flow lifecycle hooks.
+    This class handles all GitHub-specific operations triggered by flow orchestration events.
     It creates PRs, handles merges, posts comments, and updates issue status.
     """
 
@@ -39,22 +39,24 @@ class ProjectManagerHooks:
         return self._pm_factory(config)
 
     @hookimpl
-    def on_flow_phase(
+    def on_flow_event(
         self,
-        phase: FlowPhase,
+        event: FlowEvent,
         flow_id: str,
         state: Any,
         result: Any | None = None,
+        label: str = "",
     ) -> None:
-        """Handle flow phase transitions for project management operations.
+        """Handle flow orchestration events for project management operations.
 
-        This is the main hook that dispatches to specific handlers based on phase.
+        This is the main hook that dispatches to specific handlers based on event type.
 
         Args:
-            phase: Current flow phase
+            event: Current flow event
             flow_id: Unique flow identifier
             state: Flow state model (mutable)
-            result: Result from the phase method (if any)
+            result: Event-specific result (e.g., commit sha, pr url)
+            label: Context label (e.g., "plan", "implement", "review")
         """
         if not hasattr(state, "project_config") or not state.project_config:
             log.debug("No project_config in state, skipping project manager hooks")
@@ -62,17 +64,18 @@ class ProjectManagerHooks:
 
         pm = self._get_pm(state.project_config)
 
-        if phase == FlowPhase.PRE_PR:
+        if event == FlowEvent.PR_CREATED:
             self._handle_create_pr(state, pm)
-        elif phase == FlowPhase.PRE_REVIEW:
-            self._handle_review_start(state, pm)
-        elif phase == FlowPhase.PRE_MERGE:
+        elif event == FlowEvent.PR_MERGED:
             self._handle_merge(state, pm)
-        elif phase == FlowPhase.POST_CLEANUP:
-            self._handle_cleanup(state, pm)
-        elif phase == FlowPhase.PRE_PLANNING_COMMENT:
+        elif event == FlowEvent.ISSUE_UPDATED:
+            if label == "pickup":
+                self._handle_review_start(state, pm)
+            elif label == "cleanup":
+                self._handle_cleanup(state, pm)
+        elif event == FlowEvent.CHECKLIST_POSTED:
             self._handle_planning_comment(state, pm, result)
-        elif phase == FlowPhase.PRE_UPDATE_CHECKLIST:
+        elif event == FlowEvent.CHECKLIST_UPDATED:
             self._handle_update_checklist(state, pm, result)
 
     def _handle_review_start(self, state: Any, pm: "ProjectManager") -> None:
@@ -157,9 +160,7 @@ class ProjectManagerHooks:
         required_label = project_settings.MERGE_REQUIRED_LABEL
 
         if not pm.has_label(issue_id, required_label):
-            log.warning(
-                f"⚠️ Issue #{issue_id} does not have required label '{required_label}'. Merge aborted."
-            )
+            log.warning(f"⚠️ Issue #{issue_id} does not have required label '{required_label}'. Merge aborted.")
             pm.add_comment(
                 issue_id,
                 f"## ⚠️ Merge Blocked\n\n"
@@ -169,9 +170,7 @@ class ProjectManagerHooks:
             )
             return
 
-        log.info(
-            f"✅ PR #{pr_number} has required label '{required_label}', proceeding with merge"
-        )
+        log.info(f"✅ PR #{pr_number} has required label '{required_label}', proceeding with merge")
 
         success = pm.merge_pull_request(pr_number)
 
@@ -199,9 +198,7 @@ class ProjectManagerHooks:
         except Exception as e:
             log.info(f"🚨 Failed to update project status to Done: {e}")
 
-    def _handle_planning_comment(
-        self, state: Any, pm: "ProjectManager", stories: Any | None
-    ) -> None:
+    def _handle_planning_comment(self, state: Any, pm: "ProjectManager", stories: Any | None) -> None:
         """Post planning checklist to issue.
 
         Args:
@@ -217,10 +214,10 @@ class ProjectManagerHooks:
         if not issue_id:
             return
 
-        checklist_items = "\n".join(
-            f"- [ ] {getattr(story, 'description', str(story))}" for story in stories
+        checklist_items = "\n".join(f"- [ ] {getattr(story, 'description', str(story))}" for story in stories)
+        comment = (
+            f"## 📋 Implementation Plan\n\n{checklist_items}\n\n_Progress will be updated as stories are implemented._"
         )
-        comment = f"## 📋 Implementation Plan\n\n{checklist_items}\n\n_Progress will be updated as stories are implemented._"
         pm.add_comment(issue_id, comment)
 
         comment_id = pm.get_last_comment_by_user(issue_id, pm.bot_username)
@@ -228,9 +225,7 @@ class ProjectManagerHooks:
             state.planning_comment_id = comment_id
             log.info(f"🏹 Posted planning checklist, comment ID: {comment_id}")
 
-    def _handle_update_checklist(
-        self, state: Any, pm: "ProjectManager", data: Any | None
-    ) -> None:
+    def _handle_update_checklist(self, state: Any, pm: "ProjectManager", data: Any | None) -> None:
         """Update planning checklist with progress.
 
         Args:
@@ -273,9 +268,7 @@ class ProjectManagerHooks:
             if story_id in completed_ids:
                 commit_url = commit_urls.get(story_id)
                 if commit_url:
-                    checklist_lines.append(
-                        f"- [x] {story_desc} ([commit]({commit_url}))"
-                    )
+                    checklist_lines.append(f"- [x] {story_desc} ([commit]({commit_url}))")
                 else:
                     checklist_lines.append(f"- [x] {story_desc}")
             else:

@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 
 from gitcore import GitOperations
 from glm import GLMJSONLLM
-from modules.hooks import FlowPhase
+from modules.hooks import FlowEvent
 from persistence.postgres import (
     SessionLocal,
     ensure_request_exists,
@@ -44,9 +44,7 @@ class KickoffRepo(BaseModel):
 
 class KickoffIssue(BaseModel):
     id: int = Field(description="Issue ID")
-    flow_id: uuid.UUID = Field(
-        default=uuid.uuid4(), description="UUID of the flow that will run"
-    )
+    flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of the flow that will run")
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
     memory_prefix: str = Field(description="prefix for memory")
@@ -55,9 +53,7 @@ class KickoffIssue(BaseModel):
 
 
 class BaseFlowModel(BaseModel):
-    project_config: Optional[ProjectConfig] = Field(
-        default=None, description="Description of the project to work on"
-    )
+    project_config: Optional[ProjectConfig] = Field(default=None, description="Description of the project to work on")
     path: str = Field(default="", description="Original Path to repository")
     repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
@@ -69,30 +65,17 @@ class BaseFlowModel(BaseModel):
     pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id")
-
-    planning_comment_id: Optional[int] = Field(
-        default=None, description="ID of the planning progress comment"
-    )
-    commit_urls: dict[int, str] = Field(
-        default_factory=dict, description="Story ID to commit URL mapping"
-    )
-
+    planning_comment_id: Optional[int] = Field(default=None, description="ID of the planning progress comment")
+    commit_urls: dict[int, str] = Field(default_factory=dict, description="Story ID to commit URL mapping")
     commit_title: Optional[str] = Field(
         default=None,
         description="Commit Message title including conventional commit prefix",
     )
-    commit_message: Optional[str] = Field(
-        default=None, description="The body of the commit message"
-    )
-    commit_footer: Optional[str] = Field(
-        default=None, description="Commit message footer"
-    )
+    commit_message: Optional[str] = Field(default=None, description="The body of the commit message")
+    commit_footer: Optional[str] = Field(default=None, description="Commit message footer")
     memory_prefix: str = Field(default="", description="prefix for memory")
-
     test_cmd: Optional[str] = Field(default=None, description="Test command")
-    build_cmd: Optional[str] = Field(
-        default=None, description="Build command from package.json"
-    )
+    build_cmd: Optional[str] = Field(default=None, description="Build command from package.json")
 
 
 class FlowIssueManagement(Flow[T]):
@@ -123,19 +106,25 @@ class FlowIssueManagement(Flow[T]):
         """Set the plugin manager for all flow instances."""
         cls._pm = pm
 
-    def _emit(self, phase: FlowPhase, result: object | None = None) -> None:
+    def _emit(
+        self,
+        event: FlowEvent,
+        result: object | None = None,
+        label: str = "",
+    ) -> None:
         """Emit a hook event. Safe to call even if no pm configured."""
         if not self._pm:
             return
         try:
-            self._pm.hook.on_flow_phase(
-                phase=phase,
-                flow_id=str(getattr(self.state, "flow_id", "")),
+            self._pm.hook.on_flow_event(
+                event=event,
+                flow_id=str(getattr(self.state, "id", "")),
                 state=self.state,
                 result=result,
+                label=label,
             )
         except Exception as e:
-            logger.warning(f"⚠️ Hook error in {phase}: {e}")
+            logger.warning(f"⚠️ Hook error in {event}: {e}")
 
     @property
     def git_operations(self) -> GitOperations:
@@ -143,7 +132,7 @@ class FlowIssueManagement(Flow[T]):
         return GitOperations.from_flow_state(self.state, self._pm)
 
     def _setup(self):
-        self._emit(FlowPhase.PRE_SETUP)
+        self._emit(FlowEvent.FLOW_START, label="setup")
         worktree_path = self.git_operations.prepare_worktree()
         self.state.repo = worktree_path
         if not self.state.project_config:
@@ -154,38 +143,32 @@ class FlowIssueManagement(Flow[T]):
             logger.info(f"🏹 Ensured request exists for issue #{self.state.issue_id}")
         except Exception as e:
             logger.error(f"🚨 Failed to ensure request exists: {e}")
-        self._emit(FlowPhase.POST_SETUP)
 
     def pickup_issue(self):
         try:
             update_request_status(SessionLocal, self.state.issue_id, "inprogress")
-            logger.info(
-                f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}"
-            )
+            logger.info(f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}")
         except Exception as e:
             logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
+        self._emit(FlowEvent.ISSUE_UPDATED, result="inprogress", label="pickup")
 
     def _commit_changes(self, title: str, body="", footer=""):
-        self._emit(FlowPhase.PRE_COMMIT)
-
         commit = self.git_operations.commit(title, body, footer)
-
-        self._emit(FlowPhase.POST_COMMIT, result=commit)
+        self._emit(FlowEvent.GIT_COMMIT, result=commit.hexsha if commit else None, label="implement")
         return commit
 
     def _push_repo(self):
-        self._emit(FlowPhase.PRE_PUSH)
+        self._emit(FlowEvent.GIT_PUSH, label="implement")
         self.git_operations.push()
-        self._emit(FlowPhase.POST_PUSH)
+        self._emit(FlowEvent.GIT_PUSH, label="implement")
 
     def _post_planning_checklist(self, stories: list, issue_id: int) -> int | None:
         """Post planning checklist to issue.
 
         Delegates to project_manager module via hooks.
-        Emits PRE_PLANNING_COMMENT/POST_PLANNING_COMMENT with stories as result.
         """
-        self._emit(FlowPhase.PRE_PLANNING_COMMENT, result=stories)
-        self._emit(FlowPhase.POST_PLANNING_COMMENT, result=stories)
+        self._emit(FlowEvent.CHECKLIST_POSTED, result=stories, label="plan")
+        self._emit(FlowEvent.CHECKLIST_POSTED, result=stories, label="plan")
         return getattr(self.state, "planning_comment_id", None)
 
     def _update_planning_checklist(
@@ -199,7 +182,6 @@ class FlowIssueManagement(Flow[T]):
         """Update the planning checklist with progress.
 
         Delegates to project_manager module via hooks.
-        Emits PRE_UPDATE_CHECKLIST/POST_UPDATE_CHECKLIST with checklist data as result.
         """
         data = {
             "stories": stories,
@@ -207,8 +189,8 @@ class FlowIssueManagement(Flow[T]):
             "pr_url": pr_url,
             "merged": merged,
         }
-        self._emit(FlowPhase.PRE_UPDATE_CHECKLIST, result=data)
-        self._emit(FlowPhase.POST_UPDATE_CHECKLIST, result=data)
+        self._emit(FlowEvent.CHECKLIST_UPDATED, result=data, label="plan")
+        self._emit(FlowEvent.CHECKLIST_UPDATED, result=data, label="plan")
 
     def recall_as_markdown_list(self, name: str, **kwargs):
         if "scope" not in kwargs:
@@ -249,40 +231,34 @@ class FlowIssueManagement(Flow[T]):
         """Create pull request.
 
         Delegates to project_manager module via hooks.
-        Emits PRE_PR/POST_PR hooks - project_manager handles PR creation.
         """
-        self._emit(FlowPhase.PRE_PR)
+        self._emit(FlowEvent.PR_CREATED, label="publish")
         logger.info("🏹 Creating pull request (via hook)")
-        self._emit(FlowPhase.POST_PR)
+        self._emit(FlowEvent.PR_CREATED, label="publish")
 
     def _merge_branch(self):
         """Merge the pull request.
 
         Delegates to project_manager module via hooks.
-        Emits PRE_MERGE/POST_MERGE hooks - project_manager handles merge logic.
         """
-        self._emit(FlowPhase.PRE_MERGE)
+        self._emit(FlowEvent.PR_MERGED, label="publish")
         logger.info("🏹 Processing merge (via hook)")
-        self._emit(FlowPhase.POST_MERGE)
+        self._emit(FlowEvent.PR_MERGED, label="publish")
 
     def _cleanup_worktree(self):
         """Cleanup worktree and update issue status.
 
-        Delegates issue status update to project_manager via POST_CLEANUP hook.
+        Delegates issue status update to project_manager via FLOW_COMPLETE hook.
         """
-        self._emit(FlowPhase.PRE_CLEANUP)
-
+        self._emit(FlowEvent.WORKTREE_CLEANUP, label="cleanup")
         try:
             update_request_status(SessionLocal, self.state.issue_id, "completed")
-            logger.info(
-                f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}"
-            )
+            logger.info(f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}")
         except Exception as e:
             logger.error(f"🚨 Failed to update PostgreSQL status: {e}")
 
         self.git_operations.cleanup()
-
-        self._emit(FlowPhase.POST_CLEANUP)
+        self._emit(FlowEvent.FLOW_COMPLETE, label="cleanup")
 
     def _discover_build_cmd(self):
         """Discover build command from package.json."""
@@ -299,7 +275,7 @@ class FlowIssueManagement(Flow[T]):
                     self.state.build_cmd = f"pnpm run -C {self.state.repo} build"
                     logger.info(f"📦 Build command: {self.state.build_cmd}")
                 elif "typecheck" in scripts:
-                    self.state.build_cmd = f"pnpm run-C {self.state.repo} typecheck"
+                    self.state.build_cmd = f"pnpm run -C {self.state.repo} typecheck"
                     logger.info(f"📦 Typecheck command: {self.state.build_cmd}")
             except Exception as e:
                 logger.warning(f"⚠️ Could not read package.json: {e}")
@@ -318,9 +294,7 @@ class FlowIssueManagement(Flow[T]):
             text=True,
             timeout=180,
         )
-        logger.info(
-            f"✅ Build verification passed\n{result.stdout[:200] if result.stdout else ''}..."
-        )
+        logger.info(f"✅ Build verification passed\n{result.stdout[:200] if result.stdout else ''}...")
 
     def _test(self):
         if not self.state.test_cmd:
@@ -336,6 +310,4 @@ class FlowIssueManagement(Flow[T]):
             text=True,
             timeout=180,
         )
-        logger.info(
-            f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}..."
-        )
+        logger.info(f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}...")

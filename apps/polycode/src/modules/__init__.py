@@ -3,8 +3,8 @@
 from modules.channels import ChannelRegistry
 from modules.context import ModuleContext
 from modules.hooks import (
+    FlowEvent,
     FlowHookSpec,
-    FlowPhase,
     get_plugin_manager,
     hookimpl,
     hookspec,
@@ -16,8 +16,8 @@ from modules.tasks import TaskRegistry, get_task_registry, reset_task_registry
 __all__ = [
     "ModuleContext",
     "ChannelRegistry",
+    "FlowEvent",
     "FlowHookSpec",
-    "FlowPhase",
     "get_plugin_manager",
     "hookimpl",
     "hookspec",

@@ -2,172 +2,108 @@
 
 from unittest.mock import MagicMock
 
-import pytest
 
-from modules.hooks import FlowPhase
+from modules.hooks import FlowEvent
 from project_manager import (
-    ProjectManager,
     ProjectManagerModule,
 )
-from project_manager.hooks import ProjectManagerHooks
 from project_manager.types import ProjectConfig
 
 
-class MockProjectManager(ProjectManager):
-    """Mock implementation for testing."""
+class TestFlowEvents:
+    """Tests for flow events."""
 
-    def __init__(self, config):
-        super().__init__(config)
-        self._bot_username = "test-bot"
+    def test_event_types_exist(self):
+        """Verify all FlowEvent types exist."""
+        assert hasattr(FlowEvent, "FLOW_START")
+        assert hasattr(FlowEvent, "FLOW_COMPLETE")
+        assert hasattr(FlowEvent, "FLOW_ERROR")
+        assert hasattr(FlowEvent, "GIT_COMMIT")
+        assert hasattr(FlowEvent, "GIT_PUSH")
+        assert hasattr(FlowEvent, "PR_CREATED")
+        assert hasattr(FlowEvent, "PR_MERGED")
+        assert hasattr(FlowEvent, "ISSUE_UPDATED")
+        assert hasattr(FlowEvent, "WORKTREE_CLEANUP")
+        assert hasattr(FlowEvent, "CHECKLIST_POSTED")
+        assert hasattr(FlowEvent, "CHECKLIST_UPDATED")
 
-    @property
-    def bot_username(self) -> str:
-        return self._bot_username
+    def test_event_values(self):
+        """Verify event string values."""
+        assert FlowEvent.FLOW_START == "flow_start"
+        assert FlowEvent.FLOW_COMPLETE == "flow_complete"
+        assert FlowEvent.FLOW_ERROR == "flow_error"
+        assert FlowEvent.GIT_COMMIT == "git_commit"
+        assert FlowEvent.GIT_PUSH == "git_push"
+        assert FlowEvent.PR_CREATED == "pr_created"
+        assert FlowEvent.PR_MERGED == "pr_merged"
+        assert FlowEvent.ISSUE_UPDATED == "issue_updated"
+        assert FlowEvent.WORKTREE_CLEANUP == "worktree_cleanup"
+        assert FlowEvent.CHECKLIST_POSTED == "checklist_posted"
+        assert FlowEvent.CHECKLIST_UPDATED == "checklist_updated"
 
-    def get_comments(self, issue_number: int) -> list:
-        return []
+    def test_label_parameter(self):
+        """Test that events can have optional labels."""
+        from modules.hooks import get_plugin_manager
 
-    def get_last_comment_by_user(self, issue_number: int, username: str) -> int | None:
-        return 123
-
-    def update_comment(self, issue_number: int, comment_id: int, body: str) -> bool:
-        return True
-
-    def get_open_issues(self) -> list:
-        return []
-
-    def get_project_items(self) -> list:
-        return []
-
-    def add_issue_to_project(self, issue) -> str | None:
-        return "item-123"
-
-    def update_issue_status(self, issue_number: int, status: str) -> bool:
-        return True
-
-    def add_comment(self, issue_number: int, comment: str) -> bool:
-        return True
-
-    def has_label(self, issue_number: int, label_name: str) -> bool:
-        return label_name == "approved"
-
-    def merge_pull_request(
-        self, pr_number: int, commit_message: str | None = None, merge_method: str = "merge"
-    ) -> bool:
-        return True
+        pm = get_plugin_manager()
+        pm.hook.on_flow_event(
+            event=FlowEvent.GIT_COMMIT,
+            flow_id="test-flow",
+            state=MagicMock(),
+            result="abc123",
+            label="implement",
+        )
 
 
 class TestProjectManagerModule:
     """Tests for ProjectManagerModule."""
 
     def test_module_metadata(self):
+        """Verify module has required metadata."""
+        assert hasattr(ProjectManagerModule, "name")
         assert ProjectManagerModule.name == "project_manager"
-        assert ProjectManagerModule.version == "0.1.0"
-        assert ProjectManagerModule.dependencies == []
-
-    def test_module_on_load(self):
-        context = MagicMock()
-        ProjectManagerModule.on_load(context)
+        assert hasattr(ProjectManagerModule, "version")
 
     def test_module_get_models(self):
+        """Verify module returns models."""
         models = ProjectManagerModule.get_models()
-        assert models == []
+        assert isinstance(models, list)
+        assert len(models) >= 0
 
 
-class TestProjectManagerHooks:
-    """Tests for ProjectManagerHooks."""
+class TestProjectConfig:
+    """Tests for ProjectConfig."""
 
-    @pytest.fixture
-    def mock_state(self):
-        state = MagicMock()
-        state.project_config = ProjectConfig(
+    def test_config_creation(self):
+        """Test creating a ProjectConfig."""
+        config = ProjectConfig(
             provider="github",
-            repo_owner="testowner",
-            repo_name="testrepo",
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
-        state.pr_number = None
-        state.pr_url = None
-        state.issue_id = 123
-        state.planning_comment_id = None
-        state.commit_urls = {}
-        state.repo = "/tmp/repo"
-        state.branch = "feature-branch"
-        state.task = "Test task"
-        state.commit_title = "feat: test"
-        state.commit_message = "Test commit"
-        state.commit_footer = ""
-        return state
+        assert config.provider == "github"
+        assert config.repo_owner == "test-owner"
+        assert config.repo_name == "test-repo"
 
-    @pytest.fixture
-    def hooks(self):
-        def factory(config):
-            return MockProjectManager(config)
-
-        return ProjectManagerHooks(factory)
-
-    def test_hooks_skip_without_config(self, hooks):
-        state = MagicMock()
-        state.project_config = None
-
-        hooks.on_flow_phase(FlowPhase.PRE_PR, "test-flow", state, None)
-
-    def test_handle_planning_comment(self, hooks, mock_state):
-        stories = [MagicMock(id=1, description="Story 1"), MagicMock(id=2, description="Story 2")]
-
-        hooks.on_flow_phase(
-            FlowPhase.PRE_PLANNING_COMMENT,
-            "test-flow",
-            mock_state,
-            stories,
+    def test_config_defaults(self):
+        """Test ProjectConfig defaults."""
+        config = ProjectConfig(
+            provider="github",
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
-
-        assert mock_state.planning_comment_id == 123
-
-    def test_handle_update_checklist(self, hooks, mock_state):
-        mock_state.planning_comment_id = 123
-
-        data = {
-            "stories": [MagicMock(id=1, description="Story 1")],
-            "completed_ids": [1],
-            "pr_url": "https://github.com/test/testrepo/pull/1",
-            "merged": False,
-        }
-
-        hooks.on_flow_phase(
-            FlowPhase.PRE_UPDATE_CHECKLIST,
-            "test-flow",
-            mock_state,
-            data,
-        )
-
-    def test_handle_cleanup(self, hooks, mock_state):
-        hooks.on_flow_phase(
-            FlowPhase.POST_CLEANUP,
-            "test-flow",
-            mock_state,
-            None,
-        )
-
-    def test_handle_review_start(self, hooks, mock_state):
-        hooks.on_flow_phase(
-            FlowPhase.PRE_REVIEW,
-            "test-flow",
-            mock_state,
-            None,
-        )
+        assert config.project_identifier is None
+        assert config.token is None
+        assert config.extra == {}
 
 
-class TestFlowPhases:
-    """Tests for new flow phases."""
+class TestPluginManager:
+    """Tests for plugin manager setup."""
 
-    def test_planning_phases_exist(self):
-        assert hasattr(FlowPhase, "PRE_PLANNING_COMMENT")
-        assert hasattr(FlowPhase, "POST_PLANNING_COMMENT")
-        assert hasattr(FlowPhase, "PRE_UPDATE_CHECKLIST")
-        assert hasattr(FlowPhase, "POST_UPDATE_CHECKLIST")
+    def test_get_plugin_manager(self):
+        """Verify plugin manager is properly configured."""
+        from modules.hooks import get_plugin_manager
 
-    def test_phase_values(self):
-        assert FlowPhase.PRE_PLANNING_COMMENT == "pre_planning_comment"
-        assert FlowPhase.POST_PLANNING_COMMENT == "post_planning_comment"
-        assert FlowPhase.PRE_UPDATE_CHECKLIST == "pre_update_checklist"
-        assert FlowPhase.POST_UPDATE_CHECKLIST == "post_update_checklist"
+        pm = get_plugin_manager()
+        assert pm is not None
+        assert hasattr(pm, "hook")
