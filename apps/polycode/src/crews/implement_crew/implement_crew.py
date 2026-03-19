@@ -7,15 +7,14 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import agent, crew, task
 from crewai_tools import FileWriterTool
 
-from crews.base import PolycodeCrew
+from crews.base import PolycodeCrewMixin
 from glm import GLMJSONLLM
-from solcraft.types import TaskTemplate
 from tools import AgentsMDLoaderTool, DirectoryReadTool, ExecTool, FileReadTool
 
-from .types import ImplementOutput
+from .types import ImplementOutput, TaskTemplate
 
 
-class ImplementCrew(PolycodeCrew):
+class ImplementCrew(PolycodeCrewMixin):
     """Flexible Implement Crew that accepts custom task configurations."""
 
     crew_label = "implement"

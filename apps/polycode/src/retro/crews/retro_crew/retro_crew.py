@@ -1,13 +1,12 @@
 """Retro Crew - CrewAI crew for generating structured retrospectives."""
 
-from crews import PolycodeCrew
-
 import logging
 from typing import TYPE_CHECKING
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import agent, crew, task
 
+from crews import PolycodeCrewMixin
 from retro.types import RetroEntry
 
 if TYPE_CHECKING:
@@ -17,7 +16,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class RetroCrew(PolycodeCrew):
+class RetroCrew(PolycodeCrewMixin):
     """CrewAI crew for retrospective analysis and generation."""
 
     agents_config = "config/agents.yaml"

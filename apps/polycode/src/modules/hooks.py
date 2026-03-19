@@ -33,7 +33,7 @@ class FlowEvent(StrEnum):
     - FLOW_STARTED/FINISHED: flow name (e.g., "ralph")
 
     Crew-level lifecycle (@before_kickoff, @after_kickoff) is handled by
-    PolycodeCrew base class which emits CREW_FINISHED events.
+    PolycodeCrewMixin base class which emits CREW_FINISHED events.
     """
 
     FLOW_STARTED = "flow_started"

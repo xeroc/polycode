@@ -4,14 +4,14 @@ from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import agent, crew, task
 
-from crews.base import PolycodeCrew
+from crews.base import PolycodeCrewMixin
 from glm import GLMJSONLLM
 from tools import DirectoryReadTool, ExecTool, FileReadTool
 
 from .types import VerifyOutput
 
 
-class VerifyCrew(PolycodeCrew):
+class VerifyCrew(PolycodeCrewMixin):
     """Verify Crew - Verify implementation."""
 
     crew_label = "verify"

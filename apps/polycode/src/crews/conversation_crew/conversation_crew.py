@@ -4,12 +4,12 @@ from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import agent, crew, task
 
-from crews.base import PolycodeCrew
+from crews.base import PolycodeCrewMixin
 
 from .types import SpecOutput
 
 
-class ConversationCrew(PolycodeCrew):
+class ConversationCrew(PolycodeCrewMixin):
     """Conversation-driven specification crew."""
 
     crew_label = "conversation"

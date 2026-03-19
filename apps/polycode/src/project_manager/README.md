@@ -291,27 +291,6 @@ curl -X POST http://localhost:8000/trigger
 curl -X POST http://localhost:8000/trigger?issue_number=42
 ```
 
-## Integration with feature_dev
-
-The webhook automatically integrates with `feature_dev` flow:
-
-```python
-# In webhook callback
-def on_issue_ready(item):
-    from feature_dev import kickoff
-    from feature_dev.types import KickoffIssue
-
-    issue = KickoffIssue(
-        id=item.issue_number,
-        title=item.title,
-        body=item.body or "",
-    )
-
-    kickoff(issue)  # This runs feature development flow
-```
-
-When flow completes, it automatically triggers the next ready issue.
-
 ## API Reference
 
 ### FlowRunner

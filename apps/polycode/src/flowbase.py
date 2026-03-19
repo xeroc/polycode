@@ -5,12 +5,6 @@ Generic flow orchestration that delegates project-specific operations (PR, merge
 to plugin hooks. This module has no knowledge of GitHub or any specific provider.
 """
 
-from project_manager.config import settings
-
-from crewai.flow.persistence import SQLiteFlowPersistence
-from crewai.events.utils.console_formatter import set_suppress_console_output
-from persistence import PostgresFlowPersistence
-
 import json
 import logging
 import subprocess
@@ -19,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, TypeVar
 
 from crewai import Flow
+from crewai.events.utils.console_formatter import set_suppress_console_output
 from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.providers.ollama.types import (
     OllamaProviderConfig,
@@ -73,7 +68,6 @@ class BaseFlowModel(BaseModel):
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id")
     planning_comment_id: Optional[int] = Field(default=None, description="ID of the planning progress comment")
-    commit_urls: dict[int, str] = Field(default_factory=dict, description="Story ID to commit URL mapping")
     commit_title: Optional[str] = Field(
         default=None,
         description="Commit Message title including conventional commit prefix",
@@ -85,17 +79,9 @@ class BaseFlowModel(BaseModel):
     build_cmd: Optional[str] = Field(default=None, description="Build command from package.json")
 
 
-DATABASE_URL = settings.DATABASE_URL
-if DATABASE_URL and DATABASE_URL.startswith("postgres"):
-    logger.info("📊 Connecting persistence with postgres")
-    persistence = PostgresFlowPersistence(connection_string=DATABASE_URL)
-else:
-    persistence = SQLiteFlowPersistence()
-
 set_suppress_console_output(True)
 
 
-# @persist(persistence=persistence, verbose=False)
 class FlowIssueManagement(Flow[T]):
     """Generic base class that passes type parameter to Flow."""
 

@@ -72,8 +72,7 @@ htmlcov/
 # uv
 .python-version
 
-feature_dev.db
-flow_state.db
+*.db
 
 deployment
 Makefile

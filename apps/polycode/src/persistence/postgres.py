@@ -1,11 +1,13 @@
 """PostgreSQL-based flow state persistence using SQLAlchemy with JSONB."""
 
-import os
+from persistence.config import settings
+
+import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 from crewai.flow.async_feedback.types import PendingFeedbackContext
-from crewai.flow.persistence import FlowPersistence
+from crewai.flow.persistence import FlowPersistence, SQLiteFlowPersistence
 from pydantic import BaseModel
 from sqlalchemy import Index, create_engine
 from sqlalchemy.dialects.postgresql import JSONB
@@ -18,9 +20,12 @@ from sqlalchemy.orm import (
 from sqlalchemy.sql.expression import text
 from sqlalchemy.types import JSON, DateTime, Integer, String, TypeDecorator
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/chaoscraft")
+DATABASE_URL = settings.DATABASE_URL
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -332,3 +337,10 @@ class PostgresFlowPersistence(FlowPersistence):
             return state_data
         else:
             raise ValueError(f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}")
+
+
+if DATABASE_URL and DATABASE_URL.startswith("postgres"):
+    logger.info("📊 Connecting persistence with postgres")
+    persistence = PostgresFlowPersistence(connection_string=DATABASE_URL)
+else:
+    persistence = SQLiteFlowPersistence()

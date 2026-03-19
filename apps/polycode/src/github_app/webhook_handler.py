@@ -24,7 +24,7 @@ class GitHubAppWebhookHandler:
     Integrates with existing system:
     - Uses FlowRunner for concurrent flow management
     - Delegates to existing Celery tasks (process_github_webhook_task, kickoff_task)
-    - Triggers CrewAI flows (ralph, feature_dev, etc.)
+    - Triggers CrewAI flows (ralph, etc.)
     - Works with existing GitHubProjectManager
     """
 

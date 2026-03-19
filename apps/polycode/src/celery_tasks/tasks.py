@@ -61,11 +61,11 @@ get_persistence_tracker()
     time_limit=7380,
 )
 def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str, Any]:
-    """Kickoff feature development flow for an issue.
+    """Kickoff flow development flow for an issue.
 
-    This task orchestrates the entire feature development process:
+    This task orchestrates the entire development process:
     1. Get issue details from GitHub
-    2. Initialize feature dev flow
+    2. Initialize flow
     3. Process through planning, implementation, testing, and review
 
     Args:
@@ -81,7 +81,7 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
     task_id = current_task.request.id  # type: ignore
     flow_id = get_flow_id()
 
-    log.info(f"Starting feature dev flow for issue #{issue_number}, task_id: {task_id}, flow_id: {flow_id}")
+    log.info(f"Starting flow for issue #{issue_number}, task_id: {task_id}, flow_id: {flow_id}")
 
     try:
         update_task_started(task_id)
@@ -119,25 +119,24 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
             project_config=config,
         )
 
-        log.info(f"Kicking off feature dev for: {kickoff_issue.title}")
+        log.info(f"Kicking off flow for: {kickoff_issue.title}")
 
-        # feature_dev_kickoff(kickoff_issue)
         kickoff_ralph(kickoff_issue)
 
-        log.info(f"Feature dev flow completed for issue #{issue_number}")
+        log.info(f"Flow completed for issue #{issue_number}")
         update_status_task(project_config_dict, issue_number, "In review")
-        update_task_completed(project_config_dict, task_id, "Feature development completed")
+        update_task_completed(project_config_dict, task_id, "Development completed")
 
         return {
             "status": "success",
             "issue_number": issue_number,
             "flow_id": flow_id,
-            "message": "Feature development completed successfully",
+            "message": "Development completed successfully",
         }
 
     except Exception as e:
         log.error(
-            f"Feature dev flow failed for issue #{issue_number}: {e}",
+            f"Flow failed for issue #{issue_number}: {e}",
             exc_info=True,
         )
         update_task_failed(project_config_dict, task_id, str(e))
@@ -146,14 +145,14 @@ def kickoff_task(self, project_config_dict: dict, issue_number: int) -> dict[str
         retry_count = self.request.retries
         if retry_count < self.max_retries:
             timeout = calculate_timeout(retry_count)
-            log.info(f"Retrying feature dev for issue #{issue_number}, attempt {retry_count + 1}/{self.max_retries}")
+            log.info(f"Retrying issue #{issue_number}, attempt {retry_count + 1}/{self.max_retries}")
             raise self.retry(exc=e, countdown=timeout)
 
         return {
             "status": "failed",
             "issue_number": issue_number,
             "flow_id": flow_id,
-            "message": f"Feature development failed: {str(e)}",
+            "message": f"Development failed: {str(e)}",
         }
 
 
@@ -448,7 +447,7 @@ def process_github_webhook_task(self, payload: dict[str, Any]) -> dict[str, Any]
                     log.warning(f"Failed to update issue #{issue_number} to Ready")
 
                 kickoff_task.delay(config.model_dump(), issue_number)  # type: ignore
-                log.info(f"Triggered feature dev flow for issue #{issue_number}")
+                log.info(f"Triggered flow for issue #{issue_number}")
 
                 update_task_completed(task_id, "Issue labeled and flow triggered")
 

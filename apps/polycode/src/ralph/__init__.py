@@ -4,18 +4,19 @@ Flow: Setup → Plan → Implement (per-story) → Verify → Finish
 
 Events:
   - FLOW_STARTED: Emitted at flow start (triggers gitcore/project_manager setup hooks)
-  - CREW_FINISHED: Emitted after each crew via PolycodeCrew @after_kickoff
+  - CREW_FINISHED: Emitted after each crew via PolycodeCrewMixin @after_kickoff
   - STORY_COMPLETED: Emitted after each story (triggers commit/push/checklist hooks)
   - FLOW_FINISHED: Emitted after verify (triggers PR/merge/cleanup hooks)
 """
 
-from crewai import Flow
+from persistence.postgres import persistence
 
 import logging
 import subprocess
 import uuid
 from typing import cast
 
+from crewai import Flow
 from crewai.flow.flow import listen, start
 
 from crews import PlanCrew, RalphCrew
@@ -27,12 +28,14 @@ from modules.hooks import FlowEvent
 from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
 from project_manager.types import ProjectConfig
+from crewai.flow.persistence import persist
 
 from .types import RalphLoopState
 
 logger = logging.getLogger(__name__)
 
 
+@persist(persistence=persistence, verbose=False)
 class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
     """Ralph Loop Flow - simplified event-driven architecture.
 
@@ -51,7 +54,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
     def plan(self):
         """Create stories from the prompt.
 
-        PlanCrew emits CREW_FINISHED event via PolycodeCrew @after_kickoff.
+        PlanCrew emits CREW_FINISHED event via PolycodeCrewMixin @after_kickoff.
         """
         if self.state.stories:
             return
@@ -88,7 +91,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
     def implement(self):
         """Implement each story and emit STORY_COMPLETED events.
 
-        RalphCrew emits CREW_FINISHED event via PolycodeCrew @after_kickoff.
+        RalphCrew emits CREW_FINISHED event via PolycodeCrewMixin @after_kickoff.
         STORY_COMPLETED event triggers:
           - gitcore hook: commit + push
           - project_manager hook: update checklist item

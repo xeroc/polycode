@@ -6,14 +6,14 @@ from crewai.project import agent, crew, task
 from crewai.tools import BaseTool
 from crewai_tools import FileWriterTool
 
-from crews.base import PolycodeCrew
+from crews.base import PolycodeCrewMixin
 from glm import GLMJSONLLM
 from tools import AgentsMDLoaderTool, DirectoryReadTool, FileReadTool
 
 from .types import PlanOutput
 
 
-class PlanCrew(PolycodeCrew):
+class PlanCrew(PolycodeCrewMixin):
     """Plan Crew - Decompose task into user stories."""
 
     crew_label = "plan"

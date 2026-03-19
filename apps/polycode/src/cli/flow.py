@@ -36,7 +36,6 @@ def flow_list(
 
     flows: dict[str, str] = {
         "ralph": "Ralph - Feature development orchestrator with per-story commits",
-        "feature_dev": "Feature development flow (legacy)",
     }
 
     table = Table(title="Available Flows", box=box.ROUNDED)

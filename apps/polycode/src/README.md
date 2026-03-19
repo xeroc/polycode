@@ -4,37 +4,7 @@ Multi-agent AI development automation powered by [CrewAI](https://crewai.com).
 
 ## Structure
 
-```
-src/
-├── ralph/                    # Ralph Flow - fast iterative development
-│   ├── crews/
-│   │   ├── plan_crew/        # Issue decomposition
-│   │   └── ralph_crew/       # Implementation with verification loop
-│   └── __init__.py           # Ralph flow definition
-├── feature_dev/               # Feature Dev Flow - comprehensive feature development
-│   ├── crews/
-│   │   ├── plan_crew/
-│   │   ├── implement_crew/
-│   │   ├── verify_crew/
-│   │   ├── test_crew/
-│   │   └── review_crew/
-│   └── __init__.py
-├── github_app/                # GitHub App webhook server
-│   ├── app.py                # FastAPI application
-│   ├── handlers.py            # Webhook event handlers
-│   └── ...
-├── project_manager/           # Project management abstraction
-│   ├── base.py               # Abstract ProjectManager interface
-│   ├── github.py             # GitHub Projects V2 implementation
-│   ├── flow_runner.py         # Flow execution orchestration
-│   ├── flow_state.py         # State persistence
-│   ├── webhook.py            # FastAPI webhook server
-│   └── cli.py               # CLI commands
-├── celery_tasks/             # Async task processing
-├── persistence/              # Database layer (PostgreSQL)
-├── tools/                   # Custom CrewAI tools
-└── flowbase.py              # Base flow classes
-```
+TBD
 
 ## Installation
 
@@ -54,9 +24,6 @@ cp .env.example .env
 ```bash
 # Run Ralph Flow (interactive)
 uv run ralph
-
-# Run Feature Dev example
-uv run example
 
 # Run project manager CLI
 python -m project_manager.cli --help

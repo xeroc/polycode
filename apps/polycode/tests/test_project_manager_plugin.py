@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock
 
-
 from modules.hooks import FlowEvent
 from project_manager import (
     ProjectManagerModule,

@@ -4,13 +4,13 @@ from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import agent, crew, task
 
-from crews.base import PolycodeCrew
+from crews.base import PolycodeCrewMixin
 from glm import GLMJSONLLM
 
 from .types import ReviewOutput
 
 
-class ReviewCrew(PolycodeCrew):
+class ReviewCrew(PolycodeCrewMixin):
     """Review Crew - Review pull requests."""
 
     crew_label = "review"

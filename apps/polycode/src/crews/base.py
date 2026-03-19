@@ -1,4 +1,4 @@
-"""PolycodeCrew base class with automatic hook emission.
+"""PolycodeCrewMixin base class with automatic hook emission.
 
 All Polycode crews should extend this base class to automatically emit
 CREW_FINISHED events via the @after_kickoff decorator.
@@ -15,9 +15,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Just a rename
+PolyCodeBase = CrewBase
 
-@CrewBase
-class PolycodeCrew:
+
+class PolycodeCrewMixin:
     """Base class for all Polycode crews.
 
     Automatically emits CREW_FINISHED event after crew execution completes.
@@ -27,7 +29,7 @@ class PolycodeCrew:
     Example:
 
         @CrewBase
-        class PlanCrew(PolycodeCrew):
+        class PlanCrew(PolycodeCrewMixin):
             crew_label = "plan"
 
             agents_config = "config/agents.yaml"
