@@ -10,7 +10,8 @@ import uuid
 from crewai.flow.flow import listen, start
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
-from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
+from flowbase import FlowIssueManagement, KickoffIssue
+from gitcore import sanitize_branch_name
 from persistence.postgres import PostgresFlowPersistence
 from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
@@ -135,7 +136,9 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
             return
 
         completed_ids = [x.id for x in self.state.completed_stories or []]
-        missing_stories = [x for x in self.state.stories or [] if x.id not in completed_ids]
+        missing_stories = [
+            x for x in self.state.stories or [] if x.id not in completed_ids
+        ]
 
         self.state.completed_stories = []
         self.state.changes = []
@@ -171,7 +174,9 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
                     build_cmd=self.state.build_cmd,
                     test_cmd=self.state.test_cmd,
                     current_story=story.model_dump_json(),
-                    completed_stories="\n- ".join([x.description for x in self.state.completed_stories or []]),
+                    completed_stories="\n- ".join(
+                        [x.description for x in self.state.completed_stories or []]
+                    ),
                     current_story_id=story.id,
                     current_story_title=story.title,
                     architecture=self.recall_as_markdown_list("architecture"),

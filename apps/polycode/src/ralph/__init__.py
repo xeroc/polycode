@@ -22,7 +22,8 @@ from crews import PlanCrew, RalphCrew
 from crews.plan_crew.types import PlanOutput
 from crews.plan_crew.types import Story as Story
 from crews.ralph_crew.types import RalphOutput
-from flowbase import FlowIssueManagement, KickoffIssue, sanitize_branch_name
+from flowbase import FlowIssueManagement, KickoffIssue
+from gitcore import sanitize_branch_name
 from persistence.postgres import PostgresFlowPersistence
 from project_manager import StatusMapping
 from project_manager.config import settings as project_settings

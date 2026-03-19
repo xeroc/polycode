@@ -78,3 +78,20 @@ count = false
 ignore = ["E226", "E302", "E71"]
 max-line-length = 160
 statistics = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+addopts = [
+    "-v",               # verbose output
+    "--strict-markers", # strict markers
+    "--tb=short",       # shorter tracebacks
+    "--maxfail=1",      # stop after first failure
+    "-ra",              # show summary of all tests
+]
+testpaths = [
+    "tests",
+    "src",   # test doctests in src
+]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
