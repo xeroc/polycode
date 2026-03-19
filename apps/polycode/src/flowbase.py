@@ -21,8 +21,6 @@ from crewai.rag.embeddings.providers.ollama.types import (
 )
 from pydantic import BaseModel, Field
 
-from channels.dispatcher import ChannelDispatcher
-from channels.types import ChannelConfig, ChannelType, Notification, NotificationLevel
 from gitcore import GitOperations
 from glm import GLMJSONLLM
 from modules.hooks import FlowPhase
@@ -47,7 +45,9 @@ class KickoffRepo(BaseModel):
 
 class KickoffIssue(BaseModel):
     id: int = Field(description="Issue ID")
-    flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of the flow that will run")
+    flow_id: uuid.UUID = Field(
+        default=uuid.uuid4(), description="UUID of the flow that will run"
+    )
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
     memory_prefix: str = Field(description="prefix for memory")
@@ -56,7 +56,9 @@ class KickoffIssue(BaseModel):
 
 
 class BaseFlowModel(BaseModel):
-    project_config: Optional[ProjectConfig] = Field(default=None, description="Description of the project to work on")
+    project_config: Optional[ProjectConfig] = Field(
+        default=None, description="Description of the project to work on"
+    )
     path: str = Field(default="", description="Original Path to repository")
     repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
@@ -69,25 +71,38 @@ class BaseFlowModel(BaseModel):
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id")
 
-    planning_comment_id: Optional[int] = Field(default=None, description="ID of the planning progress comment")
-    commit_urls: dict[int, str] = Field(default_factory=dict, description="Story ID to commit URL mapping")
+    planning_comment_id: Optional[int] = Field(
+        default=None, description="ID of the planning progress comment"
+    )
+    commit_urls: dict[int, str] = Field(
+        default_factory=dict, description="Story ID to commit URL mapping"
+    )
 
     commit_title: Optional[str] = Field(
         default=None,
         description="Commit Message title including conventional commit prefix",
     )
-    commit_message: Optional[str] = Field(default=None, description="The body of the commit message")
-    commit_footer: Optional[str] = Field(default=None, description="Commit message footer")
+    commit_message: Optional[str] = Field(
+        default=None, description="The body of the commit message"
+    )
+    commit_footer: Optional[str] = Field(
+        default=None, description="Commit message footer"
+    )
     memory_prefix: str = Field(default="", description="prefix for memory")
 
     test_cmd: Optional[str] = Field(default=None, description="Test command")
-    build_cmd: Optional[str] = Field(default=None, description="Build command from package.json")
+    build_cmd: Optional[str] = Field(
+        default=None, description="Build command from package.json"
+    )
 
 
 class FlowIssueManagement(Flow[T]):
     """Generic base class that passes type parameter to Flow."""
 
     _pm: "pluggy.PluginManager | None" = None
+    _agents_md_map: dict[str, str] = {}
+    _root_agents_md: str = ""
+    _git_ops: GitOperations | None = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,10 +118,6 @@ class FlowIssueManagement(Flow[T]):
         )
         logger.info("💾 Memory:")
         logger.info(self.memory.tree())
-
-        self.agents_md_map: dict[str, str] = {}
-        self.root_agents_md: str = ""
-        self._git_ops: GitOperations | None = None
 
     @classmethod
     def configure_hooks(cls, pm: "pluggy.PluginManager") -> None:
@@ -126,67 +137,6 @@ class FlowIssueManagement(Flow[T]):
             )
         except Exception as e:
             logger.warning(f"⚠️ Hook error in {phase}: {e}")
-
-    def _should_skip(self, phase: FlowPhase) -> bool:
-        """Check if any module wants to skip this phase."""
-        if not self._pm:
-            return False
-        return bool(
-            self._pm.hook.should_skip_phase(
-                phase=phase,
-                flow_id=str(getattr(self.state, "flow_id", "")),
-                state=self.state,
-            )
-        )
-
-    @property
-    def _channels(self) -> ChannelDispatcher | None:
-        """Get channel dispatcher for sending notifications."""
-        if not self.state.project_config:
-            return None
-
-        extra = self.state.project_config.extra or {}
-        channel_configs_data = extra.get("channels", [])
-
-        if not channel_configs_data:
-            return None
-
-        configs = [
-            ChannelConfig(
-                channel_type=ChannelType(c["channel_type"]),
-                enabled=c.get("enabled", True),
-                extra=c.get("extra", {}),
-            )
-            for c in channel_configs_data
-        ]
-
-        return ChannelDispatcher(configs, self.state.project_config)
-
-    async def _notify(
-        self,
-        content: str,
-        level: NotificationLevel = NotificationLevel.INFO,
-        context: dict | None = None,
-    ) -> None:
-        """Send a notification through configured channels."""
-        if not self._channels:
-            logger.debug("No channels configured, skipping notification")
-            return
-
-        notification = Notification(
-            content=content,
-            level=level,
-            context=context or {},
-            metadata={"flow_id": str(getattr(self.state, "flow_id", "unknown"))},
-        )
-
-        results = await self._channels.dispatch(notification)
-
-        for result in results:
-            if result.success:
-                logger.info(f"Notification sent via {result.channel_type.value}")
-            else:
-                logger.warning(f"Failed to send notification via {result.channel_type.value}: {result.error}")
 
     @property
     def _git_repo(self) -> git.Repo:
@@ -215,18 +165,13 @@ class FlowIssueManagement(Flow[T]):
     def pickup_issue(self):
         try:
             update_request_status(SessionLocal, self.state.issue_id, "inprogress")
-            logger.info(f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}")
+            logger.info(
+                f"🏹 Set PostgreSQL request status to inprogress for issue #{self.state.issue_id}"
+            )
         except Exception as e:
             logger.error(f"🚨 Failed to update PostgreSQL status to inprogress: {e}")
 
-    def _list_git_tree(self):
-        return self.git_operations.list_tree()
-
     def _prepare_work_tree(self):
-        if self._should_skip(FlowPhase.PRE_SETUP):
-            logger.info("Skipping worktree preparation (hook)")
-            return
-
         worktree_path = self.git_operations.prepare_worktree()
         self.state.repo = worktree_path
 
@@ -302,13 +247,13 @@ class FlowIssueManagement(Flow[T]):
             except Exception as e:
                 logger.error(f"🚨 Error reading {agents_file}: {e}")
 
-        self.agents_md_map = agents_md_files
+        self._agents_md_map = agents_md_files
 
         if "AGENTS.md" in agents_md_files:
-            self.root_agents_md = agents_md_files["AGENTS.md"]
+            self._root_agents_md = agents_md_files["AGENTS.md"]
         elif len(agents_md_files) > 0:
             first_path = next(iter(agents_md_files.keys()))
-            self.root_agents_md = agents_md_files[first_path]
+            self._root_agents_md = agents_md_files[first_path]
             logger.info(f"📕 Using {first_path} as root AGENTS.md")
 
         logger.info(f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}")
@@ -343,7 +288,9 @@ class FlowIssueManagement(Flow[T]):
 
         try:
             update_request_status(SessionLocal, self.state.issue_id, "completed")
-            logger.info(f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}")
+            logger.info(
+                f"🏹 Updated PostgreSQL request status to completed for issue #{self.state.issue_id}"
+            )
         except Exception as e:
             logger.error(f"🚨 Failed to update PostgreSQL status: {e}")
 
@@ -385,7 +332,9 @@ class FlowIssueManagement(Flow[T]):
             text=True,
             timeout=180,
         )
-        logger.info(f"✅ Build verification passed\n{result.stdout[:200] if result.stdout else ''}...")
+        logger.info(
+            f"✅ Build verification passed\n{result.stdout[:200] if result.stdout else ''}..."
+        )
 
     def _test(self):
         if not self.state.test_cmd:
@@ -401,4 +350,6 @@ class FlowIssueManagement(Flow[T]):
             text=True,
             timeout=180,
         )
-        logger.info(f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}...")
+        logger.info(
+            f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}..."
+        )

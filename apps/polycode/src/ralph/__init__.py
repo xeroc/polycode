@@ -87,7 +87,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
                     repo=self.state.repo,
                     branch=self.state.branch,
                     agents_md=self.root_agents_md,
-                    file_in_repos=self._list_git_tree(),
+                    file_in_repos=self.git_operations.list_tree(),
                 )
             )
         )

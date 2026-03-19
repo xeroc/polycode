@@ -42,3 +42,9 @@ class BaseChannel(ABC):
     async def get_reactions(self, message_id: str) -> list[Reaction]:
         """Get reactions for a message (optional)."""
         return []
+
+    async def close(self) -> None:
+        """Close channel resources (optional).
+
+        Override this method if your channel needs cleanup.
+        """

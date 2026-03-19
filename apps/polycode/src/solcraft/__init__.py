@@ -73,13 +73,13 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
 
         result = (
             PlanCrew()
-            .crew(agents_md_map=self.agents_md_map)
+            .crew(_agents_md_map=self._agents_md_map)
             .kickoff(
                 inputs=dict(
                     task=self.state.task,
                     repo=self.state.repo,
                     branch=self.state.branch,
-                    agents_md=self.root_agents_md,
+                    agents_md=self._root_agents_md,
                 )
             )
         )
@@ -157,7 +157,7 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
         output = (
             ImplementCrew()
             .crew(
-                agents_md_map=self.agents_md_map,
+                _agents_md_map=self._agents_md_map,
                 custom_tasks=self.task_templates,
             )
             .kickoff(
@@ -174,7 +174,7 @@ class SolcraftFlow(FlowIssueManagement[SolcraftState]):
                     architecture=self.recall_as_markdown_list("architecture"),
                     configuration=self.recall_as_markdown_list("configuration"),
                     tech_stack=self.recall_as_markdown_list("tech_stack"),
-                    agents_md=self.root_agents_md,
+                    agents_md=self._root_agents_md,
                 )
             )
         )

@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING
 
 import pluggy
 
-POLYCODE_NS = "polycode"
-
 if TYPE_CHECKING:
     pass
+
+POLYCODE_NS = "polycode"
 
 hookspec = pluggy.HookspecMarker(POLYCODE_NS)
 hookimpl = pluggy.HookimplMarker(POLYCODE_NS)

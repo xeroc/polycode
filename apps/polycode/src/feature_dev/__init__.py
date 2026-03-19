@@ -60,13 +60,13 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
 
         result = (
             PlanCrew()
-            .crew(agents_md_map=self.agents_md_map)
+            .crew(_agents_md_map=self._agents_md_map)
             .kickoff(
                 inputs=dict(
                     task=self.state.task,
                     repo=self.state.repo,
                     branch=self.state.branch,
-                    agents_md=self.root_agents_md,
+                    agents_md=self._root_agents_md,
                 )
             )
         )
@@ -123,7 +123,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
 
             output = (
                 ImplementCrew()
-                .crew(agents_md_map=self.agents_md_map)
+                .crew(_agents_md_map=self._agents_md_map)
                 .kickoff(
                     inputs=dict(
                         task=self.state.task,
@@ -138,7 +138,7 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                         architecture=self.recall_as_markdown_list("architecture"),
                         configuration=self.recall_as_markdown_list("configuration"),
                         tech_stack=self.recall_as_markdown_list("tech_stack"),
-                        agents_md=self.root_agents_md,
+                        agents_md=self._root_agents_md,
                     )
                 )
             )

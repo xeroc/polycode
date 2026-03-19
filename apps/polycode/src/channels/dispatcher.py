@@ -1,38 +1,53 @@
-"""Channel dispatcher for routing notifications to multiple channels."""
+"""Channel dispatcher for routing notifications to multiple channels.
+
+Uses the plugin system for channel discovery and creation.
+"""
 
 import logging
+from typing import TYPE_CHECKING
 
 from channels.base import BaseChannel
-from channels.github import GitHubChannel
-from channels.redis import RedisChannel
 from channels.types import (
     ChannelConfig,
     ChannelResult,
     ChannelType,
     Notification,
 )
-from project_manager.types import ProjectConfig
+
+if TYPE_CHECKING:
+    from modules.channels import ChannelRegistry
+    from project_manager.types import ProjectConfig
 
 log = logging.getLogger(__name__)
 
 
 class ChannelDispatcher:
-    """Dispatches notifications to multiple channels."""
+    """Dispatches notifications to multiple channels via plugin system."""
 
     def __init__(
         self,
         configs: list[ChannelConfig],
-        project_config: ProjectConfig | None = None,
+        project_config: "ProjectConfig | None" = None,
+        channel_registry: "ChannelRegistry | None" = None,
     ) -> None:
         """Initialize channel dispatcher.
 
         Args:
-            configs: List of channel configurations
-            project_config: Project configuration (required for GitHub channel)
+            configs: List of channel configurations.
+            project_config: Project configuration (required for GitHub channel).
+            channel_registry: Optional ChannelRegistry instance. If None, uses singleton.
         """
         self._configs = configs
         self._project_config = project_config
         self._channels: dict[ChannelType, BaseChannel] = {}
+
+        if channel_registry is None:
+            from modules.channels import ChannelRegistry
+
+            self._registry = ChannelRegistry.get()
+        else:
+            self._registry = channel_registry
+
         self._initialize_channels()
 
     def _initialize_channels(self) -> None:
@@ -51,34 +66,27 @@ class ChannelDispatcher:
                 log.error(f"Failed to initialize channel {config.channel_type.value}: {e}")
 
     def _create_channel(self, config: ChannelConfig) -> BaseChannel | None:
-        """Create a channel instance from config.
+        """Create a channel instance via registry.
 
         Args:
-            config: Channel configuration
+            config: Channel configuration.
 
         Returns:
-            Channel instance or None if creation failed
+            Channel instance or None if creation failed.
         """
-        extra = config.extra
+        channel = self._registry.create_channel(
+            channel_type=config.channel_type,
+            config=config,
+            project_config=self._project_config,
+        )
 
-        match config.channel_type:
-            case ChannelType.GITHUB:
-                if not self._project_config:
-                    raise ValueError("project_config required for GitHub channel")
-                return GitHubChannel(self._project_config)
+        if channel is None:
+            log.warning(
+                f"No channel registered for type: {config.channel_type.value}. "
+                f"Available: {self._registry.registered_types}"
+            )
 
-            case ChannelType.REDIS:
-                return RedisChannel(
-                    host=extra.get("host", "localhost"),
-                    port=extra.get("port", 6379),
-                    db=extra.get("db", 0),
-                    password=extra.get("password"),
-                    channel_name=extra.get("channel_name", "notifications"),
-                )
-
-            case _:
-                log.warning(f"Unsupported channel type: {config.channel_type.value}")
-                return None
+        return channel
 
     @property
     def channels(self) -> dict[ChannelType, BaseChannel]:
@@ -93,22 +101,20 @@ class ChannelDispatcher:
         """Dispatch a notification to specified channels.
 
         Args:
-            notification: The notification to send
+            notification: The notification to send.
             channel_types: Optional list of channel types to target.
                           If None, sends to all enabled channels.
 
         Returns:
-            List of results from each channel
+            List of results from each channel.
         """
         results: list[ChannelResult] = []
 
-        # Determine which channels to use
         if channel_types:
             target_channels = {ct: ch for ct, ch in self._channels.items() if ct in channel_types}
         else:
             target_channels = self._channels
 
-        # Send to each channel
         for channel_type, channel in target_channels.items():
             try:
                 result = await channel.send(notification)
@@ -128,11 +134,11 @@ class ChannelDispatcher:
         """Synchronous wrapper for dispatch (for backwards compatibility).
 
         Args:
-            notification: The notification to send
-            channel_types: Optional list of channel types to target
+            notification: The notification to send.
+            channel_types: Optional list of channel types to target.
 
         Returns:
-            List of results from each channel
+            List of results from each channel.
         """
         return await self.dispatch(notification, channel_types)
 
@@ -140,10 +146,10 @@ class ChannelDispatcher:
         """Check if a channel type is enabled.
 
         Args:
-            channel_type: The channel type to check
+            channel_type: The channel type to check.
 
         Returns:
-            True if channel is enabled and initialized
+            True if channel is enabled and initialized.
         """
         return channel_type in self._channels
 
@@ -151,6 +157,6 @@ class ChannelDispatcher:
         """Close all channel connections."""
         for channel in self._channels.values():
             if hasattr(channel, "close"):
-                await channel.close()  # type: ignore[attr-defined]
+                await channel.close()
         self._channels.clear()
         log.info("All channels closed")
