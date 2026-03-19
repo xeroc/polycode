@@ -103,9 +103,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         for current_story in output.stories:
             logger.info(f"  |- 🔖 {current_story.description}")
 
-        self.state.planning_comment_id = self._post_planning_checklist(
-            output.stories, self.state.issue_id
-        )
+        self.state.planning_comment_id = self._post_planning_checklist(output.stories, self.state.issue_id)
 
         num_stories = len(self.state.stories) if self.state.stories else 0
         logger.info(f"\n🔨 Starting Ralph Loop for {num_stories} stories")
@@ -120,17 +118,14 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         - Not based on subjective judgment
         """
 
-        unfinished_stories = list(
-            filter(lambda story: not story.completed, self.state.stories or [])
-        )
+        unfinished_stories = list(filter(lambda story: not story.completed, self.state.stories or []))
 
         logger.info(f"Unfinished stories: {len(unfinished_stories)}")
         for story in unfinished_stories:
             logger.info(f"\n📖 Story: {story.title}")
 
             error_context = (
-                "\n\n## Previous Errors:\n"
-                + "\n".join(f"- {err}" for err in story.errors)
+                "\n\n## Previous Errors:\n" + "\n".join(f"- {err}" for err in story.errors)
                 if story.errors
                 else "No previous errors"
             )
@@ -183,7 +178,14 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             story.completed = True
             story.errors = []
 
-        self._push_repo()
+            self._push_repo()
+
+            completed_ids = [x.id for x in self.state.stories or [] if x.completed]
+            self._update_planning_checklist(
+                self.state.stories or [],
+                completed_ids,
+                self.state.issue_id,
+            )
 
         completed_ids = [x.id for x in self.state.stories or [] if x.completed]
         self._update_planning_checklist(
