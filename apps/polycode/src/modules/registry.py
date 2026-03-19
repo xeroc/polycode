@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 from modules.hooks import get_plugin_manager
 from modules.protocol import PolycodeModule
+from modules.tasks import get_task_registry
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ class ModuleRegistry:
         1. Topological sort based on dependencies.
         2. Call on_load() for each module.
         3. Call register_hooks() for each module.
+        4. Collect Celery tasks from all modules.
 
         Raises:
             RuntimeError: If circular dependency detected.
@@ -98,6 +100,18 @@ class ModuleRegistry:
                 raise
 
             log.info(f"✅ Module loaded: {name}")
+
+        self._collect_celery_tasks()
+
+    def _collect_celery_tasks(self) -> int:
+        """Collect Celery tasks from all loaded modules.
+
+        Returns:
+            Number of tasks collected.
+        """
+        task_registry = get_task_registry()
+        count = task_registry.collect_from_modules(self._modules)
+        return count
 
     def _topological_sort(self) -> list[str]:
         """Sort modules by dependencies using Kahn's algorithm.

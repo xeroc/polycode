@@ -1,6 +1,6 @@
 """Protocol for polycode modules."""
 
-from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from modules.context import ModuleContext
@@ -52,5 +52,25 @@ class PolycodeModule(Protocol):
 
         Optional — models are auto-registered via RegisteredBase.
         This method is for explicit listing when needed (docs, introspection).
+        """
+        return []
+
+    @classmethod
+    def get_celery_tasks(cls) -> list[dict[str, Any]]:
+        """Return Celery task definitions for this module.
+
+        Each dict should contain:
+        - name: str - Task name (will be prefixed with module name)
+        - func: Callable - Task function
+        - options: dict (optional) - Task options (bind, max_retries, etc.)
+
+        Returns:
+            List of task definition dicts.
+
+        Example:
+            return [
+                {"name": "process_data", "func": process_data_task, "options": {"bind": True}},
+                {"name": "cleanup", "func": cleanup_task},
+            ]
         """
         return []

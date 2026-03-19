@@ -1,6 +1,7 @@
 """Project management module implementation for the Polycode plugin system."""
 
 import logging
+from typing import Any
 
 import pluggy
 
@@ -57,4 +58,9 @@ class ProjectManagerModule:
 
         Project manager doesn't define any database models.
         """
+        return []
+
+    @classmethod
+    def get_celery_tasks(cls) -> list[dict[str, Any]]:
+        """Return Celery task definitions for this module."""
         return []

@@ -12,7 +12,6 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, TypeVar
 
-import git
 from crewai import Flow
 from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.providers.ollama.types import (
@@ -137,10 +136,6 @@ class FlowIssueManagement(Flow[T]):
             )
         except Exception as e:
             logger.warning(f"⚠️ Hook error in {phase}: {e}")
-
-    @property
-    def _git_repo(self) -> git.Repo:
-        return git.Repo(self.state.repo)
 
     @property
     def git_operations(self) -> GitOperations:
