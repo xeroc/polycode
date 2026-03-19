@@ -15,13 +15,12 @@ import subprocess
 import uuid
 from typing import cast
 
+from crewai.events.utils.console_formatter import set_suppress_console_output
 from crewai.flow.flow import listen, start
 from crewai.flow.persistence import SQLiteFlowPersistence, persist
 
 from crews import PlanCrew, RalphCrew
-from crews.plan_crew.types import PlanOutput
-from crewai.events.utils.console_formatter import set_suppress_console_output
-from crews.plan_crew.types import Story
+from crews.plan_crew.types import PlanOutput, Story
 from crews.ralph_crew.types import RalphOutput
 from flowbase import FlowIssueManagement, KickoffIssue
 from gitcore import sanitize_branch_name
@@ -176,7 +175,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             )
 
             if commit:
-                commit_url = self._get_commit_url(commit.hexsha)
+                commit_url = self.git_operations.get_commit_url(commit.hexsha)
                 self.state.commit_urls[story.id] = commit_url
 
             logger.info("✅ Completion")

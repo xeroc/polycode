@@ -76,6 +76,10 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     model_count = len(ModelRegistry.all_models())
     log.info(f"🚀 Bootstrap complete: {module_count} modules, {model_count} tables")
 
+    from flowbase import FlowIssueManagement
+
+    FlowIssueManagement.configure_hooks(module_registry.pm)
+
     return context
 
 
@@ -101,14 +105,16 @@ def init_plugins() -> pluggy.PluginManager:
 
     pm = get_plugin_manager()
 
-    # Register channels module (this registers ChannelHooks)
-    from channels import ChannelsPolycodeModule
-
-    ChannelsPolycodeModule.register_hooks(pm)
-
     # Import channel implementations to trigger self-registration
     import channels.github  # noqa: F401
     import channels.redis  # noqa: F401
+
+    # Register channels module (this registers ChannelHooks)
+    from channels import ChannelsPolycodeModule
+    from flowbase import FlowIssueManagement
+
+    ChannelsPolycodeModule.register_hooks(pm)
+    FlowIssueManagement.configure_hooks(pm)
 
     log.info("🔌 Plugin system initialized (channels active)")
 

@@ -101,7 +101,9 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
         for current_story in output.stories:
             print(f"  |- 🔖 {current_story.description}")
 
-        self.state.planning_comment_id = self._post_planning_checklist(output.stories, self.state.issue_id)
+        self.state.planning_comment_id = self._post_planning_checklist(
+            output.stories, self.state.issue_id
+        )
         return output
 
     @listen(setup)
@@ -132,7 +134,9 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                         build_cmd=self.state.build_cmd,
                         test_cmd=self.state.test_cmd,
                         current_story=current_story.model_dump_json(),
-                        completed_stories="\n- ".join([x.description for x in self.state.completed_stories or []]),
+                        completed_stories="\n- ".join(
+                            [x.description for x in self.state.completed_stories or []]
+                        ),
                         current_story_id=current_story.id,
                         current_story_title=current_story.title,
                         architecture=self.recall_as_markdown_list("architecture"),
@@ -151,13 +155,15 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
             commit = self._commit_changes(commit_title, commit_message, commit_footer)
 
             if commit:
-                commit_url = self._get_commit_url(commit.hexsha)
+                commit_url = self.git_operations.get_commit_url(commit.hexsha)
                 self.state.commit_urls[current_story.id] = commit_url
 
             return implement_result
 
         completed_ids = [x.id for x in self.state.completed_stories or []]
-        missing_stories = [x for x in self.state.stories or [] if x.id not in completed_ids]
+        missing_stories = [
+            x for x in self.state.stories or [] if x.id not in completed_ids
+        ]
 
         self.state.completed_stories = []
         self.state.changes = []
@@ -249,7 +255,9 @@ class FeatureDevFlow(FlowIssueManagement[FeatureDevState]):
                     changes=self.state.changes,
                     test_cmd=self.state.test_cmd,
                     current_story=self.state.current_story,
-                    completed_stories=[x.description for x in self.state.completed_stories or []],
+                    completed_stories=[
+                        x.description for x in self.state.completed_stories or []
+                    ],
                 )
             )
         )

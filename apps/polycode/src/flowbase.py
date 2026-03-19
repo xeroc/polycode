@@ -173,10 +173,6 @@ class FlowIssueManagement(Flow[T]):
         self._emit(FlowPhase.POST_COMMIT, result=commit)
         return commit
 
-    def _get_commit_url(self, commit_sha: str) -> str:
-        """Get the URL for a commit."""
-        return self.git_operations.get_commit_url(commit_sha)
-
     def _push_repo(self):
         self._emit(FlowPhase.PRE_PUSH)
         self.git_operations.push()

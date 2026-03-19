@@ -157,7 +157,9 @@ class ProjectManagerHooks:
         required_label = project_settings.MERGE_REQUIRED_LABEL
 
         if not pm.has_label(issue_id, required_label):
-            log.warning(f"⚠️ Issue #{issue_id} does not have required label '{required_label}'. Merge aborted.")
+            log.warning(
+                f"⚠️ Issue #{issue_id} does not have required label '{required_label}'. Merge aborted."
+            )
             pm.add_comment(
                 issue_id,
                 f"## ⚠️ Merge Blocked\n\n"
@@ -167,7 +169,9 @@ class ProjectManagerHooks:
             )
             return
 
-        log.info(f"✅ PR #{pr_number} has required label '{required_label}', proceeding with merge")
+        log.info(
+            f"✅ PR #{pr_number} has required label '{required_label}', proceeding with merge"
+        )
 
         success = pm.merge_pull_request(pr_number)
 
@@ -195,7 +199,9 @@ class ProjectManagerHooks:
         except Exception as e:
             log.info(f"🚨 Failed to update project status to Done: {e}")
 
-    def _handle_planning_comment(self, state: Any, pm: "ProjectManager", stories: Any | None) -> None:
+    def _handle_planning_comment(
+        self, state: Any, pm: "ProjectManager", stories: Any | None
+    ) -> None:
         """Post planning checklist to issue.
 
         Args:
@@ -211,10 +217,10 @@ class ProjectManagerHooks:
         if not issue_id:
             return
 
-        checklist_items = "\n".join(f"- [ ] {getattr(story, 'description', str(story))}" for story in stories)
-        comment = (
-            f"## 📋 Implementation Plan\n\n{checklist_items}\n\n_Progress will be updated as stories are implemented._"
+        checklist_items = "\n".join(
+            f"- [ ] {getattr(story, 'description', str(story))}" for story in stories
         )
+        comment = f"## 📋 Implementation Plan\n\n{checklist_items}\n\n_Progress will be updated as stories are implemented._"
         pm.add_comment(issue_id, comment)
 
         comment_id = pm.get_last_comment_by_user(issue_id, pm.bot_username)
@@ -222,7 +228,9 @@ class ProjectManagerHooks:
             state.planning_comment_id = comment_id
             log.info(f"🏹 Posted planning checklist, comment ID: {comment_id}")
 
-    def _handle_update_checklist(self, state: Any, pm: "ProjectManager", data: Any | None) -> None:
+    def _handle_update_checklist(
+        self, state: Any, pm: "ProjectManager", data: Any | None
+    ) -> None:
         """Update planning checklist with progress.
 
         Args:
@@ -265,7 +273,9 @@ class ProjectManagerHooks:
             if story_id in completed_ids:
                 commit_url = commit_urls.get(story_id)
                 if commit_url:
-                    checklist_lines.append(f"- [x] {story_desc} ([commit]({commit_url}))")
+                    checklist_lines.append(
+                        f"- [x] {story_desc} ([commit]({commit_url}))"
+                    )
                 else:
                     checklist_lines.append(f"- [x] {story_desc}")
             else:

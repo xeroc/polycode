@@ -61,6 +61,10 @@ packages = [
 [dependency-groups]
 dev = ["pytest>=9.0.2", "ruff>=0.15.4"]
 
+[tool.black]
+line-length = 120
+
+
 [tool.ruff]
 line-length = 120
 
