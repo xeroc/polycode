@@ -56,3 +56,4 @@ htmlcov/
 
 feature_dev.db
 flow_state.db
+*.db

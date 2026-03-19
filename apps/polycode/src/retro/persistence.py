@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import Index, create_engine
+from sqlalchemy import Index, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from .types import RetroEntry, RetroQuery
@@ -54,7 +54,9 @@ class RetroModel(Base):
     test_coverage_impact: Mapped[float | None] = mapped_column()
     build_duration_ms: Mapped[int | None] = mapped_column()
     test_duration_ms: Mapped[int | None] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(
+        server_default=text("CURRENT_TIMESTAMP")
+    )
 
     __table_args__ = (
         Index("idx_retro_commit", "commit_sha"),
@@ -134,7 +136,9 @@ class RetroStore:
             what_worked=json.dumps(retro.what_worked),
             what_failed=json.dumps(retro.what_failed),
             root_causes=json.dumps(retro.root_causes),
-            actionable_improvements=json.dumps([item.model_dump() for item in retro.actionable_improvements]),
+            actionable_improvements=json.dumps(
+                [item.model_dump() for item in retro.actionable_improvements]
+            ),
             time_to_completion_seconds=retro.time_to_completion_seconds,
             retry_count=retro.retry_count,
             test_coverage_impact=retro.test_coverage_impact,
@@ -157,7 +161,11 @@ class RetroStore:
             RetroEntry or None
         """
         with self.session_factory() as sess:
-            model = sess.query(RetroModel).filter(RetroModel.commit_sha == commit_sha).first()
+            model = (
+                sess.query(RetroModel)
+                .filter(RetroModel.commit_sha == commit_sha)
+                .first()
+            )
             if not model:
                 return None
             return retro_model_to_entry(model)
@@ -239,7 +247,11 @@ class RetroStore:
             True if deleted, False otherwise
         """
         with self.session_factory() as sess:
-            result = sess.query(RetroModel).filter(RetroModel.commit_sha == commit_sha).delete()
+            result = (
+                sess.query(RetroModel)
+                .filter(RetroModel.commit_sha == commit_sha)
+                .delete()
+            )
             sess.commit()
             deleted = result > 0
             if deleted:

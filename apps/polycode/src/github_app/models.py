@@ -1,6 +1,6 @@
 """GitHub App database models using shared PostgreSQL base."""
 
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Any, Optional
 
 from sqlalchemy import Index
@@ -8,6 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Boolean, DateTime, Integer, String, Text
 
 from persistence.postgres import Base, JSONType
+
+now = lambda: datetime.now(UTC)
 
 
 class GitHubAppInstallation(Base):
@@ -35,13 +37,11 @@ class GitHubAppInstallation(Base):
     )
     events: Mapped[Optional[list[str]]] = mapped_column(JSONType, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=now,
+        onupdate=now,
         nullable=False,
     )
 
@@ -59,13 +59,11 @@ class GitHubWebhookRegistration(Base):
     secret: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     webhook_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=now,
+        onupdate=now,
         nullable=False,
     )
 
@@ -83,13 +81,11 @@ class LabelFlowMapping(Base):
     priority: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     config: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONType, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=now,
+        onupdate=now,
         nullable=False,
     )
 
@@ -114,13 +110,11 @@ class FlowExecution(Base):
     flow_metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(
         JSONType, nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=now,
+        onupdate=now,
         nullable=False,
     )
 

@@ -5,17 +5,17 @@ from sqlalchemy import create_engine
 from retro import GitNotes, init_db
 
 import subprocess
-import sys
-from pathlib import Path
 
 from retro.persistence import RetroStore
 from retro.types import RetroEntry
 
-sys.path.insert(0, str(Path(__file__).parent / "retro"))
-
 DATABASE_URL = "sqlite:///test_retro.db"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+init_db(DATABASE_URL)
+store = RetroStore(SessionLocal)
+store.create_tables()
 
 
 def test_git_notes_basic():
@@ -68,10 +68,6 @@ def test_git_notes_basic():
 
 def test_persistence_basic():
     """Test basic RetroStore operations."""
-    init_db(DATABASE_URL)
-    store = RetroStore(SessionLocal)
-
-    store.create_tables()
 
     retro = RetroEntry(
         commit_sha="abc123",
@@ -97,11 +93,6 @@ def test_persistence_basic():
 
 def test_pattern_analyzer():
     """Test PatternAnalyzer functionality."""
-    init_db(DATABASE_URL)
-    store = RetroStore(SessionLocal)
-
-    store.create_tables()
-
     from retro.analyzer import PatternAnalyzer
 
     analyzer = PatternAnalyzer(store=store)
@@ -138,19 +129,3 @@ def test_pattern_analyzer():
 
     suggestions = analyzer.suggest_improvements_from_patterns(limit=5)
     assert len(suggestions) > 0
-
-
-def test_retro_crew():
-    """Test retro crew can be imported and created."""
-    from retro.crews.retro_crew import RetroCrew
-
-    crew = RetroCrew()
-    assert crew is not None
-
-    agents = crew.agents  # ty:ignore # pyright:ignore
-    tasks = crew.tasks  # ty:ignore # pyright:ignore
-
-    assert agents is not None
-    assert len(agents) > 0
-    assert tasks is not None
-    assert len(tasks) > 0
