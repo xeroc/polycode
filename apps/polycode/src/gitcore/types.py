@@ -14,9 +14,7 @@ class WorktreeConfig:
     branch_name: str
     base_branch: str = "develop"
     worktrees_dir: str | None = None
-    symlink_deps: list[str] = field(
-        default_factory=lambda: ["node_modules", ".venv", ".env"]
-    )
+    symlink_deps: list[str] = field(default_factory=lambda: ["node_modules", ".venv", ".env"])
 
 
 @dataclass
@@ -31,6 +29,7 @@ class GitContext:
     branch_name: str = ""
     repo_owner: str = ""
     repo_name: str = ""
+    installation_token: str | None = None
 
     project_config: Any = None
 
@@ -58,17 +57,17 @@ class GitContext:
         return git.Repo(self.repo_path)
 
     def get_commit_url(self, commit_sha: str) -> str:
-        return (
-            f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{commit_sha}"
-        )
+        return f"https://github.com/{self.repo_owner}/{self.repo_name}/commit/{commit_sha}"
 
     @classmethod
     def from_flow_state(cls, state: Any) -> "GitContext":
+        project_config = getattr(state, "project_config", None)
         return cls(
             repo_path=getattr(state, "path", ""),
             worktree_path=getattr(state, "repo", ""),
             branch_name=getattr(state, "branch", ""),
             repo_owner=getattr(state, "repo_owner", "") or "",
             repo_name=getattr(state, "repo_name", "") or "",
-            project_config=getattr(state, "project_config", None),
+            installation_token=getattr(project_config, "token", None) if project_config else None,
+            project_config=project_config,
         )

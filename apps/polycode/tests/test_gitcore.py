@@ -61,6 +61,26 @@ def test_git_context_from_flow_state():
     assert ctx.repo_path == "/repos/myrepo"
     assert ctx.worktree_path == "/repos/myrepo/.git/.worktrees/feature"
     assert ctx.branch_name == "feature"
+    assert ctx.installation_token is None
+
+
+def test_git_context_from_flow_state_with_token():
+    mock_state = MagicMock()
+    mock_state.path = "/repos/myrepo"
+    mock_state.repo = "/repos/myrepo/.git/.worktrees/feature"
+    mock_state.branch = "feature"
+    mock_state.repo_owner = "owner"
+    mock_state.repo_name = "repo"
+
+    mock_config = MagicMock()
+    mock_config.token = "ghs_test_token_123"
+    mock_state.project_config = mock_config
+
+    ctx = GitContext.from_flow_state(mock_state)
+
+    assert ctx.repo_path == "/repos/myrepo"
+    assert ctx.installation_token == "ghs_test_token_123"
+    assert ctx.project_config == mock_config
 
 
 def test_get_commit_url():

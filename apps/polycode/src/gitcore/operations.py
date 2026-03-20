@@ -35,6 +35,7 @@ def clone_repository(
     repo_owner: str,
     repo_name: str,
     target_path: str,
+    installation_token: str | None = None,
 ) -> git.Repo:
     """Clone a repository from GitHub.
 
@@ -42,6 +43,7 @@ def clone_repository(
         repo_owner: GitHub repository owner
         repo_name: Repository name
         target_path: Local path to clone to
+        installation_token: GitHub App installation token (optional)
 
     Returns:
         git.Repo object for the cloned repository
@@ -50,9 +52,15 @@ def clone_repository(
     if parent_dir:
         os.makedirs(parent_dir, exist_ok=True)
 
-    repo_url = f"github:{repo_owner}/{repo_name}"
+    if installation_token:
+        repo_url = f"https://x-access-token:{installation_token}@github.com/{repo_owner}/{repo_name}.git"
+        safe_url = f"https://x-access-token:***@github.com/{repo_owner}/{repo_name}.git"
+    else:
+        repo_url = f"github:{repo_owner}/{repo_name}"
+        safe_url = repo_url
+
     repo = git.Repo.clone_from(repo_url, target_path)
-    log.info(f"🏹 Cloned repository from {repo_url} to {target_path}")
+    log.info(f"🏹 Cloned repository from {safe_url} to {target_path}")
     return repo
 
 
@@ -298,6 +306,7 @@ class GitOperations:
                 ctx.repo_owner,
                 ctx.repo_name,
                 repo_path,
+                installation_token=ctx.installation_token,
             )
 
         setup_develop_branch(ctx.root_repo)

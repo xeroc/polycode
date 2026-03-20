@@ -5,9 +5,9 @@ tools for Polycode agents.
 """
 
 import logging
-import os
+import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     import pluggy
@@ -33,15 +33,14 @@ class CodeAnalysisModule:
 
     name = "code_analysis"
     version = "0.1.0"
-    dependencies: list[str] = ClassVar = []
+    dependencies: ClassVar[list[str]] = []
 
     @classmethod
-    def on_load(cls, context: ModuleContext) -> None:
+    def on_load(cls, context: "ModuleContext") -> None:
         """Initialize code analysis module."""
-        pass
 
     @classmethod
-    def register_hooks(cls, hook_manager: pluggy.PluginManager) -> None:
+    def register_hooks(cls, hook_manager: "pluggy.PluginManager") -> None:
         """Register code analysis hooks."""
         hook_manager.register(CodeAnalysisHooks())
 
@@ -57,7 +56,8 @@ class CodeAnalysisModule:
             file_path: Path to the file
 
         Returns:
-            Analysis results with structural info and        """
+            Analysis results with structural info
+        """
         result = {"file_path": str(file_path), "analysis": "complete"}
         return result
 
@@ -71,7 +71,7 @@ class CodeAnalysisModule:
             Analysis results for all changed files
         """
         results = {}
-        for file_path, changes.keys():
+        for file_path in changes:
             results[file_path] = self.analyze_file(file_path)
         return results
 
@@ -79,47 +79,49 @@ class CodeAnalysisModule:
 class CodeAnalysisHooks:
     """Hook implementations for code analysis during flow phases."""
 
-    @hookimpl
+    def __init__(self) -> None:
+        self.module = CodeAnalysisModule()
+
+    @hookimpl  # type: ignore[misc]
     def on_flow_event(
         self,
-        event: FlowEvent,
+        event: "FlowEvent",
         flow_id: str,
         state: object,
         result: object | None = None,
         label: str = "",
     ) -> None:
         """Analyze code during planning and review phases."""
-        if not hasattr(state, "repo") or not state.repo:
+        if not hasattr(state, "repo") or not getattr(state, "repo", None):
             return
 
-        if event == FlowEvent.GIT_COMMIT:
+        if event == FlowEvent.GIT_COMMIT:  # type: ignore[attr-defined]
             log.debug(f"Analyzing commit in flow {flow_id}")
             changes = self._get_changes(state)
             if changes:
                 analysis = self.module.analyze_changes(changes)
-                log.info(f"📊 Code analysis complete for {len(analysis)} files")
-        elif event == FlowEvent.PR_CREATED:
+                log.info(f"Code analysis complete for {len(analysis)} files")
+        elif event == FlowEvent.PR_CREATED:  # type: ignore[attr-defined]
             log.debug(f"Reviewing PR in flow {flow_id}")
             changes = self._get_changes(state)
             if changes:
                 analysis = self.module.analyze_changes(changes)
-                self._validate_analysis(analysis,                log.info(f"✅ Code review passed for {len(analysis)} files")
+                self._validate_analysis(analysis)
+                log.info(f"Code review passed for {len(analysis)} files")
         else:
-            log.warning(f"⚠️ No changes to analyze in flow {flow_id}")
+            log.warning(f"No changes to analyze in flow {flow_id}")
 
     def _get_changes(self, state: object) -> dict[str, Any]:
         """Get file changes from git status."""
         if not hasattr(state, "repo"):
-                return {}
+            return {}
 
-        repo = Path(state.repo)
+        repo = Path(getattr(state, "repo", ""))
         if not repo.exists():
             return {}
 
         result = {}
         try:
-            import subprocess
-
             output = subprocess.check_output(
                 ["git", "status", "--porcelain"],
                 cwd=repo,
@@ -131,7 +133,7 @@ class CodeAnalysisHooks:
                     parts = line.split()
                     if len(parts) >= 2:
                         result[parts[1]] = {"status": "modified"}
-        except Exception:
+        except Exception as e:
             log.warning(f"Failed to get git status: {e}")
 
         return result
@@ -146,12 +148,10 @@ class CodeAnalysisHooks:
 
             errors = file_analysis.get("errors", [])
             if errors:
-                issues.extend(
-                    {"file": file_path, "errors": errors}
-                )
+                issues.append({"file": file_path, "errors": errors})
 
         if issues:
-            log.warning(f"⚠️ Code analysis issues found: {len(issues)} files")
+            log.warning(f"Code analysis issues found: {len(issues)} files")
             return False
 
         return True
