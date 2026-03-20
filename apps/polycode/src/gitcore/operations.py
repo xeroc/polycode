@@ -15,7 +15,7 @@ import git
 from gitcore.types import GitContext, WorktreeConfig
 
 if TYPE_CHECKING:
-    import pluggy
+    pass
 
 log = logging.getLogger(__name__)
 
@@ -255,19 +255,23 @@ class GitOperations:
     def __init__(
         self,
         context: GitContext,
-        hook_manager: "pluggy.PluginManager | None" = None,
     ):
         self.context = context
-        self._pm = hook_manager
 
     @classmethod
     def from_flow_state(
         cls,
         state: Any,
-        hook_manager: "pluggy.PluginManager | None" = None,
     ) -> "GitOperations":
         context = GitContext.from_flow_state(state)
-        return cls(context, hook_manager)
+        return cls(context)
+
+    @property
+    def worktree_path(self):
+        ctx = self.context
+        repo_path = ctx.repo_path
+        worktrees_dir = os.path.join(repo_path, ".git", ".worktrees")
+        return os.path.join(worktrees_dir, ctx.branch_name)
 
     def prepare_worktree(self) -> str:
         """Prepare a worktree for development.

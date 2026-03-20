@@ -160,7 +160,7 @@ def flow_run(
             enrich_offset=0,
             monitor=False,
         ) as bar:
-            bar.text = (f"Processing issue #{issue_number}: {issue.title}",)
+            bar.text = f"Processing issue #{issue_number}: {issue.title}"
 
             from ralph import kickoff as kickoff_ralph
 

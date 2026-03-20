@@ -36,12 +36,14 @@ class FlowEvent(StrEnum):
     PolycodeCrewMixin base class which emits CREW_FINISHED events.
     """
 
+    SETUP = "SETUP"
     FLOW_STARTED = "flow_started"
     FLOW_FINISHED = "flow_finished"
     FLOW_ERROR = "flow_error"
 
     CREW_FINISHED = "crew_finished"
     STORY_COMPLETED = "story_completed"
+    CLEANUP = "cleanup"
 
 
 class FlowHookSpec:

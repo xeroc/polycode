@@ -1,7 +1,5 @@
 """PostgreSQL-based flow state persistence using SQLAlchemy with JSONB."""
 
-from persistence.config import settings
-
 import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -19,6 +17,8 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.sql.expression import text
 from sqlalchemy.types import JSON, DateTime, Integer, String, TypeDecorator
+
+from persistence.config import settings
 
 DATABASE_URL = settings.DATABASE_URL
 

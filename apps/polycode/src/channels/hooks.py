@@ -39,9 +39,8 @@ class ChannelHooks:
             result: Event result (if any)
             label: Context label (e.g., "plan", "implement")
         """
-        if (
-            not hasattr(state, "project_config") or not state.project_config  # type: ignore[attr-defined]
-        ):
+        log.info(f"🎣 Hook called in {__name__}")
+        if not hasattr(state, "project_config") or not state.project_config:  # type: ignore[attr-defined]
             return
 
         dispatcher = self._get_dispatcher(state)

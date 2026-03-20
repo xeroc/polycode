@@ -28,6 +28,7 @@ class ImplementCrew(PolycodeCrewMixin):
     _custom_tasks: dict[str, TaskTemplate] | None = None
     _base_tasks_config: dict | None = None
     _loaded_agents_config: dict | None = None
+    _project_root: str | None = None
 
     def _load_base_configs(self):
         config_path = Path(__file__).parent / "config" / "tasks.yaml"
@@ -78,8 +79,24 @@ class ImplementCrew(PolycodeCrewMixin):
         ]
 
         if self.agents_md_map:
-            tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))  # ty:ignore
+            tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
 
+        if self._project_root:
+            from tools.code_analysis import (
+                DefinitionTool,
+                DiagnosticsTool,
+                HoverTool,
+                ReferencesTool,
+            )
+
+            tools.extend(
+                [
+                    DiagnosticsTool(),
+                    HoverTool(),
+                    DefinitionTool(),
+                    ReferencesTool(),
+                ]
+            )
         return Agent(  # ty:ignore
             config=self._get_agent_config("developer"),
             verbose=False,
@@ -128,10 +145,13 @@ class ImplementCrew(PolycodeCrewMixin):
         self,
         agents_md_map: dict[str, str] | None = None,
         custom_tasks: dict[str, TaskTemplate] | None = None,
+        project_root: str | None = None,
     ) -> Crew:
         self.agents_md_map = agents_md_map or {}
         if custom_tasks:
             self._custom_tasks = custom_tasks
+        if project_root:
+            self._project_root = project_root
 
         return Crew(
             agents=self.agents,

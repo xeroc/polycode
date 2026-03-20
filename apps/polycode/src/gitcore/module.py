@@ -1,5 +1,7 @@
 """Gitcore module implementation for the Polycode plugin system."""
 
+from gitcore.hooks import GitcoreHooks
+
 import logging
 from typing import Any
 
@@ -38,6 +40,8 @@ class GitcoreModule:
         Gitcore doesn't register lifecycle hooks by default, but modules
         can extend it to add git-related hooks.
         """
+        hook_manager.register(GitcoreHooks())
+        log.info("🏹 Registered GitModuleHooks")
 
     @classmethod
     def get_models(cls) -> list[type]:

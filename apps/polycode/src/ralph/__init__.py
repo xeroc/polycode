@@ -9,8 +9,6 @@ Events:
   - FLOW_FINISHED: Emitted after verify (triggers PR/merge/cleanup hooks)
 """
 
-from persistence.postgres import persistence
-
 import logging
 import subprocess
 import uuid
@@ -18,6 +16,7 @@ from typing import cast
 
 from crewai import Flow
 from crewai.flow.flow import listen, start
+from crewai.flow.persistence import persist
 
 from crews import PlanCrew, RalphCrew
 from crews.plan_crew.types import PlanOutput
@@ -25,10 +24,10 @@ from crews.ralph_crew.types import RalphOutput
 from flowbase import FlowIssueManagement, KickoffIssue
 from gitcore import sanitize_branch_name
 from modules.hooks import FlowEvent
+from persistence.postgres import persistence
 from project_manager import StatusMapping
 from project_manager.config import settings as project_settings
 from project_manager.types import ProjectConfig
-from crewai.flow.persistence import persist
 
 from .types import RalphLoopState
 
@@ -85,6 +84,8 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             logger.info(f"  |- 🔖 {current_story.description}")
 
         num_stories = len(self.state.stories) if self.state.stories else 0
+
+        self._emit(FlowEvent.STORY_COMPLETED)  # non completed
         logger.info(f"\n🔨 Starting implementation for {num_stories} stories")
 
     @listen(plan)
@@ -174,6 +175,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         # Emit FLOW_FINISHED - hooks will handle PR/merge/cleanup
         logger.info("🏁 Flow finished - emitting FLOW_FINISHED event")
         self._emit(FlowEvent.FLOW_FINISHED, label="ralph")
+        self._emit(FlowEvent.CLEANUP)
 
 
 def kickoff(issue: KickoffIssue):

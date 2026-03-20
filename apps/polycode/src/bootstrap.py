@@ -59,8 +59,9 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     from gitcore import GitcoreModule
     from project_manager import ProjectManagerModule
 
-    module_registry.register_builtin(GitcoreModule)  # type: ignore[arg-type]
     module_registry.register_builtin(ProjectManagerModule)  # type: ignore[arg-type]
+    # git core last, so it gets called first! pull request require the branch is pushed!
+    module_registry.register_builtin(GitcoreModule)  # type: ignore[arg-type]
 
     ModelRegistry.create_all(engine)
 

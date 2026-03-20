@@ -92,6 +92,8 @@ class CodeAnalysisHooks:
         label: str = "",
     ) -> None:
         """Analyze code during planning and review phases."""
+        log.info(f"🎣 Hook called in {__name__}")
+
         if not hasattr(state, "repo") or not getattr(state, "repo", None):
             return
 

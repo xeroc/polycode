@@ -120,6 +120,7 @@ class FlowIssueManagement(Flow[T]):
         if not self._pm:
             return
         try:
+            logger.info(f"🪝 Received an emit, calling hooks for {event}")
             self._pm.hook.on_flow_event(
                 event=event,
                 flow_id=str(getattr(self.state, "id", "")),
@@ -133,12 +134,11 @@ class FlowIssueManagement(Flow[T]):
     @property
     def git_operations(self) -> GitOperations:
         """Get git operations instance for this flow."""
-        return GitOperations.from_flow_state(self.state, self._pm)
+        return GitOperations.from_flow_state(self.state)
 
     def _setup(self):
         """Initialize flow - prepare worktree and discover project structure."""
-        worktree_path = self.git_operations.prepare_worktree()
-        self.state.repo = worktree_path
+        self.state.repo = self.git_operations.worktree_path
         if not self.state.project_config:
             raise ValueError("project_config required!")
 

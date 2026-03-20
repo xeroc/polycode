@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable
 
 from modules.hooks import FlowEvent, hookimpl
+from project_manager import IssueStatus
 
 if TYPE_CHECKING:
     from project_manager.base import ProjectManager
@@ -58,6 +59,7 @@ class ProjectManagerHooks:
             result: Event-specific result (e.g., commit sha, pr url)
             label: Context label (e.g., "plan", "implement", "review")
         """
+        log.info(f"🎣 Hook called in {__name__}")
         if not hasattr(state, "project_config") or not state.project_config:
             log.debug("No project_config in state, skipping project manager hooks")
             return
@@ -291,6 +293,8 @@ class ProjectManagerHooks:
         if not issue_id:
             return
 
+        pm.update_issue_status(issue_id, pm.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS))
+
         log.info(f"🚀 Flow started for issue #{issue_id}")
 
     def _handle_story_completed(self, state: Any, pm: "ProjectManager", story: Any) -> None:
@@ -322,7 +326,10 @@ class ProjectManagerHooks:
             },
         )
 
-        log.info(f"✅ Updated checklist for story: {story.title if hasattr(story, 'title') else 'unknown'}")
+        if story:
+            log.info(f"✅ Updated checklist for story: {story.title if hasattr(story, 'title') else 'unknown'}")
+        else:
+            log.info(f"✅ New checklist for all ({len(stories)})")
 
     def _handle_flow_finished(self, state: Any, pm: "ProjectManager") -> None:
         """Handle flow finish - create PR, merge, update final checklist, cleanup.
@@ -360,5 +367,7 @@ class ProjectManagerHooks:
 
         # Update issue status to Done
         self._handle_cleanup(state, pm)
+
+        pm.update_issue_status(issue_id, pm.config.status_mapping.to_provider_status(IssueStatus.DONE))
 
         log.info(f"🏁 Flow finished for issue #{issue_id}")
