@@ -1,6 +1,27 @@
-# Polycode
+<div align="center">
 
-Multi-agent software development automation using CrewAI with GitHub App integration for webhook-driven workflows.
+<h1>Self-hosted AI GitHub bot for automated software development</h1>
+
+<p>Label an issue, and watch your bot plan, implement, and open a PR.<br>
+<strong>Polycode brings AI automation to your repos — no black box, no SaaS, your infra.</strong></p>
+
+<br>
+
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![CrewAI](https://img.shields.io/badge/CrewAI-Multi_Agent-FF6B6B?style=for-the-badge)](https://docs.crewai.com)
+[![GitHub App](https://img.shields.io/badge/GitHub-App_Integration-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/apps/polycode-agent/)
+
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/xeroc/polycode?style=flat-square)](https://github.com/xeroc/polycode)
+[![Python package](https://img.shields.io/badge/pypi-v0.1.0-blue?style=flat-square&logo=pypi)](https://pypi.org/project/polycode/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/xeroc/polycode)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Redis](https://img.shields.io/badge/Redis-7+-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io)
+
+</div>
+
+---
 
 ## Key Features
 
