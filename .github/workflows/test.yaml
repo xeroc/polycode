@@ -23,6 +23,11 @@ jobs:
         run: uv sync --locked --all-extras --dev
         working-directory: apps/polycode/
 
+      - name: setup git
+        run: |
+          git config --global user.email "polycode@polycod.ing"
+          git config --global user.name "Polycode pipeline"
+
       - name: Run pytest
         run: uv run pytest
         env:
