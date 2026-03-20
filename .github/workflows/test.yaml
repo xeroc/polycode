@@ -25,6 +25,8 @@ jobs:
 
       - name: Run pytest
         run: uv run pytest
+        env:
+          GITHUB_TOKEN: xxx
         working-directory: apps/polycode/
 
       - name: Run pyright
