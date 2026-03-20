@@ -5,11 +5,9 @@ on:
   workflow_call:
 
 jobs:
-
   test:
     runs-on: ubuntu-latest
     steps:
-
       - uses: actions/checkout@v4
 
       # If you wanted to use multiple Python versions, you'd have specify a matrix in the job and
@@ -51,13 +49,14 @@ jobs:
         id: cache-deps
         uses: actions/cache@v4
         with:
-          path: .venv
+          path: apps/polycode/.venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
       # Install dependencies. `--no-root` means "install all dependencies but not the project
       # itself", which is what you want to avoid caching _your_ code. The `if` statement
       # ensures this only runs on a cache miss.
       - run: poetry install --no-interaction --no-root
+        working-directory: apps/polycode/
         if: steps.cache-deps.outputs.cache-hit != 'true'
 
       # Now install _your_ project. This isn't necessary for many types of projects -- particularly
@@ -65,7 +64,9 @@ jobs:
       # pyproject.toml and makes that if you add things like console-scripts at some point that
       # they'll be installed and working.
       - run: poetry install --no-interaction
+        working-directory: apps/polycode/
 
       # And finally run tests. I'm using pytest and all my pytest config is in my `pyproject.toml`
       # so this line is super-simple. But it could be as complex as you need.
       - run: poetry run pytest
+        working-directory: apps/polycode/
