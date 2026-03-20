@@ -2,7 +2,7 @@ from typing import List
 
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.project import agent, crew, task
+from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
 from crewai_tools import FileWriterTool
 
@@ -13,6 +13,7 @@ from tools import AgentsMDLoaderTool, DirectoryReadTool, FileReadTool
 from .types import PlanOutput
 
 
+@CrewBase
 class PlanCrew(PolycodeCrewMixin):
     """Plan Crew - Decompose task into user stories."""
 
@@ -31,7 +32,7 @@ class PlanCrew(PolycodeCrewMixin):
         if self.agents_md_map:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
 
-        return Agent(
+        return Agent(  # ty:ignore
             config=self.agents_config["setup"],  # type: ignore
             verbose=False,
             llm=GLMJSONLLM(),
@@ -47,7 +48,7 @@ class PlanCrew(PolycodeCrewMixin):
         if self.agents_md_map:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
 
-        return Agent(
+        return Agent(  # ty:ignore
             config=self.agents_config["planner"],  # type: ignore
             llm=GLMJSONLLM(),
             verbose=False,
@@ -56,13 +57,13 @@ class PlanCrew(PolycodeCrewMixin):
 
     @task
     def setup_task(self) -> Task:
-        return Task(
+        return Task(  # ty:ignore
             config=self.tasks_config["setup_task"],  # type: ignore
         )
 
     @task
     def plan_task(self) -> Task:
-        return Task(
+        return Task(  # ty:ignore
             config=self.tasks_config["plan_task"],  # type: ignore
             output_pydantic=PlanOutput,
         )
@@ -72,8 +73,8 @@ class PlanCrew(PolycodeCrewMixin):
         self.agents_md_map = agents_md_map or {}
 
         return Crew(
-            agents=self.agents,  # type: ignore
-            tasks=self.tasks,  # type: ignore
+            agents=self.agents,
+            tasks=self.tasks,
             process=Process.sequential,
             verbose=False,
         )

@@ -2,7 +2,7 @@ from typing import List
 
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.project import agent, crew, task
+from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
 from crewai_tools import FileWriterTool
 
@@ -13,6 +13,7 @@ from tools import AgentsMDLoaderTool, DirectoryReadTool, ExecTool, FileReadTool
 from .types import RalphOutput
 
 
+@CrewBase
 class RalphCrew(PolycodeCrewMixin):
     """Ralph implementation crew - minimal loop for fast changes."""
 

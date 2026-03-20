@@ -4,7 +4,7 @@ from typing import List
 import yaml
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.project import agent, crew, task
+from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import FileWriterTool
 
 from crews.base import PolycodeCrewMixin
@@ -14,6 +14,7 @@ from tools import AgentsMDLoaderTool, DirectoryReadTool, ExecTool, FileReadTool
 from .types import ImplementOutput, TaskTemplate
 
 
+@CrewBase
 class ImplementCrew(PolycodeCrewMixin):
     """Flexible Implement Crew that accepts custom task configurations."""
 
@@ -133,8 +134,8 @@ class ImplementCrew(PolycodeCrewMixin):
             self._custom_tasks = custom_tasks
 
         return Crew(
-            agents=self.agents,  # pyright:ignore # ty:ignore
-            tasks=self.tasks,  # pyright:ignore # ty:ignore
+            agents=self.agents,
+            tasks=self.tasks,
             process=Process.sequential,
             verbose=False,
         )

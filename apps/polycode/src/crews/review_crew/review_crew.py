@@ -2,7 +2,7 @@ from typing import List
 
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.project import agent, crew, task
+from crewai.project import CrewBase, agent, crew, task
 
 from crews.base import PolycodeCrewMixin
 from glm import GLMJSONLLM
@@ -10,6 +10,7 @@ from glm import GLMJSONLLM
 from .types import ReviewOutput
 
 
+@CrewBase
 class ReviewCrew(PolycodeCrewMixin):
     """Review Crew - Review pull requests."""
 
@@ -22,7 +23,7 @@ class ReviewCrew(PolycodeCrewMixin):
 
     @agent
     def reviewer(self) -> Agent:
-        return Agent(
+        return Agent(  # ty:ignore
             config=self.agents_config["reviewer"],  # type: ignore
             verbose=False,
             llm=GLMJSONLLM(),
@@ -30,16 +31,16 @@ class ReviewCrew(PolycodeCrewMixin):
 
     @task
     def review_task(self) -> Task:
-        return Task(
-            config=self.tasks_config["review_task"],  # pyright:ignore
-            output_pydantic=ReviewOutput,  # type: ignore
+        return Task(  # ty:ignore
+            config=self.tasks_config["review_task"],  # type: ignore
+            output_pydantic=ReviewOutput,
         )
 
     @crew
     def crew(self) -> Crew:
         return Crew(
-            agents=self.agents,  # type: ignore
-            tasks=self.tasks,  # type: ignore
+            agents=self.agents,
+            tasks=self.tasks,
             process=Process.sequential,
             verbose=False,
         )
