@@ -65,3 +65,4 @@ jobs:
           stack-name: "${{ inputs.stack }}"
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          PULUMI_CONFIG_PASSPHRASE: ${{secrets.PULUMI_CONFIG_PASSPHRASE}}
