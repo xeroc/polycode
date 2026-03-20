@@ -180,4 +180,4 @@ uv run pyright            # Type check
 
 ## License
 
-MIT
+MIT [LICENSE](./LICENSE)
