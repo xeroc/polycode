@@ -1,7 +1,7 @@
 [project]
-name = "coding_farm"
+name = "polycode"
 version = "0.1.0"
-description = "Antfarm workflows implemented with CrewAI - Multi-agent software development automation"
+description = "Coding agent that lives in your project management tool"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
