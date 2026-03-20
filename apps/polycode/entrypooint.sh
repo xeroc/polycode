@@ -20,7 +20,7 @@ worker)
     curl ${OLLAMA_HOST}/api/pull -d '{"name": "all-minilm:22m"}'
     echo -e "$SSH_KEY" >~/.ssh/id
     chmod 0600 ~/.ssh/id
-    exec uv run celery -A celery_tasks.worker.app worker -Ofair --task-events --queues celery,default --loglevel=info $*
+    exec uv run polycode worker start --queues celery,default --loglevel=info $*
     ;;
 
 flower)
@@ -32,7 +32,16 @@ api)
     echo "Launching API:"
     # needed to allow x-forward of proto and ip so url_for in fastapi returns an https schema'd link
     export FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:="*"}
-    exec uv run webhook-server webhook --host=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
+    # FIXME: might want to use `uv run polycode` instead
+    exec uv run polycode server webhook --host=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
+    ;;
+
+socketio)
+    echo "Launching Socketio:"
+    # needed to allow x-forward of proto and ip so url_for in fastapi returns an https schema'd link
+    export FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:="*"}
+    # FIXME: might want to use `uv run polycode` instead
+    exec uv run polycode server socketio --host=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
     ;;
 
 esac

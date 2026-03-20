@@ -61,7 +61,7 @@ jobs:
           push: true
           tags: ${{ inputs.registry }}/${{ inputs.image }}:${{ inputs.version }}
           file: ${{ inputs.package }}/Dockerfile
-          context: .
+          context: ${{ inputs.package }}
           build-args: |
             VCS_REF=${{ github.sha }}
             IMAGE_VERSION=${{ inputs.version }}
