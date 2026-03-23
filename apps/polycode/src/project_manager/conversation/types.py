@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, Field
 
-from flowbase import BaseFlowModel
+from flows.base import BaseFlowModel
 
 if TYPE_CHECKING:
     from crews.plan_crew.types import Story

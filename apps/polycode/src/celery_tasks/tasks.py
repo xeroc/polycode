@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from bootstrap import init_plugins
-from flowbase import KickoffIssue, KickoffRepo
+from flows.base import KickoffIssue, KickoffRepo
 from flows.registry import get_flow_registry
 from persistence.celery_tasks import CeleryTaskTracker
 from persistence.postgres import Base

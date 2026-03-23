@@ -13,7 +13,7 @@ from rich.table import Table
 from bootstrap import init_plugins
 from cli import print_error, print_info, print_success
 from cli.utils import get_logger
-from flowbase import KickoffIssue, KickoffRepo
+from flows.base import KickoffIssue, KickoffRepo
 from project_manager.github import GitHubProjectManager
 from project_manager.types import ProjectConfig, StatusMapping
 
@@ -162,9 +162,9 @@ def flow_run(
         ) as bar:
             bar.text = f"Processing issue #{issue_number}: {issue.title}"
 
-            from ralph import kickoff as kickoff_ralph
+            from flows.ralph import ralph_kickoff
 
-            kickoff_ralph(kickoff_issue)
+            ralph_kickoff(kickoff_issue)
 
             bar()
 

@@ -77,7 +77,7 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     model_count = len(ModelRegistry.all_models())
     log.info(f"🚀 Bootstrap complete: {module_count} modules, {model_count} tables")
 
-    from flowbase import FlowIssueManagement
+    from flows.base import FlowIssueManagement
 
     FlowIssueManagement.configure_hooks(module_registry.pm)
 
@@ -112,7 +112,7 @@ def init_plugins() -> pluggy.PluginManager:
 
     # Register channels module (this registers ChannelHooks)
     from channels import ChannelsPolycodeModule
-    from flowbase import FlowIssueManagement
+    from flows.base import FlowIssueManagement
 
     ChannelsPolycodeModule.register_hooks(pm)
     FlowIssueManagement.configure_hooks(pm)

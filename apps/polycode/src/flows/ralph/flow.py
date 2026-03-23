@@ -9,7 +9,7 @@ from crewai.flow.persistence import persist
 from crews import PlanCrew, RalphCrew
 from crews.plan_crew.types import PlanOutput
 from crews.ralph_crew.types import RalphOutput
-from flowbase import FlowIssueManagement, KickoffIssue
+from flows.base import FlowIssueManagement, KickoffIssue
 from gitcore import sanitize_branch_name
 from modules.hooks import FlowEvent
 from persistence.postgres import persistence

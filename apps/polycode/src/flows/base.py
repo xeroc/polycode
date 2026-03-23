@@ -1,5 +1,4 @@
-"""
-Feature Development Flow module.
+"""Feature Development Flow module.
 
 Generic flow orchestration that delegates project-specific operations (PR, merge, issue management)
 to plugin hooks. This module has no knowledge of GitHub or any specific provider.
@@ -46,7 +45,7 @@ class KickoffRepo(BaseModel):
 
 class KickoffIssue(BaseModel):
     id: int = Field(description="Issue ID")
-    flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of the flow that will run")
+    flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of flow that will run")
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
     memory_prefix: str = Field(description="prefix for memory")
@@ -55,7 +54,7 @@ class KickoffIssue(BaseModel):
 
 
 class BaseFlowModel(BaseModel):
-    project_config: Optional[ProjectConfig] = Field(default=None, description="Description of the project to work on")
+    project_config: Optional[ProjectConfig] = Field(default=None, description="Description of project to work on")
     path: str = Field(default="", description="Original Path to repository")
     repo: str = Field(default="", description="Path to repository in a worktree")
     branch: str = Field(default="", description="Feature branch name")
@@ -67,12 +66,12 @@ class BaseFlowModel(BaseModel):
     pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
     issue_id: int = Field(default=0, description="issue id")
-    planning_comment_id: Optional[int] = Field(default=None, description="ID of the planning progress comment")
+    planning_comment_id: Optional[int] = Field(default=None, description="ID of planning progress comment")
     commit_title: Optional[str] = Field(
         default=None,
         description="Commit Message title including conventional commit prefix",
     )
-    commit_message: Optional[str] = Field(default=None, description="The body of the commit message")
+    commit_message: Optional[str] = Field(default=None, description="The body of commit message")
     commit_footer: Optional[str] = Field(default=None, description="Commit message footer")
     memory_prefix: str = Field(default="", description="prefix for memory")
     test_cmd: Optional[str] = Field(default=None, description="Test command")
@@ -107,7 +106,7 @@ class FlowIssueManagement(Flow[T]):
 
     @classmethod
     def configure_hooks(cls, pm: "pluggy.PluginManager") -> None:
-        """Set the plugin manager for all flow instances."""
+        """Set plugin manager for all flow instances."""
         cls._pm = pm
 
     def _emit(
@@ -164,7 +163,7 @@ class FlowIssueManagement(Flow[T]):
         return "\n".join(f"- {m.record.content}" for m in conf_recall)
 
     def discover_agents_md_files(self):
-        """Discover all AGENTS.md files in the repository."""
+        """Discover all AGENTS.md files in repository."""
         repo_path = Path(self.state.repo)
         agents_md_files = {}
 

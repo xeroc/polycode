@@ -7,7 +7,7 @@ from crewai.flow.flow import listen, start
 
 from crews.conversation_crew import ConversationCrew
 from crews.plan_crew.types import Story
-from flowbase import FlowIssueManagement
+from flows.base import FlowIssueManagement
 from project_manager.github_conversation import GitHubConversationManager
 
 from .types import (

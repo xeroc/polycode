@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Callable
 
-from flowbase import KickoffIssue
+from flows.base import KickoffIssue
 
 
 @dataclass(frozen=True)

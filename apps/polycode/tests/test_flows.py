@@ -1,7 +1,6 @@
 """Tests for flow system."""
 
-
-from flowbase import KickoffIssue
+from flows.base import KickoffIssue
 from flows.protocol import FlowDef
 from flows.registry import FlowRegistry, get_flow_registry
 
