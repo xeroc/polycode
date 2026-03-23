@@ -1,12 +1,11 @@
 """Gitcore module implementation for the Polycode plugin system."""
 
-from gitcore.hooks import GitcoreHooks
-
 import logging
 from typing import Any
 
 import pluggy
 
+from gitcore.hooks import GitcoreHooks
 from modules.context import ModuleContext
 
 log = logging.getLogger(__name__)

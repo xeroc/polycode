@@ -24,6 +24,9 @@ class ProjectManagerSettings(BaseSettings):
     MERGE_REQUIRED_LABEL: str = "polycode:automerge"
     WORK_FLOW_START_LABEL: str = "polycode:implement"
 
+    # Label prefix for flow-triggering labels
+    FLOW_LABEL_PREFIX: str = "polycode:"
+
     # Database Configuration
     DATABASE_URL: str = "sqlite:///polycode.db"
 
