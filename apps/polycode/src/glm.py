@@ -1,4 +1,3 @@
-from typing import Optional
 
 from crewai.llms.providers.openai.completion import OpenAICompletion
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,19 +19,19 @@ settings = GLMSettings()  # pyright:ignore # ty:ignore
 class GLMJSONLLM(OpenAICompletion):
     """Custom LLM wrapper for GLM with JSON mode support."""
 
-    def __init__(
-        self,
-        temperature: Optional[float] = 0.7,
-        **kwargs,
-    ):
-        super().__init__(
-            model=settings.OPENAI_MODEL,
-            temperature=temperature,
-            api_key=settings.OPENAI_API_KEY,  # ty:ignore
-            base_url=settings.OPENAI_BASE_URL,  # ty:ignore
-            **kwargs,
-        )
-
+    # def __init__(
+    #     self,
+    #     temperature: Optional[float] = 0.7,
+    #     **kwargs,
+    # ):
+    #     super().__init__(
+    #         model=settings.OPENAI_MODEL,
+    #         temperature=temperature,
+    #         api_key=settings.OPENAI_API_KEY,  # ty:ignore
+    #         base_url=settings.OPENAI_BASE_URL,  # ty:ignore
+    #         **kwargs,
+    #     )
+    #
     # def call(
     #     self,
     #     messages: str | list[LLMMessage],
