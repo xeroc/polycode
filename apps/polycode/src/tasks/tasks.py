@@ -99,7 +99,7 @@ def kickoff_task(
                 "message": f"Issue #{issue_number} not found in project",
             }
 
-        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}"
+        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
         flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier)
 
         comments = manager.get_comments(issue_number)

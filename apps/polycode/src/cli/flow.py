@@ -6,6 +6,7 @@ from typing import Any
 
 import typer
 from alive_progress import alive_bar
+from uuid import NAMESPACE_DNS, uuid5
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -132,9 +133,11 @@ def flow_run(
 
         print_info(f"   Title: {issue.title}")
 
-        from uuid import NAMESPACE_DNS, uuid5
+        from bootstrap import bootstrap
 
-        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}"
+        bootstrap(config={"modules": {p: {} for p in plugins}})
+
+        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
 
         comments = manager.get_comments(issue_number)
 
