@@ -12,7 +12,6 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from redis import Redis
 
 from github_app.auth import GitHubAppAuth
 from github_app.config import settings
@@ -29,12 +28,9 @@ app = FastAPI(
     version="2.0.0",
 )
 
-redis_client = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB)
-
 github_auth = GitHubAppAuth(
     app_id=settings.GITHUB_APP_ID,
     private_key=settings.GITHUB_APP_PRIVATE_KEY.replace("\\n", "\n"),
-    redis_client=redis_client,
 )
 
 
@@ -117,27 +113,6 @@ async def github_webhook(request: Request):
 # ============================================================================
 # Installation Management API
 # ============================================================================
-
-
-@app.post("/installations/{installation_id}/sync")
-async def sync_installation(installation_id: int):
-    """Sync repositories for an installation."""
-    db_session = get_db_session()
-
-    try:
-        installation_manager = InstallationManager(db_session, github_auth)
-        repos = installation_manager.sync_repositories(installation_id)
-
-        if repos is None:
-            raise HTTPException(status_code=404, detail="Installation not found")
-
-        return {
-            "installation_id": installation_id,
-            "repositories": repos,
-            "count": len(repos or []),
-        }
-    finally:
-        db_session.close()
 
 
 @app.get("/installations")

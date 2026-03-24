@@ -200,7 +200,7 @@ class GitHubAppWebhookHandler:
 
     async def _delegate_to_celery(self, payload: Dict[str, Any], installation_id: int) -> Dict[str, Any]:
         """Delegate to existing process_github_webhook_task."""
-        from celery_tasks.tasks import process_github_webhook_task
+        from tasks.tasks import process_github_webhook_task
 
         # Add installation context to payload
         payload["installation_id"] = installation_id

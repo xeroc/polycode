@@ -5,6 +5,11 @@ implement_task:
     TASK (overall):
     {task}
 
+    COMMENTS:
+    {% for comment in comments %}
+    - {{comment.user}} - {{comment.created_at}}: {{comment.comment|replace('\n', ' ')}}
+    {% endfor %}
+
     REPO: {repo}
     BRANCH: {branch}
     BUILD_CMD: {build_cmd}
@@ -130,7 +135,8 @@ generate_result:
     5. **Never fabricate ticket numbers** unless they appear explicitly in the stories input.
     6. **If no scope is determinable**, omit the parentheses entirely.
     7. **Breaking changes** must appear both as `!` after the type/scope and as a `BREAKING CHANGE:` footer.
-     8. **Output only the commit message** — no preamble, no explanation, no markdown fences.
+    8. **Output only the commit message** — no preamble, no explanation, no markdown fences.
+    9. **Reference issue** must be named in the commit message. Our reference issue number is {issue_id}
 
   expected_output: >
     Structured commit message distinguishing title (first one) from body (rest of the message without title)

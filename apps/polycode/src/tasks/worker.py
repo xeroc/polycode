@@ -2,7 +2,7 @@
 
 import logging
 
-from celery_tasks import app, tasks
+from tasks import app, tasks
 
 assert app
 assert tasks
@@ -18,7 +18,7 @@ def hello():
 def register_module_tasks() -> list[str]:
     """Register tasks from all loaded modules.
 
-    Modules can define get_celery_tasks() to contribute async tasks.
+    Modules can define get_tasks() to contribute async tasks.
 
     Returns:
         List of registered task names.

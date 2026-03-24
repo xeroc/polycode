@@ -101,9 +101,23 @@ class ModuleRegistry:
 
             log.info(f"✅ Module loaded: {name}")
 
-        self._collect_celery_tasks()
+        self._collect_tasks()
 
-    def _collect_celery_tasks(self) -> int:
+    def _collect_flows_from_modules(self) -> int:
+        """Collect flows from all modules.
+
+        Args:
+            modules: Dict of module_name -> module class.
+
+        Returns:
+            Number of flows collected.
+        """
+        from flows.registry import get_flow_registry
+
+        flow_registry = get_flow_registry()
+        return flow_registry.collect_from_modules(self.modules)
+
+    def _collect_tasks(self) -> int:
         """Collect Celery tasks from all loaded modules.
 
         Returns:

@@ -34,13 +34,6 @@ class ConversationCrew(PolycodeCrewMixin):
             verbose=False,
         )
 
-    @agent
-    def ralph_initializer(self) -> Agent:
-        return Agent(  # ty:ignore
-            config=self.agents_config["ralph_initializer"],  # type: ignore[index]
-            verbose=False,
-        )
-
     @task
     def spec_elicitation_task(self) -> Task:
         return Task(  # ty:ignore
@@ -54,12 +47,6 @@ class ConversationCrew(PolycodeCrewMixin):
             config=self.tasks_config["story_breakdown_task"],  # type: ignore[index]
             output_pydantic=List[SpecOutput],  # ty:ignore
             context=[self.spec_elicitation_task()],  # pyright: ignore
-        )
-
-    @task
-    def ralph_init_task(self) -> Task:
-        return Task(  # ty:ignore
-            config=self.tasks_config["ralph_init_task"],  # type: ignore[index]
         )
 
     @crew

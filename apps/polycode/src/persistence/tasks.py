@@ -15,7 +15,7 @@ class CeleryTask(Base):
     Tracks all Celery tasks for monitoring and debugging purposes.
     """
 
-    __tablename__ = "celery_tasks"
+    __tablename__ = "tasks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     task_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
@@ -31,9 +31,9 @@ class CeleryTask(Base):
     issue_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (
-        Index("idx_celery_tasks_flow_id", "flow_id"),
-        Index("idx_celery_tasks_status", "status"),
-        Index("idx_celery_tasks_task_type", "task_type"),
+        Index("idx_tasks_flow_id", "flow_id"),
+        Index("idx_tasks_status", "status"),
+        Index("idx_tasks_task_type", "task_type"),
     )
 
 

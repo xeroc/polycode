@@ -6,6 +6,7 @@ from typing import Any
 
 import typer
 from alive_progress import alive_bar
+from uuid import NAMESPACE_DNS, uuid5
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -13,7 +14,7 @@ from rich.table import Table
 from bootstrap import init_plugins
 from cli import print_error, print_info, print_success
 from cli.utils import get_logger
-from flowbase import KickoffIssue, KickoffRepo
+from flows.base import KickoffIssue, KickoffRepo
 from project_manager.github import GitHubProjectManager
 from project_manager.types import ProjectConfig, StatusMapping
 
@@ -136,18 +137,28 @@ def flow_run(
 
         bootstrap(config={"modules": {p: {} for p in plugins}})
 
-        from uuid import NAMESPACE_DNS, uuid5
+        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
 
-        flow_identifier = f"{repo_owner}/{repo_name}/{issue_number}"
+        comments = manager.get_comments(issue_number)
+
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=uuid5(NAMESPACE_DNS, flow_identifier),
             title=issue.title,
             body=issue.body or "",
-            memory_prefix=f"{repo_owner}/{repo_name}",
+            comments=[
+                {
+                    "id": c.id,
+                    "user": c.user.login if c.user else None,
+                    "body": c.body,
+                    "created_at": c.created_at.isoformat() if c.created_at else None,
+                }
+                for c in comments
+            ],
+            memory_prefix=f"{manager.config.repo_owner}/{manager.config.repo_name}",
             repository=KickoffRepo(
-                owner=repo_owner,
-                repository=repo_name,
+                owner=manager.config.repo_owner,
+                repository=manager.config.repo_name,
             ),
             project_config=config,
         )
@@ -162,9 +173,9 @@ def flow_run(
         ) as bar:
             bar.text = f"Processing issue #{issue_number}: {issue.title}"
 
-            from ralph import kickoff as kickoff_ralph
+            from flows.ralph import ralph_kickoff
 
-            kickoff_ralph(kickoff_issue)
+            ralph_kickoff(kickoff_issue)
 
             bar()
 

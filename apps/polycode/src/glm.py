@@ -1,5 +1,4 @@
 from typing import Optional
-
 from crewai.llms.providers.openai.completion import OpenAICompletion
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

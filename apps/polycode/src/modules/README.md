@@ -244,7 +244,7 @@ class PolycodeModule(Protocol):
         return []
 
     @classmethod
-    def get_celery_tasks(cls) -> list[dict[str, Any]]:
+    def get_tasks(cls) -> list[dict[str, Any]]:
         """
         Return Celery task definitions for this module.
 
@@ -263,7 +263,7 @@ class PolycodeModule(Protocol):
 3. Validates `dependencies` (other modules load first)
 4. Calls `on_load(context)` with `ModuleContext`
 5. Calls `register_hooks(hook_manager)` to collect hook implementations
-6. Collects `get_celery_tasks()` and registers with Celery app
+6. Collects `get_tasks()` and registers with Celery app
 7. Raises error on circular dependencies
 
 ---
@@ -350,8 +350,8 @@ entry_points.register(
 ```python
 from tasks import TaskRegistry
 
-# In your module's get_celery_tasks():
-def get_celery_tasks(cls):
+# In your module's get_tasks():
+def get_tasks(cls):
     return [
         {"name": "process_data", "func": process_data_task, "options": {"bind": True}},
         {"name": "cleanup", "func": cleanup_task},
@@ -611,7 +611,7 @@ def test_hook_filters_by_event():
 ✅ **Always implement `PolycodeModule` protocol** — This ensures proper integration
 ✅ **Use `dependencies` for module ordering** — Registry handles load order
 ✅ **Keep `on_load()` lightweight** — Only initialize resources, don't run heavy operations
-✅ **Use `get_celery_tasks()` for background work** — Don't block module load
+✅ **Use `get_tasks()` for background work** — Don't block module load
 ✅ **Register hooks if needed** — Even if your module doesn't use events, implement no-op methods
 ✅ **Add docstrings** — Explain your module's purpose in `on_load()` or class docstring
 
@@ -717,7 +717,7 @@ print(registry.tasks)
 
 **Common Causes:**
 
-- `get_celery_tasks()` returns empty list
+- `get_tasks()` returns empty list
 - Module `name` attribute doesn't match registry
 - Task definition missing `name` or `func` field
 
@@ -735,7 +735,7 @@ def process_data_task(data: dict):
     # Process data
     pass
 
-# Task definition in get_celery_tasks()
+# Task definition in get_tasks()
 {
     "name": "process_data",
     "func": process_data_task,
@@ -829,7 +829,7 @@ When contributing modules to Polycode:
 1. Follow the `PolycodeModule` protocol
 2. Add comprehensive docstrings
 3. Implement hooks if needed
-4. Return tasks from `get_celery_tasks()` if using Celery
+4. Return tasks from `get_tasks()` if using Celery
 5. Use `ModuleContext` for shared resources
 6. Test thoroughly
 

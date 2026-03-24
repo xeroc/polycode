@@ -8,6 +8,10 @@ import {
   Zap,
   CheckCircle2,
   ChevronRight,
+  Puzzle,
+  Lock,
+  GitBranch,
+  Layers,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -16,42 +20,39 @@ import { addToWaitlist } from "../lib/n8n";
 const features = [
   {
     icon: Zap,
-    title: "Fast Iterative Workflows",
+    title: "Label-Driven Workflows",
     description:
-      "Ralph Loop implements changes with automated verification. Fast, reliable, with built-in quality checks.",
+      "Add a GitHub label like 'polycode:implement' and AI agents automatically plan, code, test, and create a PR.",
   },
   {
-    icon: Terminal,
-    title: "Multi-Agent Systems",
+    icon: Puzzle,
+    title: "Plugin Architecture",
     description:
-      "CrewAI-powered agents collaborate on complex tasks. Each agent specializes in different aspects.",
+      "Extend with Python modules. Import flows from any GitHub repo. Build custom workflows for your team's process.",
   },
   {
-    icon: Github,
-    title: "GitHub App Integration",
+    icon: Lock,
+    title: "Self-Hosted & Open Source",
     description:
-      "Seamless automation across multiple repositories. Label-triggered workflows, webhooks, and PR automation.",
+      "MIT licensed core. Your code stays on your infrastructure. Full audit trail with per-story commits.",
   },
 ];
 
 const workflows = [
   {
-    cmd: "polycode ralph start --issue 123",
+    cmd: "polycode flow run ralph --issue 123",
     branch: "feature/auth-middleware",
-    description:
-      "Ralph Flow: Fast iterative implementation with automated verification",
+    description: "Ralph Flow: Plan → Implement → Verify → PR → Merge",
   },
   {
-    cmd: "polycode feature-dev create --project acme/web",
+    cmd: "gh issue create --label polycode:implement",
     branch: "feat/new-dashboard",
-    description:
-      "Feature Flow: Comprehensive planning, implementation, testing, and review",
+    description: "Label-triggered: Just add a label, agents handle the rest",
   },
   {
-    cmd: "gh issue create --label ralph",
-    branch: "bug/performance",
-    description:
-      "Label-based automation: Just add a label and let agents handle it",
+    cmd: "polycode flow list",
+    branch: "Available flows",
+    description: "Browse built-in and custom flows from your plugins",
   },
 ];
 
@@ -62,6 +63,32 @@ const tech = [
   "Celery",
   "Redis",
   "PostgreSQL",
+];
+
+const extensibility = [
+  {
+    title: "Write Custom Flows",
+    description: "Python-based flows with full access to tools and state",
+    icon: GitBranch,
+  },
+  {
+    title: "Plugin Hooks",
+    description: "5 lifecycle events for commit, push, PR, merge, cleanup",
+    icon: Layers,
+  },
+  {
+    title: "Import from GitHub",
+    description: "Share flows across your org or the community",
+    icon: Github,
+  },
+];
+
+const comparison = [
+  { feature: "Hosting", devin: "SaaS only", polycode: "Self-hosted" },
+  { feature: "Workflows", devin: "Black box", polycode: "Fully customizable" },
+  { feature: "Interface", devin: "Chat / Slack", polycode: "GitHub-native" },
+  { feature: "Data", devin: "Vendor owns", polycode: "You own" },
+  { feature: "Price", devin: "$500/mo", polycode: "Open source (MIT)" },
 ];
 
 export default function App() {
@@ -92,36 +119,44 @@ export default function App() {
 
   return (
     <main className="mx-auto max-w-5xl px-4">
+      {/* Hero Section */}
       <section className="py-20">
+        <div className="flex items-center gap-2 mb-6">
+          <span className="bg-green-500/10 text-green-600 border-green-500/20 text-xs font-medium px-2.5 py-1 border">
+            MIT Licensed
+          </span>
+          <span className="text-muted-foreground text-xs">
+            Open Source Core
+          </span>
+        </div>
         <div className="grid gap-8 lg:grid-cols-[2fr_1fr] lg:gap-16">
           <div className="flex flex-col items-start gap-4 text-left">
             <h1 className="text-3xl font-bold leading-snug tracking-tighter md:text-4xl">
-              Multi-agent software
+              Label an issue.
+              <br />
               <span className="bg-linear-to-r from-blue-500 to-[#14F195] bg-clip-text text-transparent">
-                {" "}
-                automation
+                Ship a feature.
               </span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Automate software development with AI-powered workflows. GitHub
-              App integration, webhook-driven automation, and label-triggered
-              flows.
+              Self-hosted GitHub automation with AI agents. Extensible plugin
+              architecture. Your code, your infrastructure, your workflows.
             </p>
             <div className="flex gap-3 pt-2">
               <a
-                href="https://github.com/your-repo/polycode"
+                href="https://github.com/xeroc/polycode"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-primary text-primary-foreground shadow-2xs hover:bg-primary/90 inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-none font-medium text-sm outline-hidden transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 h-11 px-6"
               >
                 <Github className="h-4 w-4" />
-                Get Started
+                View on GitHub
               </a>
               <a
                 href="#how-it-works"
                 className="border bg-background hover:bg-accent hover:text-accent-foreground inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-none font-medium text-sm outline-hidden transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 h-11 px-6"
               >
-                Learn More
+                See How It Works
                 <ArrowRight className="h-4 w-4" />
               </a>
             </div>
@@ -131,20 +166,20 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">$</span>
                 <span className="text-foreground text-xs">
-                  polycode ralph start --issue 123
+                  polycode flow run ralph --issue 42
                 </span>
               </div>
               <div className="space-y-1 mt-2 pl-4">
                 <div className="flex items-center gap-2 text-xs text-green-500">
                   <Check className="h-3 w-3" />
-                  <span>Planning tasks...</span>
+                  <span>Planning user stories...</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-green-500">
                   <Check className="h-3 w-3" />
-                  <span>Implementing feature...</span>
+                  <span>Implementing story 1/3...</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-green-500">
-                  <Check className="h-3 w-3" />
+                <div className="flex items-center gap-2 text-xs text-blue-500">
+                  <span className="animate-pulse">●</span>
                   <span>Running tests...</span>
                 </div>
               </div>
@@ -152,12 +187,175 @@ export default function App() {
           </div>
         </div>
       </section>
+
       <div
         className="font-mono text-sm text-muted-foreground/30 select-none"
         aria-hidden="true"
       >
         //
       </div>
+
+      {/* Features Section */}
+      <section className="py-20" id="features">
+        <div className="grid gap-8 md:grid-cols-3">
+          {features.map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="space-y-2"
+            >
+              <div className="text-primary">
+                <feature.icon className="h-6 w-6" />
+              </div>
+              <h3 className="font-medium text-sm">{feature.title}</h3>
+              <p className="text-sm text-muted-foreground">
+                {feature.description}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <div
+        className="font-mono text-sm text-muted-foreground/30 select-none"
+        aria-hidden="true"
+      >
+        //
+      </div>
+
+      {/* Extensibility Section */}
+      <section className="py-20" id="plugins">
+        <div className="flex items-center gap-3 mb-8">
+          <Puzzle className="h-5 w-5 text-primary" />
+          <h2 className="text-2xl font-bold">Plugin Architecture</h2>
+        </div>
+        <p className="text-muted-foreground mb-8 max-w-2xl">
+          Polycode is designed for extensibility. Write custom flows in Python,
+          register hooks for lifecycle events, and share workflows across your
+          organization or with the community.
+        </p>
+        <div className="grid gap-4 md:grid-cols-3">
+          {extensibility.map((item, index) => (
+            <motion.div
+              key={item.title}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="bg-card border-border rounded-lg border p-4 space-y-2"
+            >
+              <item.icon className="h-5 w-5 text-primary" />
+              <h3 className="font-medium text-sm">{item.title}</h3>
+              <p className="text-xs text-muted-foreground">
+                {item.description}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+        <div className="mt-6 bg-muted/30 border-border rounded-lg border p-4">
+          <p className="text-xs font-mono text-muted-foreground mb-2">
+            # .polycode/polycode.yml
+          </p>
+          <pre className="text-xs text-foreground overflow-x-auto">
+            {`flows:
+  ralph:
+    label: implement
+    source: polycode/ralph  # built-in
+
+  deploy-check:
+    label: deploy-check
+    source: github:acme-org/polycode-flows/deploy  # from GitHub`}
+          </pre>
+        </div>
+      </section>
+
+      <div
+        className="font-mono text-sm text-muted-foreground/30 select-none"
+        aria-hidden="true"
+      >
+        //
+      </div>
+
+      {/* How It Works Section */}
+      <section className="py-20" id="how-it-works">
+        <h2 className="text-2xl font-bold mb-8">How It Works</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          {workflows.map((workflow, index) => (
+            <motion.div
+              key={workflow.cmd}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="bg-card border-border rounded-lg border p-4 space-y-3"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">$</span>
+                <span className="text-foreground text-sm font-mono">
+                  {workflow.cmd}
+                </span>
+              </div>
+              <div className="space-y-2 mt-2">
+                <div className="text-xs text-muted-foreground">
+                  {workflow.branch}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {workflow.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <div
+        className="font-mono text-sm text-muted-foreground/30 select-none"
+        aria-hidden="true"
+      >
+        //
+      </div>
+
+      {/* Comparison Section */}
+      <section className="py-20" id="comparison">
+        <h2 className="text-2xl font-bold mb-8">Why Polycode?</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 font-medium">Feature</th>
+                <th className="text-left py-3 font-medium text-muted-foreground">
+                  Devin
+                </th>
+                <th className="text-left py-3 font-medium text-primary">
+                  Polycode
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparison.map((row) => (
+                <tr key={row.feature} className="border-b border-border/50">
+                  <td className="py-3 font-medium">{row.feature}</td>
+                  <td className="py-3 text-muted-foreground">{row.devin}</td>
+                  <td className="py-3 text-primary">{row.polycode}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-muted-foreground text-sm mt-6">
+          Devin is built for demos. Polycode is built for teams that want
+          automation they can trust, inspect, and extend.
+        </p>
+      </section>
+
+      <div
+        className="font-mono text-sm text-muted-foreground/30 select-none"
+        aria-hidden="true"
+      >
+        //
+      </div>
+
+      {/* Waitlist Section */}
       <section id="waitlist" className="mb-24">
         <div className="border border-border/50 p-12">
           <h2 className="text-2xl font-bold mb-4">Join Early Access</h2>
@@ -200,74 +398,15 @@ export default function App() {
           </p>
         </div>
       </section>
+
       <div
         className="font-mono text-sm text-muted-foreground/30 select-none"
         aria-hidden="true"
       >
         //
       </div>
-      <section className="py-20" id="features">
-        <div className="grid gap-8 md:grid-cols-3">
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="space-y-2"
-            >
-              <div className="text-primary">
-                <feature.icon className="h-6 w-6" />
-              </div>
-              <h3 className="font-medium text-sm">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                {feature.description}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-      <div
-        className="font-mono text-sm text-muted-foreground/30 select-none"
-        aria-hidden="true"
-      >
-        //
-      </div>
-      <section className="py-20" id="how-it-works">
-        <h2 className="text-2xl font-bold mb-8">How It Works</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {workflows.map((workflow, index) => (
-            <motion.div
-              key={workflow.cmd}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="bg-card border-border rounded-lg border p-4 space-y-3"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">$</span>
-                <span className="text-foreground text-sm font-mono">
-                  {workflow.cmd}
-                </span>
-              </div>
-              <div className="space-y-2 mt-2">
-                <div className="text-xs text-muted-foreground">
-                  {workflow.branch}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {workflow.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-      <div
-        className="font-mono text-sm text-muted-foreground/30 select-none"
-        aria-hidden="true"
-      >
-        //
-      </div>
+
+      {/* Tech Stack Section */}
       <section className="py-20" id="tech">
         <h2 className="text-2xl font-bold mb-8">Built With</h2>
         <div className="flex flex-wrap gap-2">

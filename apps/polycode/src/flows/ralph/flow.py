@@ -1,27 +1,15 @@
-"""Ralph Loop - Simplified event-driven flow.
-
-Flow: Setup → Plan → Implement (per-story) → Verify → Finish
-
-Events:
-  - FLOW_STARTED: Emitted at flow start (triggers gitcore/project_manager setup hooks)
-  - CREW_FINISHED: Emitted after each crew via PolycodeCrewMixin @after_kickoff
-  - STORY_COMPLETED: Emitted after each story (triggers commit/push/checklist hooks)
-  - FLOW_FINISHED: Emitted after verify (triggers PR/merge/cleanup hooks)
-"""
-
 import logging
 import subprocess
 import uuid
 from typing import cast
 
-from crewai import Flow
 from crewai.flow.flow import listen, start
 from crewai.flow.persistence import persist
 
 from crews import PlanCrew, RalphCrew
 from crews.plan_crew.types import PlanOutput
 from crews.ralph_crew.types import RalphOutput
-from flowbase import FlowIssueManagement, KickoffIssue
+from flows.base import FlowIssueManagement, KickoffIssue
 from gitcore import sanitize_branch_name
 from modules.hooks import FlowEvent
 from persistence.postgres import persistence
@@ -85,7 +73,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
         num_stories = len(self.state.stories) if self.state.stories else 0
 
-        self._emit(FlowEvent.STORY_COMPLETED)  # non completed
+        self._emit(FlowEvent.STORIES_PLANNED)
         logger.info(f"\n🔨 Starting implementation for {num_stories} stories")
 
     @listen(plan)
@@ -126,7 +114,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
                 )
             )
 
-            output = cast(RalphOutput, result.pydantic)  # pyright:ignore
+            output = cast(RalphOutput, result.pydantic)  # type: ignore
             self.state.agent_output = output.changes
             self.state.commit_title = output.title
             self.state.commit_message = output.message
@@ -141,7 +129,6 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
             logger.warning("✅ Tests succeeded")
 
-            # Emit STORY_COMPLETED - hooks will handle commit/push/checklist
             logger.info(f"✅ Story '{story.title}' complete")
             story.completed = True
             story.errors = []
@@ -172,7 +159,6 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             logger.info(f"❌ Test verification failed:\n{e.stderr}")
             self.state.test_success = False
 
-        # Emit FLOW_FINISHED - hooks will handle PR/merge/cleanup
         logger.info("🏁 Flow finished - emitting FLOW_FINISHED event")
         self._emit(FlowEvent.FLOW_FINISHED, label="ralph")
         self._emit(FlowEvent.CLEANUP)
@@ -244,7 +230,3 @@ def plot():
     """Plot the flow."""
     flow = RalphLoopFlow()
     flow.plot()
-
-
-if __name__ == "__main__":
-    example()

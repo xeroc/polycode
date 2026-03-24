@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import Field
 
 from crews.plan_crew.types import Story
-from flowbase import BaseFlowModel
+from flows.base import BaseFlowModel
 
 
 class RalphLoopState(BaseFlowModel):

@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from flows.protocol import FlowDef
     from modules.context import ModuleContext
 
 if TYPE_CHECKING:
@@ -56,13 +57,13 @@ class PolycodeModule(Protocol):
         return []
 
     @classmethod
-    def get_celery_tasks(cls) -> list[dict[str, Any]]:
-        """Return Celery task definitions for this module.
+    def get_tasks(cls) -> list[dict[str, Any]]:
+        """Return Celery task definitions from this module.
 
         Each dict should contain:
-        - name: str - Task name (will be prefixed with module name)
-        - func: Callable - Task function
-        - options: dict (optional) - Task options (bind, max_retries, etc.)
+            - name: str - Task name (will be prefixed with module name)
+            - func: Callable - Task function
+            - options: dict (optional) - Task options (bind, max_retries, etc.)
 
         Returns:
             List of task definition dicts.
@@ -73,4 +74,19 @@ class PolycodeModule(Protocol):
                 {"name": "cleanup", "func": cleanup_task},
             ]
         """
+        return []
+
+    @classmethod
+    def get_flows(cls) -> list["FlowDef"]:
+        """Return flow definitions provided by this module.
+
+        Each flow can declare which labels it handles via supported_labels.
+        Labels are matched against the FLOW_LABEL_PREFIX (default: "polycode:").
+
+        Returns:
+            List of FlowDef instances. Empty list if module provides no flows.
+        """
+        if TYPE_CHECKING:
+            pass
+
         return []
