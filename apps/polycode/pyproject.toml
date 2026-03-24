@@ -7,7 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "celery>=5.4.0",
     "click>=8.0.0",
-    "crewai[litellm]>=1.10.0b1",
+    "crewai>=1.11.1",
     "crewai-tools>=0.76.0",
     "fastapi>=0.115.0",
     "flower>=2.0.1",
