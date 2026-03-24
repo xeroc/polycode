@@ -30,11 +30,14 @@ class FlowRunner:
         """Check if a flow is currently running.
 
         Uses project manager as single source of truth - checks if any
-        item has "In progress" status.
+        item has "In Progress" status.
 
         Returns:
             True if a flow is running, False otherwise
         """
+        if not self.manager.has_project:
+            return False  # No project configured = no flow running
+
         items = self.manager.get_project_items()
         in_progress_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
 
@@ -47,12 +50,16 @@ class FlowRunner:
         Returns:
             ProjectItem if a flow is running, None otherwise
         """
+        if not self.manager.has_project:
+            return None  # No project = no running flow
+
         items = self.manager.get_project_items()
         in_progress_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
 
         for item in items:
             if item.status == in_progress_status:
                 return item
+
         return None
 
     def trigger_flow(self, issue_number: int | None = None) -> bool | str:
@@ -66,15 +73,20 @@ class FlowRunner:
 
         Args:
             issue_number: Optional specific issue to process
+            None for finding next ready issue
 
         Returns:
             True/task_id if flow was triggered, False if already running or no issue found
         """
+        if not self.manager.has_project:
+            log.warning("trigger_flow called without project configuration")
+            return False
+
         if self.is_flow_running():
             current = self.get_running_flow()
             if current:
                 log.info(f"Flow already running for issue #{current.issue_number}")
-            return False
+                return False
 
         if issue_number:
             return self._process_specific_issue(issue_number)

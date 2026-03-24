@@ -48,6 +48,11 @@ class GitHubProjectManager(ProjectManager):
         self._bot_username: str | None = None
 
     @property
+    def has_project(self) -> bool:
+        """Check if project integration is enabled for this manager."""
+        return self.config.project_identifier is not None
+
+    @property
     def bot_username(self) -> str:
         """Get the authenticated bot username."""
         if self._bot_username is None:
@@ -115,16 +120,23 @@ class GitHubProjectManager(ProjectManager):
             return False
 
     @property
-    def project_id(self) -> str:
-        """Lazy-load project ID."""
-        if self._project_id is None:
-            project_number = int(self.config.project_identifier) if self.config.project_identifier else None
-            self._project_id = self.projects_client.get_project_id(self.config.repo_owner, project_number)
+    def project_id(self) -> str | None:
+        """Lazy-load project ID. Returns None if not configured."""
+        if self.project_id is None:  # New guard
+            return None  # Explicit return None when not configured
+
+        # Existing logic for when configured
+        project_number = int(self.config.project_identifier) if self.config.project_identifier else None
+        self._project_id = self.projects_client.get_project_id(self.config.repo_owner, project_number)
         return self._project_id
 
     @property
     def status_field_info(self) -> tuple[str, dict[str, str]]:
         """Lazy-load status field ID and options."""
+        if self.project_id is None:  # New guard
+            return "", {}  # Return None when no project configured
+
+        # Existing logic...
         if self._status_field_id is None or self._status_options is None:
             self._status_field_id, self._status_options = self.projects_client.get_status_field_id(self.project_id)
         return self._status_field_id, self._status_options
@@ -153,11 +165,14 @@ class GitHubProjectManager(ProjectManager):
         return issues
 
     def get_project_items(self) -> list[ProjectItem]:
-        """Get all items in the project.
+        """Get all items in a project.
 
         Returns:
             List of project items
         """
+        if self.project_id is None:  # New guard
+            return []  # Return empty list when no project
+
         items = self.projects_client.get_project_items(self.project_id)
         return [
             ProjectItem(
@@ -171,7 +186,7 @@ class GitHubProjectManager(ProjectManager):
         ]
 
     def add_issue_to_project(self, issue: Issue) -> str | None:
-        """Add an issue to the project.
+        """Add an issue to a project.
 
         Args:
             issue: Issue to add
@@ -183,6 +198,10 @@ class GitHubProjectManager(ProjectManager):
             log.warning(f"Issue #{issue.number} has no node_id")
             return None
 
+        if self.project_id is None:
+            log.warning("add_issue_to_project called without project configuration")
+            return None
+
         try:
             item_id = self.projects_client.add_issue_to_project(self.project_id, issue.node_id)
             log.info(f"Added issue #{issue.number} to project")
@@ -192,7 +211,7 @@ class GitHubProjectManager(ProjectManager):
             return None
 
     def update_issue_status(self, issue_number: int, status: str) -> bool:
-        """Update the status of an issue in the project.
+        """Update the status of an issue in a project.
 
         Args:
             issue_number: Issue number
@@ -201,6 +220,10 @@ class GitHubProjectManager(ProjectManager):
         Returns:
             True if successful, False otherwise
         """
+        if self.project_id is None:  # New guard
+            log.warning("update_issue_status called without project configuration")
+            return False
+
         item = self.find_project_item(issue_number)
         if not item:
             log.warning(f"Issue #{issue_number} not found in project")

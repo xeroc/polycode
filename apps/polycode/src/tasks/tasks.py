@@ -11,8 +11,8 @@ from sqlalchemy.orm import sessionmaker
 from bootstrap import init_plugins
 from flows.base import KickoffIssue, KickoffRepo
 from flows.registry import get_flow_registry
-from persistence.tasks import CeleryTaskTracker
 from persistence.postgres import Base
+from persistence.tasks import CeleryTaskTracker
 from project_manager.github import GitHubProjectManager
 from project_manager.types import ProjectConfig
 

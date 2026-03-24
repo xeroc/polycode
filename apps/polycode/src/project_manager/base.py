@@ -16,6 +16,13 @@ class ProjectManager(ABC):
         """
         self.config = config
 
+    @property
+    @abstractmethod
+    def has_project(self) -> bool:
+        """Is a project configured that can be used for management, e.g.
+        Kanban?
+        """
+
     @abstractmethod
     def get_comments(self, issue_number: int) -> list:
         """Get all comments for an issue.
