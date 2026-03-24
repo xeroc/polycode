@@ -7,19 +7,10 @@ on:
     paths:
       - apps/polycode/**
   workflow_dispatch:
-    inputs:
-      release_type:
-        description: "Type of release"
-        required: false
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   test:
