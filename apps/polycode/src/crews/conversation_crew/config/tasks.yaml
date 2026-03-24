@@ -64,32 +64,3 @@ story_breakdown_task:
   expected_output: |
     Numbered list of user stories with titles, descriptions, acceptance criteria, and priorities
   agent: story_planner
-
-ralph_init_task:
-  description: |
-    ## Ralph Loop Initialization
-
-    ### SPECIFICATION:
-    {specification}
-
-    ### SELECTED STORY:
-    {story}
-
-    ### CONVERSATION CONTEXT:
-    {conversation_summary}
-
-    ### TASK:
-    Prepare comprehensive context for the Ralph development loop.
-
-    ### GUIDELINES:
-    - Include full specification as context
-    - Provide conversation summary for additional context
-    - Highlight relevant constraints and edge cases
-    - Ensure the development agent understands the "why" behind the story
-    - Include any decisions made during conversation
-
-    ### OUTPUT:
-    A complete development brief that includes all context needed for Ralph to execute the story
-  expected_output: |
-    Comprehensive development brief with specification, story details, and conversation context
-  agent: ralph_initializer
