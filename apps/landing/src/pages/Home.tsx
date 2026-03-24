@@ -4,7 +4,6 @@ import {
   Github,
   ArrowRight,
   Check,
-  Terminal,
   Zap,
   CheckCircle2,
   ChevronRight,
