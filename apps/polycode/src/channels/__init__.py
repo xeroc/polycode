@@ -1,7 +1,7 @@
 """Communication channels system.
 
 This module provides a unified interface for sending notifications
-through multiple channels (GitHub, Redis, Slack, Discord, Telegram).
+through multiple channels (Redis, Slack, Discord, Telegram).
 """
 
 import logging
@@ -52,7 +52,7 @@ class ChannelsPolycodeModule:
         """Register notification hooks.
 
         Sends notifications through configured channels at flow phases.
-        Individual channel modules (github, redis) register themselves
+        Individual channel modules (redis) register themselves
         via ChannelRegistry during their import.
         """
         from channels.hooks import ChannelHooks

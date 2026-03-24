@@ -107,7 +107,6 @@ def init_plugins() -> pluggy.PluginManager:
     pm = get_plugin_manager()
 
     # Import channel implementations to trigger self-registration
-    import channels.github  # noqa: F401
     import channels.redis  # noqa: F401
 
     # Register channels module (this registers ChannelHooks)
