@@ -129,20 +129,6 @@ class InstallationManager:
 
         return query.all()
 
-    def sync_repositories(self, installation_id: int) -> Optional[List[str]]:
-        """Sync repository list from GitHub for this installation."""
-        installation = self.get_installation(installation_id)
-        if not installation:
-            return None
-
-        repos = self.github_auth.get_installation_repos(installation_id)
-        if repos:
-            installation.repositories = {"repos": repos}
-            self.db_session.commit()
-            logger.info(f"Synced {len(repos)} repos for installation {installation_id}")
-
-        return repos
-
     def get_installation_token(self, installation_id: int) -> Optional[str]:
         """Get an installation access token."""
         return self.github_auth.get_installation_token(installation_id)
