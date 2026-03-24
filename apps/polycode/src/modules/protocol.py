@@ -57,7 +57,7 @@ class PolycodeModule(Protocol):
         return []
 
     @classmethod
-    def get_celery_tasks(cls) -> list[dict[str, Any]]:
+    def get_tasks(cls) -> list[dict[str, Any]]:
         """Return Celery task definitions from this module.
 
         Each dict should contain:

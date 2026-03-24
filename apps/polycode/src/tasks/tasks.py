@@ -11,13 +11,13 @@ from sqlalchemy.orm import sessionmaker
 from bootstrap import init_plugins
 from flows.base import KickoffIssue, KickoffRepo
 from flows.registry import get_flow_registry
-from persistence.celery_tasks import CeleryTaskTracker
+from persistence.tasks import CeleryTaskTracker
 from persistence.postgres import Base
 from project_manager.github import GitHubProjectManager
 from project_manager.types import ProjectConfig
 
 from . import app, get_flow_id
-from .celery_config import settings
+from .config import settings
 
 log = logging.getLogger(__name__)
 

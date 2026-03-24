@@ -110,7 +110,7 @@ class FlowRunner:
         log.info(f"Started flow for issue #{issue_number}: {item.title}")
 
         try:
-            from celery_tasks.tasks import kickoff_task
+            from tasks.tasks import kickoff_task
 
             task_result = kickoff_task.apply_async(args=[self.manager.config.model_dump(), issue_number])  # type: ignore
             log.info(f"Queued Celery task for issue #{issue_number}: {task_result.id}")

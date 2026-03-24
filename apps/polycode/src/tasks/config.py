@@ -51,31 +51,31 @@ app.conf.update(
     # broker_connection_max_retries=5,
     # result_expires=86400,
     # task_routes={
-    #     "celery_tasks.tasks.kickoff_task": {
+    #     "tasks.tasks.kickoff_task": {
     #         "queue": "feature_dev",
     #         "routing_key": "feature_dev",
     #     },
-    #     "celery_tasks.tasks.implement_story_task": {
+    #     "tasks.tasks.implement_story_task": {
     #         "queue": "feature_dev",
     #         "routing_key": "feature_dev",
     #     },
-    #     "celery_tasks.tasks.test_story_task": {
+    #     "tasks.tasks.test_story_task": {
     #         "queue": "feature_dev",
     #         "routing_key": "feature_dev",
     #     },
-    #     "celery_tasks.tasks.process_github_webhook_task": {
+    #     "tasks.tasks.process_github_webhook_task": {
     #         "queue": "webhooks",
     #         "routing_key": "webhooks",
     #     },
-    #     "celery_tasks.tasks.update_status_task": {
+    #     "tasks.tasks.update_status_task": {
     #         "queue": "monitoring",
     #         "routing_key": "monitoring",
     #     },
-    #     "celery_tasks.tasks.flow_heartbeat_task": {
+    #     "tasks.tasks.flow_heartbeat_task": {
     #         "queue": "monitoring",
     #         "routing_key": "monitoring",
     #     },
-    #     "celery_tasks.tasks.cleanup_completed_tasks": {
+    #     "tasks.tasks.cleanup_completed_tasks": {
     #         "queue": "cleanup",
     #         "routing_key": "cleanup",
     #     },

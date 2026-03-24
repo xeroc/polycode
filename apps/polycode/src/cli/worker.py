@@ -40,8 +40,8 @@ def worker_start(
 
     try:
         from bootstrap import bootstrap
-        from celery_tasks import app as celery_app
-        from celery_tasks import worker
+        from tasks import app as celery_app
+        from tasks import worker
 
         assert worker
 
@@ -87,7 +87,7 @@ def worker_status(
     print_info("🔍 Checking worker status...")
 
     try:
-        from celery_tasks import app as celery_app
+        from tasks import app as celery_app
 
         inspect = celery_app.control.inspect()
 

@@ -64,7 +64,7 @@ class TaskRegistry:
         count = 0
         for module_name, module in modules.items():
             try:
-                task_defs = module.get_celery_tasks()
+                task_defs = module.get_tasks()
                 for task_def in task_defs:
                     self.register(module_name, task_def)
                     count += 1

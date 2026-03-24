@@ -51,6 +51,6 @@ class GitcoreModule:
         return []
 
     @classmethod
-    def get_celery_tasks(cls) -> list[dict[str, Any]]:
+    def get_tasks(cls) -> list[dict[str, Any]]:
         """Return Celery task definitions for this module."""
         return []

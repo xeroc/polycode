@@ -44,8 +44,8 @@ def calculate_timeout(retry_count: int) -> int:
     return delay
 
 
-app = Celery(__name__, task_cls="celery_tasks.BaseTask")
-app.config_from_object("celery_tasks.celery_config")
+app = Celery(__name__, task_cls="tasks.BaseTask")
+app.config_from_object("tasks.config")
 
 
 @app.task()
