@@ -132,22 +132,30 @@ def flow_run(
 
         print_info(f"   Title: {issue.title}")
 
-        from bootstrap import bootstrap
-
-        bootstrap(config={"modules": {p: {} for p in plugins}})
-
         from uuid import NAMESPACE_DNS, uuid5
 
-        flow_identifier = f"{repo_owner}/{repo_name}/{issue_number}"
+        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}"
+
+        comments = manager.get_comments(issue_number)
+
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=uuid5(NAMESPACE_DNS, flow_identifier),
             title=issue.title,
             body=issue.body or "",
-            memory_prefix=f"{repo_owner}/{repo_name}",
+            comments=[
+                {
+                    "id": c.id,
+                    "user": c.user.login if c.user else None,
+                    "body": c.body,
+                    "created_at": c.created_at.isoformat() if c.created_at else None,
+                }
+                for c in comments
+            ],
+            memory_prefix=f"{manager.config.repo_owner}/{manager.config.repo_name}",
             repository=KickoffRepo(
-                owner=repo_owner,
-                repository=repo_name,
+                owner=manager.config.repo_owner,
+                repository=manager.config.repo_name,
             ),
             project_config=config,
         )

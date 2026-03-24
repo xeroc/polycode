@@ -48,6 +48,7 @@ class KickoffIssue(BaseModel):
     flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of flow that will run")
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
+    comments: list[dict] = Field(default_factory=list, description="Issue comments")
     memory_prefix: str = Field(description="prefix for memory")
     repository: KickoffRepo
     project_config: ProjectConfig

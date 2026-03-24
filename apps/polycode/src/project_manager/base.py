@@ -123,6 +123,26 @@ class ProjectManager(ABC):
         """
 
     @abstractmethod
+    def create_pull_request(
+        self,
+        title: str,
+        body: str,
+        head: str,
+        base: str = "develop",
+    ) -> tuple[int, str] | None:
+        """Create a pull request.
+
+        Args:
+            title: PR title
+            body: PR body/description
+            head: Source branch name
+            base: Target branch name (default: "develop")
+
+        Returns:
+            Tuple of (pr_number, pr_url) if successful, None otherwise
+        """
+
+    @abstractmethod
     def merge_pull_request(
         self,
         pr_number: int,

@@ -90,8 +90,6 @@ def kickoff_task(
 
         manager = GitHubProjectManager(config)
         issue = manager.get_issue(issue_number)
-        repo_name = config.repo_name
-        repo_owner = config.repo_owner
 
         project_item = manager.find_project_item(issue_number)
         if not project_item:
@@ -101,14 +99,26 @@ def kickoff_task(
                 "message": f"Issue #{issue_number} not found in project",
             }
 
-        flow_identifier = f"{repo_owner}/{repo_name}/{issue_number}"
+        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}"
         flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier)
+
+        comments = manager.get_comments(issue_number)
+
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=flow_id,
             title=issue.title,
             body=issue.body or "",
-            memory_prefix=f"{repo_owner}/{repo_name}",
+            comments=[
+                {
+                    "id": c.id,
+                    "user": c.user.login if c.user else None,
+                    "body": c.body,
+                    "created_at": c.created_at.isoformat() if c.created_at else None,
+                }
+                for c in comments
+            ],
+            memory_prefix=f"{manager.config.repo_owner}/{manager.config.repo_name}",
             repository=KickoffRepo(
                 owner=manager.config.repo_owner,
                 repository=manager.config.repo_name,

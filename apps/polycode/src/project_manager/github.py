@@ -122,23 +122,25 @@ class GitHubProjectManager(ProjectManager):
     @property
     def project_id(self) -> str | None:
         """Lazy-load project ID. Returns None if not configured."""
-        if self.project_id is None:  # New guard
-            return None  # Explicit return None when not configured
+        if self.config.project_identifier is None:
+            return None
 
-        # Existing logic for when configured
-        project_number = int(self.config.project_identifier) if self.config.project_identifier else None
-        self._project_id = self.projects_client.get_project_id(self.config.repo_owner, project_number)
+        if self._project_id is None:
+            project_number = int(self.config.project_identifier)
+            self._project_id = self.projects_client.get_project_id(self.config.repo_owner, project_number)
         return self._project_id
 
     @property
     def status_field_info(self) -> tuple[str, dict[str, str]]:
         """Lazy-load status field ID and options."""
-        if self.project_id is None:  # New guard
-            return "", {}  # Return None when no project configured
+        if not self.has_project:
+            return "", {}
 
-        # Existing logic...
         if self._status_field_id is None or self._status_options is None:
-            self._status_field_id, self._status_options = self.projects_client.get_status_field_id(self.project_id)
+            pid = self._project_id
+            if pid is None:
+                return "", {}
+            self._status_field_id, self._status_options = self.projects_client.get_status_field_id(pid)
         return self._status_field_id, self._status_options
 
     def get_open_issues(self) -> list[Issue]:
@@ -262,10 +264,10 @@ class GitHubProjectManager(ProjectManager):
             return False
 
     def has_label(self, issue_number: int, label_name: str) -> bool:
-        """Check if a pull request has a specific label.
+        """Check if an issue/pull request has a specific label.
 
         Args:
-            pr_number: Pull request number
+            issue_numer: Issue/Pull request number
             label_name: Name of the label to check for
 
         Returns:
@@ -289,6 +291,37 @@ class GitHubProjectManager(ProjectManager):
         except Exception as e:
             log.error(f"Failed to check label on PR #{issue_number}: {e}")
             return False
+
+    def create_pull_request(
+        self,
+        title: str,
+        body: str,
+        head: str,
+        base: str = "develop",
+    ) -> tuple[int, str] | None:
+        """Create a pull request.
+
+        Args:
+            title: PR title
+            body: PR body/description
+            head: Source branch name
+            base: Target branch name (default: "develop")
+
+        Returns:
+            Tuple of (pr_number, pr_url) if successful, None otherwise
+        """
+        try:
+            pr = self.repo.create_pull(
+                title=title,
+                body=body.strip(),
+                head=head,
+                base=base,
+            )
+            log.info(f"Created PR #{pr.number}: {pr.html_url}")
+            return pr.number, pr.html_url
+        except Exception as e:
+            log.error(f"Failed to create PR from {head} to {base}: {e}")
+            return None
 
     def merge_pull_request(
         self,

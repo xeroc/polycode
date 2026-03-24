@@ -103,30 +103,27 @@ class ProjectManagerHooks:
             log.info("PR already exists, skipping creation")
             return
 
-        from project_manager.git_utils import get_github_repo_from_local
-
-        repo_path = getattr(state, "repo", "")
-        if not repo_path:
-            log.warning("No repo path in state, cannot create PR")
+        branch = getattr(state, "branch", "")
+        if not branch:
+            log.warning("No branch in state, cannot create PR")
             return
-
-        _, github_repo, _ = get_github_repo_from_local(repo_path)
 
         title = getattr(state, "commit_title", None) or getattr(state, "task", "")
         body = f"{getattr(state, 'commit_message', '') or ''}\n\n{getattr(state, 'commit_footer', '') or ''}"
-        branch = getattr(state, "branch", "")
         base_branch = "develop"
 
-        pr = github_repo.create_pull(
+        result = pm.create_pull_request(
             title=title,
             body=body.strip(),
             head=branch,
             base=base_branch,
         )
 
-        state.pr_url = pr.html_url
-        state.pr_number = pr.number
+        if not result:
+            log.warning("Failed to create PR")
+            return
 
+        state.pr_number, state.pr_url = result
         log.info(f"🏹 PR {state.pr_number} created: {state.pr_url}")
 
         issue_id = getattr(state, "issue_id", 0)
