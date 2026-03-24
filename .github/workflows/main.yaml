@@ -6,10 +6,75 @@ on:
       - main
     paths:
       - apps/polycode/**
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Type of release"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
 
 jobs:
   test:
+    name: Run Tests
     uses: ./.github/workflows/test.yaml
+    with:
+      path: apps/polycode
+
+  semantic-release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      new_version: ${{ steps.release.outputs.new_release_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Semantic Release
+        id: release
+        uses: cycjimmy/semantic-release-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          dry_run: false
+          release_branch: main
+          commit_message_format: "conventional"
+
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: semantic-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Publish package
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd apps/polycode
+          uv version "${{ needs.semantic-release.outputs.version }}"
+          uv build
+          uv publish --token $PYPI_API_TOKEN
 
   build:
     uses: ./.github/workflows/build.yaml
