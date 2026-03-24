@@ -1,5 +1,5 @@
 [project]
-name = "polycode"
+name = "polycoding"
 version = "0.1.0"
 description = "Coding agent that lives in your project management tool"
 readme = "README.md"
