@@ -137,7 +137,7 @@ def flow_run(
 
         bootstrap(config={"modules": {p: {} for p in plugins}})
 
-        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
+        flow_identifier = f"{flow_name}/{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
 
         comments = manager.get_comments(issue_number)
 

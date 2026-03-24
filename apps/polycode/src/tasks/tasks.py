@@ -81,6 +81,7 @@ def kickoff_task(
     config = ProjectConfig(**project_config_dict)
     task_id = current_task.request.id  # type: ignore
     flow_id = get_flow_id()
+    flow_name = flow_name or "ralph"
 
     log.info(f"Starting flow '{flow_name}' for issue #{issue_number}, task_id={task_id}, flow_id={flow_id}")
 
@@ -99,7 +100,7 @@ def kickoff_task(
                 "message": f"Issue #{issue_number} not found in project",
             }
 
-        flow_identifier = f"{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
+        flow_identifier = f"{flow_name}/{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
         flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier)
 
         comments = manager.get_comments(issue_number)
@@ -127,7 +128,7 @@ def kickoff_task(
         )
         log.info(f"Kicking off flow '{flow_name}' for issue #{issue_number}")
 
-        flow_def = get_flow_registry().get_flow(flow_name or "ralph")
+        flow_def = get_flow_registry().get_flow(flow_name)
 
         if flow_def:
             flow_def.kickoff_func(kickoff_issue)
