@@ -42,7 +42,10 @@ class FlowEvent(StrEnum):
     FLOW_ERROR = "flow_error"
 
     CREW_FINISHED = "crew_finished"
+
+    STORIES_PLANNED = "stories_planned"
     STORY_COMPLETED = "story_completed"
+
     CLEANUP = "cleanup"
 
 

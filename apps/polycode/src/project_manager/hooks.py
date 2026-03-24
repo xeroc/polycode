@@ -68,6 +68,8 @@ class ProjectManagerHooks:
 
         if event == FlowEvent.FLOW_STARTED:
             self._handle_flow_started(state, pm)
+        elif event == FlowEvent.STORIES_PLANNED:
+            self._handle_planning_comment(state, pm)
         elif event == FlowEvent.STORY_COMPLETED:
             self._handle_story_completed(state, pm, result)
         elif event == FlowEvent.FLOW_FINISHED:
@@ -193,7 +195,7 @@ class ProjectManagerHooks:
         except Exception as e:
             log.info(f"🚨 Failed to update project status to Done: {e}")
 
-    def _handle_planning_comment(self, state: Any, pm: "ProjectManager", stories: Any | None) -> None:
+    def _handle_planning_comment(self, state: Any, pm: "ProjectManager") -> None:
         """Post planning checklist to issue.
 
         Args:
@@ -201,6 +203,11 @@ class ProjectManagerHooks:
             pm: Project manager instance
             stories: List of stories from planning phase
         """
+        if getattr(state, "planning_comment_id"):
+            log.debug("Already have a reference comment id for planning")
+            return
+
+        stories = getattr(state, "stories", None)
         if not stories:
             log.debug("No stories to post in planning checklist")
             return
@@ -309,7 +316,7 @@ class ProjectManagerHooks:
         planning_comment_id = getattr(state, "planning_comment_id", None)
 
         if not issue_id or not planning_comment_id:
-            return
+            self._handle_planning_comment(state, pm)
 
         stories = getattr(state, "stories", [])
         completed_ids = [s.id for s in stories if s.completed]

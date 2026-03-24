@@ -73,7 +73,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
         num_stories = len(self.state.stories) if self.state.stories else 0
 
-        self._emit(FlowEvent.STORY_COMPLETED)
+        self._emit(FlowEvent.STORIES_PLANNED)
         logger.info(f"\n🔨 Starting implementation for {num_stories} stories")
 
     @listen(plan)
