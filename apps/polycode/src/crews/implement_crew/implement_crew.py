@@ -80,23 +80,6 @@ class ImplementCrew(PolycodeCrewMixin):
 
         if self.agents_md_map:
             tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
-
-        if self._project_root:
-            from tools.code_analysis import (
-                DefinitionTool,
-                DiagnosticsTool,
-                HoverTool,
-                ReferencesTool,
-            )
-
-            tools.extend(
-                [
-                    DiagnosticsTool(),
-                    HoverTool(),
-                    DefinitionTool(),
-                    ReferencesTool(),
-                ]
-            )
         return Agent(  # ty:ignore
             config=self._get_agent_config("developer"),
             verbose=False,
