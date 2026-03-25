@@ -32,36 +32,36 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
         self._setup()
 
     @listen(setup)
-    def generate_response(self, state: SpecifyFlowState) -> SpecifyFlowState:
+    def generate_response(self):
         """Generate initial clarifying questions from issue."""
-        logger.info(f"❓ Generating initial questions for issue #{state.issue_id}")
+        logger.info(f"❓ Generating initial questions for issue #{self.state.issue_id}")
 
-        comments = self._fetch_comments(state)
+        comments = self._fetch_comments(self.state)
 
         if not comments:
             logger.info("📭 No comments, returning")
-            state.stage = SpecifyStage.WAITING
-            return state
+            self.state.stage = SpecifyStage.WAITING
+            return
 
         # Add comments to history
         for comment in comments:
-            state.conversation_history.append(
+            self.state.conversation_history.append(
                 {"body": comment["body"], "id": comment["id"], "author": comment["login"]}
             )
-            state.last_processed_comment_id = comment["id"]
+            self.state.last_processed_comment_id = comment["id"]
 
         # Check for completion keywords
         if comment and self._contains_completion_keyword(comment["body"]):  # pyright:ignore (last comment)
             logger.info(f"✅ Completion keyword detected: {comment['body']}")
-            state.completion_keyword = comment["body"].strip()
-            logger.info(f"🏁 Completing specify flow for issue #{state.issue_id}")
-            state.specification_complete = True
-            state.stage = SpecifyStage.COMPLETED
+            self.state.completion_keyword = comment["body"].strip()
+            logger.info(f"🏁 Completing specify flow for issue #{self.state.issue_id}")
+            self.state.specification_complete = True
+            self.state.stage = SpecifyStage.COMPLETED
             self._emit(FlowEvent.ADD_LABEL, ["polycode:implement"])
-            return state
+            return
 
         # Generate follow-up with ConversationCrew
-        state.stage = SpecifyStage.PROCESSING
+        self.state.stage = SpecifyStage.PROCESSING
 
         result = (
             ConversationCrew()
@@ -72,7 +72,7 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
                     branch=self.state.branch,
                     agents_md=self._root_agents_md,
                     file_in_repos=self.git_operations.list_tree(),
-                    conversation_history=state.conversation_history,
+                    conversation_history=self.state.conversation_history,
                 )
             )
         )
@@ -80,10 +80,10 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
         # Post comment to issue
         comment_body: SpecOutput = result.pydantic  # pyright:ignore
 
-        state.conversation_history.append({"role": "assistant", "content": comment_body, "source": "flow"})
-        state.stage = SpecifyStage.WAITING
+        self.state.conversation_history.append({"role": "assistant", "content": comment_body, "source": "flow"})
+        self.state.stage = SpecifyStage.WAITING
 
-        return state
+        return
 
     @router(generate_response)
     def have_questions(self):
@@ -97,9 +97,8 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
         if not self.state.question:
             return
         logger.info(f"📝 Posting comment to #{self.state.issue_id}: {self.state.question[:100]}...")
-
         self._emit(FlowEvent.COMMENT, self.state.question)
-        logger.info("💬 Posted initial questions, waiting for response")
+        logger.info("💬 Posted comment, waiting for response")
 
     @listen("build_plan")
     def build_plan(self):
