@@ -4,8 +4,11 @@ import logging
 from datetime import UTC, datetime
 
 from crewai import listen, persist, start
+from crewai.flow.flow import router
 
 from crews.conversation_crew import ConversationCrew, SpecOutput
+from crews.plan_crew.plan_crew import PlanCrew
+from crews.plan_crew.types import PlanOutput
 from flows.base import FlowIssueManagement, KickoffIssue
 from gitcore.operations import sanitize_branch_name
 from modules.hooks import FlowEvent
@@ -16,7 +19,6 @@ from .types import SpecifyFlowState, SpecifyStage
 logger = logging.getLogger(__name__)
 
 COMPLETION_KEYWORDS = {"lgtm", "lfg", "looks good", "looks good to me", "ship it", "ready"}
-MAX_RETRIES = 3
 
 
 @persist(persistence=persistence, verbose=False)
@@ -31,149 +33,114 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
         self._setup()
 
     @listen(setup)
-    def generate_initial_questions(self, state: SpecifyFlowState) -> SpecifyFlowState:
+    def generate_response(self, state: SpecifyFlowState) -> SpecifyFlowState:
         """Generate initial clarifying questions from issue."""
         logger.info(f"❓ Generating initial questions for issue #{state.issue_id}")
 
-        result = (
-            ConversationCrew()
-            .crew()
-            .kickoff(
-                inputs={
-                    "conversation_history": self._format_conversation(state.conversation_history),
-                    "current_stage": "initial",
-                }
-            )
-        )
+        comments = self._fetch_comments(state)
 
-        # Post comment to issue
-        comment_body: SpecOutput = result.pydantic  # pyright:ignore
-        self._post_comment(state, comment_body)
-
-        state.conversation_history.append({"role": "assistant", "content": comment_body, "source": "flow"})
-        state.stage = SpecifyStage.WAITING
-        state.updated_at = datetime.now(UTC)
-
-        logger.info("💬 Posted initial questions, waiting for response")
-
-        return state
-
-    @listen("resume")
-    def process_new_comments(self, state: SpecifyFlowState) -> SpecifyFlowState:
-        """Process new comments from issue author."""
-        logger.info(f"📨 Processing new comments for issue #{state.issue_id}")
-
-        # Fetch new comments
-        new_comments = self._fetch_new_comments(state)
-
-        if not new_comments:
-            logger.info("📭 No new comments, returning to wait state")
+        if not comments:
+            logger.info("📭 No comments, returning")
             state.stage = SpecifyStage.WAITING
             return state
 
         # Add comments to history
-        for comment in new_comments:
+        for comment in comments:
             state.conversation_history.append(
-                {"role": "user", "content": comment["body"], "source": "comment", "id": comment["id"]}
+                {"body": comment["body"], "id": comment["id"], "author": comment["login"]}
             )
             state.last_processed_comment_id = comment["id"]
 
         # Check for completion keywords
         if comment and self._contains_completion_keyword(comment["body"]):  # pyright:ignore (last comment)
             logger.info(f"✅ Completion keyword detected: {comment['body']}")
-            state.specification_complete = True
             state.completion_keyword = comment["body"].strip()
+            logger.info(f"🏁 Completing specify flow for issue #{state.issue_id}")
+            state.specification_complete = True
+            state.stage = SpecifyStage.COMPLETED
+            self._emit(FlowEvent.ADD_LABEL, ["polycode:implement"])
             return state
 
         # Generate follow-up with ConversationCrew
         state.stage = SpecifyStage.PROCESSING
 
-        try:
-            result = (
-                ConversationCrew()
-                .crew()
-                .kickoff(
-                    inputs={
-                        "conversation_history": self._format_conversation(state.conversation_history),
-                        "current_stage": "refinement",
-                    }
+        result = (
+            ConversationCrew()
+            .crew()
+            .kickoff(
+                inputs=dict(
+                    repo=self.state.repo,
+                    branch=self.state.branch,
+                    agents_md=self._root_agents_md,
+                    file_in_repos=self.git_operations.list_tree(),
+                    conversation_history=state.conversation_history,
                 )
             )
+        )
 
-            # Post response
-            comment_body: SpecOutput = result.pydantic  # pyright:ignore
-            self._post_comment(state, comment_body)
+        # Post comment to issue
+        comment_body: SpecOutput = result.pydantic  # pyright:ignore
 
-            state.conversation_history.append({"role": "assistant", "content": comment_body, "source": "flow"})
-            state.stage = SpecifyStage.WAITING
-            state.updated_at = datetime.now(UTC)
-
-            logger.info("💬 Posted follow-up, waiting for response")
-
-        except Exception as e:
-            logger.error(f"🚨 Failed to process comments: {e}")
-            state.last_error = str(e)
-            state.retry_count += 1
-
-            if state.retry_count >= MAX_RETRIES:
-                logger.error("🚨 Max retries exceeded, marking as error")
-                state.stage = SpecifyStage.ERROR
+        state.conversation_history.append({"role": "assistant", "content": comment_body, "source": "flow"})
+        state.stage = SpecifyStage.WAITING
 
         return state
 
-    def _complete_flow(self, state: SpecifyFlowState) -> SpecifyFlowState:
-        """Complete flow and produce stories."""
-        logger.info(f"🏁 Completing specify flow for issue #{state.issue_id}")
+    @router(generate_response)
+    def have_questions(self):
+        if self.state.question:
+            return "post_question"
+        else:
+            return "build_plan"
 
-        state.stage = SpecifyStage.COMPLETED
-        state.updated_at = datetime.now(UTC)
+    @listen("post_question")
+    def post_question(self):
+        if not self.state.question:
+            return
+        logger.info(f"📝 Posting comment to #{self.state.issue_id}: {self.state.question[:100]}...")
 
-        # TODO: label the issue with corresponding label for implemenation
-        self._add_label(state, "COMPLETED")
+        self._emit(FlowEvent.COMMENT, self.state.question)
+        logger.info("💬 Posted initial questions, waiting for response")
 
-        return state
+    @listen("build_plan")
+    def build_plan(self):
+        result = (
+            PlanCrew()
+            .crew(agents_md_map=self._agents_md_map)
+            .kickoff(
+                inputs=dict(
+                    task=self.state.task[:120],
+                    repo=self.state.repo,
+                    branch=self.state.branch,
+                    agents_md=self._root_agents_md,
+                    file_in_repos=self.git_operations.list_tree(),
+                )
+            )
+        )
+
+        output: PlanOutput = result.pydantic  # type: ignore
+        self.state.stories = output.stories
+        self.state.build_cmd = output.build_cmd
+        self.state.test_cmd = output.test_cmd
+
+        logger.info(f"🔖 Planned {len(output.stories)} stories")
+        for current_story in output.stories:
+            logger.info(f"  |- 🔖 {current_story.description}")
+
+        self._emit(FlowEvent.STORIES_PLANNED)
 
     # Helper methods
-
-    def _format_conversation(self, history: list[dict]) -> str:
-        """Format conversation history for crew input."""
-        lines = []
-        for entry in history:
-            role = entry.get("role", "unknown")
-            content = entry.get("content", "")
-            lines.append(f"[{role.upper()}]: {content}")
-        return "\n\n".join(lines)
-
     def _contains_completion_keyword(self, text: str) -> bool:
         """Check if text contains a completion keyword."""
         text_lower = text.lower().strip()
         return any(kw in text_lower for kw in COMPLETION_KEYWORDS)
 
-    def _post_comment(self, state: SpecifyFlowState, body: SpecOutput) -> None:
-        """Post a comment to the issue."""
-        # TODO: Implement with GitHubProjectManager
-        logger.info(f"📝 Would post comment to #{state.issue_id}: {body.specification[:100]}...")
-
-    def _fetch_new_comments(self, state: SpecifyFlowState) -> list[dict]:
+    def _fetch_comments(self, state: SpecifyFlowState) -> list[dict]:
         """Fetch new comments from issue author."""
         # TODO: Implement with GitHubProjectManager
         # Filter by: author == state.issue_author
         # Filter by: id > state.last_processed_comment_id
         return []
-
-    def _add_label(self, state: SpecifyFlowState, label: str) -> None:
-        """Add a label to the issue."""
-        # TODO: Implement with GitHubProjectManager
-        logger.info(f"🏷️ Would add label '{label}' to #{state.issue_id}")
-
-    def _format_stories_summary(self, stories: list) -> str:
-        """Format stories for comment."""
-        lines = []
-        for i, story in enumerate(stories, 1):
-            lines.append(f"### {i}. {story.title}")
-            lines.append(f"{story.description}")
-            lines.append("")
-        return "\n".join(lines)
 
 
 def kickoff(issue: KickoffIssue):

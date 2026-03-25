@@ -292,6 +292,28 @@ class GitHubProjectManager(ProjectManager):
             log.error(f"Failed to check label on PR #{issue_number}: {e}")
             return False
 
+    def add_labels(self, issue_number: int, labels: list[str]) -> bool:
+        """Add labels to an issue/pull request.
+
+        Args:
+            issue_number: Issue/Pull request number
+            labels: List of label names to add
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            issue = self.repo.get_issue(issue_number)
+            issue.add_to_labels(*labels)
+            log.info(f"Added labels {labels} to issue #{issue_number}")
+            return True
+        except github.UnknownObjectException:
+            log.warning(f"Issue #{issue_number} not found")
+            return False
+        except Exception as e:
+            log.error(f"Failed to add labels to issue #{issue_number}: {e}")
+            return False
+
     def create_pull_request(
         self,
         title: str,
