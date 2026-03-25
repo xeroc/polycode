@@ -2,6 +2,7 @@
 
 import logging
 
+from bootstrap import get_module_registry
 from tasks import app, tasks
 
 assert app
@@ -23,9 +24,7 @@ def register_module_tasks() -> list[str]:
     Returns:
         List of registered task names.
     """
-    from modules import get_task_registry
-
-    registry = get_task_registry()
+    registry = get_module_registry().task_registry
     return registry.register_all(app)
 
 

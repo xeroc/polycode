@@ -5,11 +5,10 @@ import uuid
 from typing import Any
 
 from celery import current_task
-from modules.registry import get_flow_registry
+from bootstrap import bootstrap, get_module_registry
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from bootstrap import init_plugins
 from flows.base import KickoffIssue, KickoffRepo
 from persistence.postgres import Base
 from persistence.tasks import CeleryTaskTracker
@@ -21,7 +20,7 @@ from .config import settings
 
 log = logging.getLogger(__name__)
 
-init_plugins()
+bootstrap()
 
 _persistence_tracker = None
 
@@ -128,7 +127,7 @@ def kickoff_task(
         )
         log.info(f"Kicking off flow '{flow_name}' for issue #{issue_number}")
 
-        flow_def = get_flow_registry().get_flow(flow_name)
+        flow_def = get_module_registry().flow_registry.get_flow(flow_name)
 
         if flow_def:
             flow_def.kickoff_func(kickoff_issue)

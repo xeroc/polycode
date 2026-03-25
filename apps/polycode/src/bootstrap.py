@@ -8,14 +8,17 @@ import logging
 import os
 from typing import Any
 
-import pluggy
 from sqlalchemy import create_engine
+from flows.ralph.module import RalphModule
+from flows.specify.module import SpecifyModule
 
 from modules.context import ModuleContext
 from modules.registry import ModuleRegistry
 from persistence.registry import ModelRegistry
 
 log = logging.getLogger(__name__)
+
+_module_registry: ModuleRegistry | None = None
 
 
 def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
@@ -53,12 +56,16 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
 
     import persistence.postgres  # noqa: F401
 
+    global _module_registry
     module_registry = ModuleRegistry()
+    _module_registry = module_registry
     module_registry.discover()
 
     from gitcore import GitcoreModule
     from project_manager import ProjectManagerModule
 
+    module_registry.register_builtin(RalphModule)  # type: ignore[arg-type]
+    module_registry.register_builtin(SpecifyModule)  # type: ignore[arg-type]
     module_registry.register_builtin(ProjectManagerModule)  # type: ignore[arg-type]
     # git core last, so it gets called first! pull request require the branch is pushed!
     module_registry.register_builtin(GitcoreModule)  # type: ignore[arg-type]
@@ -80,25 +87,16 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     return context
 
 
-def init_plugins() -> pluggy.PluginManager:
-    """Lightweight plugin initialization for CLI/Celery entry points.
+def get_module_registry() -> ModuleRegistry:
+    """Get the module registry instance.
 
-    This is a minimal bootstrap that doesn't require database setup.
-    Use bootstrap() for full application initialization.
+    Calls bootstrap() if not already initialized.
 
     Returns:
-        Configured plugin manager ready for use.
-
-    Example:
-
-        from bootstrap import init_plugins
-        pm = init_plugins()
-        # Use for lightweight initialization
+        The global ModuleRegistry instance.
     """
-    from modules.hooks import get_plugin_manager
-
-    pm = get_plugin_manager()
-
-    log.info("🔌 Plugin system initialized")
-
-    return pm
+    global _module_registry
+    if _module_registry is None:
+        bootstrap()
+    assert _module_registry is not None
+    return _module_registry

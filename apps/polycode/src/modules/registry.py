@@ -349,23 +349,3 @@ class ModuleRegistry:
             raise RuntimeError(f"Circular dependency detected among modules: {remaining}")
 
         return result
-
-
-_flow_registry: FlowRegistry | None = None
-_task_registry: TaskRegistry | None = None
-
-
-def get_flow_registry() -> FlowRegistry:
-    """Get singleton flow registry."""
-    global _flow_registry
-    if _flow_registry is None:
-        _flow_registry = FlowRegistry()
-    return _flow_registry
-
-
-def get_task_registry() -> TaskRegistry:
-    """Get singleton task registry."""
-    global _task_registry
-    if _task_registry is None:
-        _task_registry = TaskRegistry()
-    return _task_registry
