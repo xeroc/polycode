@@ -11,7 +11,7 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
-from bootstrap import init_plugins
+from bootstrap import bootstrap, get_module_registry
 from cli import print_error, print_info, print_success
 from cli.utils import get_logger
 from flows.base import KickoffIssue, KickoffRepo
@@ -33,18 +33,9 @@ def flow_list(
 
         cli.utils.setup_logging("DEBUG")
 
-    from flows.ralph import RalphModule
-    from flows.specify import SpecifyModule
-    from modules.registry import ModuleRegistry
+    bootstrap()
 
-    module_registry = ModuleRegistry()
-    module_registry.discover()
-
-    module_registry.register_builtin(RalphModule)
-    module_registry.register_builtin(SpecifyModule)
-
-    init_plugins()
-
+    module_registry = get_module_registry()
     flow_names = module_registry.flow_registry.list_flows()
 
     table = Table(title="Available Flows", box=box.ROUNDED)
@@ -108,9 +99,11 @@ def flow_run(
     print_info(f"   Repository: {repo_owner}/{repo_name}")
     print_info(f"   Issue: #{issue_number}")
 
-    try:
-        init_plugins()
+    if plugins:
+        print_info(f"   Plugins: {', '.join(plugins)}")
+    bootstrap(config={"modules": {p: {} for p in plugins}})
 
+    try:
         if status_mapping:
             try:
                 mapping_data = json.loads(status_mapping)
@@ -128,9 +121,6 @@ def flow_run(
             except json.JSONDecodeError as e:
                 print_error(f"Invalid extra JSON: {e}")
                 sys.exit(1)
-
-        if plugins:
-            print_info(f"   Plugins: {', '.join(plugins)}")
 
         config = ProjectConfig(
             provider=provider,
@@ -150,10 +140,6 @@ def flow_run(
             sys.exit(1)
 
         print_info(f"   Title: {issue.title}")
-
-        from bootstrap import bootstrap
-
-        bootstrap(config={"modules": {p: {} for p in plugins}})
 
         flow_identifier = f"{flow_name}/{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
 

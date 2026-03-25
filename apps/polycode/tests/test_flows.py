@@ -1,6 +1,7 @@
 """Tests for flow system."""
 
-from modules.registry import FlowRegistry, get_flow_registry
+from bootstrap import get_module_registry
+from modules.registry import FlowRegistry
 
 from flows.base import KickoffIssue
 from flows.protocol import FlowDef
@@ -12,7 +13,7 @@ def dummy_kickoff_func(issue: KickoffIssue):
 
 def test_register_flow():
     """Clean flow registry for each test."""
-    registry = get_flow_registry()
+    registry = get_module_registry().flow_registry
     registry.register(
         FlowDef(
             name="test-flow",
@@ -25,7 +26,7 @@ def test_register_flow():
 
 def test_get_flow_for_label():
     """Test that get_flow_for_label matches correctly."""
-    registry = get_flow_registry()
+    registry = get_module_registry().flow_registry
     registry.register(
         FlowDef(
             name="test-flow",
@@ -42,7 +43,7 @@ def test_get_flow_for_label():
 
 def test_get_flow_for_label_priority():
     """Test that higher priority flow wins when multiple match."""
-    registry = get_flow_registry()
+    registry = get_module_registry().flow_registry
     registry.register(
         FlowDef(
             name="test-flow",
@@ -69,7 +70,7 @@ def test_get_flow_for_label_priority():
 
 def test_get_flow_for_label_no_prefix():
     """Test that get_flow_for_label requires prefix."""
-    registry = get_flow_registry()
+    registry = get_module_registry().flow_registry
     registry.register(
         FlowDef(
             name="test-flow",
@@ -115,6 +116,6 @@ def test_collect_from_modules():
 
 def test_flow_registry_singleton():
     """Test that the flow registry is a singleton."""
-    registry1 = get_flow_registry()
-    registry2 = get_flow_registry()
+    registry1 = get_module_registry().flow_registry
+    registry2 = get_module_registry().flow_registry
     assert registry1 is registry2
