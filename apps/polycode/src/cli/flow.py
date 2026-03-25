@@ -27,27 +27,52 @@ flow_app = typer.Typer(help="Flow execution commands")
 def flow_list(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
 ) -> None:
-    """List all available flows."""
+    """List all available flows from registered modules."""
     if verbose:
         import cli.utils
 
         cli.utils.setup_logging("DEBUG")
 
-    print_info("📋 Available flows:")
+    from flows.registry import get_flow_registry
 
-    flows: dict[str, str] = {
-        "ralph": "Ralph - Feature development orchestrator with per-story commits",
-    }
+    from flows.specify import SpecifyModule
+    from flows.ralph import RalphModule
+    from modules.registry import ModuleRegistry
+
+    from bootstrap import init_plugins
+
+    module_registry = ModuleRegistry()
+    module_registry.discover()
+
+    module_registry.register_builtin(RalphModule)
+    module_registry.register_builtin(SpecifyModule)
+
+    registry = get_flow_registry()
+    registry.collect_from_modules(module_registry.modules)
+
+    init_plugins()
+
+    flow_names = registry.list_flows()
 
     table = Table(title="Available Flows", box=box.ROUNDED)
     table.add_column("Name", style="cyan", header_style="bold")
     table.add_column("Description", style="white")
+    table.add_column("Labels", style="yellow")
+    table.add_column("Priority", style="dim", justify="right")
 
-    for name, description in flows.items():
-        table.add_row(name, description)
+    for name in sorted(flow_names):
+        flow_def = registry.get_flow(name)
+        if flow_def:
+            labels = ", ".join(flow_def.supported_labels) if flow_def.supported_labels else "-"
+            table.add_row(
+                name,
+                flow_def.description or "-",
+                labels,
+                str(flow_def.priority),
+            )
 
     console.print(table)
-    print_success(f"Found {len(flows)} flow(s)")
+    print_success(f"Found {len(flow_names)} flow(s)")
 
 
 @flow_app.command("run")
