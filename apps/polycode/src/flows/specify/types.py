@@ -22,7 +22,7 @@ class SpecifyStage(str, Enum):
 class SpecifyFlowState(BaseFlowModel):
     """State persisted between specify flow steps."""
 
-    question: str = Field(description="List of questions that help clarify uncertainties")
+    question: Optional[str] = Field(default="", description="List of questions that help clarify uncertainties")
     stories: Optional[list[Story]] = Field(default=[], description="Ordered user stories")
 
     # Conversation state

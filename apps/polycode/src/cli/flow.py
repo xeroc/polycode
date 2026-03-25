@@ -142,12 +142,13 @@ def flow_run(
         print_info(f"   Title: {issue.title}")
 
         flow_identifier = f"{flow_name}/{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
+        flow_id = uuid5(NAMESPACE_DNS, flow_identifier)
 
         comments = manager.get_comments(issue_number)
 
         kickoff_issue = KickoffIssue(
             id=issue_number,
-            flow_id=uuid5(NAMESPACE_DNS, flow_identifier),
+            flow_id=flow_id,
             title=issue.title,
             body=issue.body or "",
             comments=[
@@ -177,9 +178,16 @@ def flow_run(
         ) as bar:
             bar.text = f"Processing issue #{issue_number}: {issue.title}"
 
-            from flows.ralph import ralph_kickoff
+            # Get flow definition from registry
+            flow_def = get_module_registry().flow_registry.get_flow(flow_name)
 
-            ralph_kickoff(kickoff_issue)
+            if not flow_def:
+                print_error(f"Flow '{flow_name}' not found")
+                print_info("Use 'flow list' to see available flows")
+                sys.exit(1)
+
+            # Execute the correct flow
+            flow_def.kickoff_func(kickoff_issue)
 
             bar()
 
