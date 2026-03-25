@@ -46,6 +46,9 @@ class FlowEvent(StrEnum):
     STORIES_PLANNED = "stories_planned"
     STORY_COMPLETED = "story_completed"
 
+    COMMENT = "comment"
+    ADD_LABEL = "add_label"
+
     CLEANUP = "cleanup"
 
 

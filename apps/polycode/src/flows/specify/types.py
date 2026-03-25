@@ -23,12 +23,7 @@ class SpecifyStage(str, Enum):
 class SpecifyFlowState(BaseFlowModel):
     """State persisted between specify flow steps."""
 
-    # Identifiers
-    flow_uuid: str
-    issue_number: int
-    issue_author: str
-    issue_title: str
-
+    question: str = Field(description="List of questions that help clarify uncertainties")
     stories: Optional[list[Story]] = Field(default=[], description="Ordered user stories")
 
     # Conversation state
@@ -39,14 +34,6 @@ class SpecifyFlowState(BaseFlowModel):
     # Specification output
     specification_complete: bool = False
     completion_keyword: str | None = None  # "LGTM", "LFG", etc.
-
-    # Timing
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    # Error tracking
-    retry_count: int = 0
-    last_error: str | None = None
 
 
 class SpecifyOutput(BaseModel):

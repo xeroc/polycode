@@ -3,10 +3,29 @@ spec_elicitation_task:
     ## Requirements Clarification
 
     ### CURRENT CONTEXT:
-    - Issue Title: {title}
-    - Issue Body: {body}
+    - Issue: {issue_id}
+    - Tas: {task}
     - Conversation History:
-    {conversation_history}
+    {% for c in conversation_history %}
+    - {{c.author}}: {{c.body}}
+    {% endfor %}
+
+    REPO: {repo}
+    BRANCH: {branch}
+
+    FILES IN REPO/WORKING DIRECTORY (honors .gitignore!):
+    ```
+    {file_in_repos}
+    ```
+
+    AGENTS.md:
+    ```
+    {agents_md}
+    ```
+
+    TOOLS:
+    - FileReadTool: Read the content of a file
+    - AgentsMDLoaderTool: Load AGENTS.md files from subdirectories (use when needed)
 
     ### TASK:
     Based on the current conversation context, either:
@@ -29,38 +48,7 @@ spec_elicitation_task:
     - Assumptions (if any)
   expected_output: |
     Either:
-    1. A clarifying question
-    2. A complete specification document ready for approval
+    1. List of questions that help clarify uncertainties
+    2. A complete document ready for approval, includin specifications, requirements and assumptions
+    Pick an option, leave the unpicked option undefined in your structured response.
   agent: spec_elicitor
-
-story_breakdown_task:
-  description: |
-    ## Story Planning
-
-    ### APPROVED SPECIFICATION:
-    {specification}
-
-    ### TASK:
-    Break down the approved specification into ordered, actionable user stories.
-
-    ### GUIDELINES:
-    - Start with setup/storying stories (infrastructure, data models)
-    - Follow with core feature stories
-    - End with polish/refinement stories
-    - Each story should be independently implementable
-    - Include clear acceptance criteria for each story
-    - Prioritize logically (dependencies first)
-    - Target 3-7 stories (fewer if simple, more if complex)
-
-    ### OUTPUT FORMAT:
-    ## Stories
-
-    1. [Story Title]
-       - Description: ...
-       - Acceptance Criteria: ...
-       - Priority: (high/medium/low)
-
-    [Continue for each story]
-  expected_output: |
-    Numbered list of user stories with titles, descriptions, acceptance criteria, and priorities
-  agent: story_planner

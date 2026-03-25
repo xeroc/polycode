@@ -123,6 +123,18 @@ class ProjectManager(ABC):
         """
 
     @abstractmethod
+    def add_labels(self, issue_number: int, labels: list[str]) -> bool:
+        """Add labels to an issue/PR.
+
+        Args:
+            issue_number: Issue or PR number
+            labels: List of label names to add
+
+        Returns:
+            True if successful, False otherwise
+        """
+
+    @abstractmethod
     def create_pull_request(
         self,
         title: str,

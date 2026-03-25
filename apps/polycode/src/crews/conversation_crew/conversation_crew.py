@@ -3,8 +3,11 @@ from typing import List
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
+from crewai.tools import BaseTool
+from crewai_tools import FileWriterTool
 
 from crews.base import PolycodeCrewMixin
+from tools import AgentsMDLoaderTool, FileReadTool
 
 from .types import SpecOutput
 
@@ -19,18 +22,15 @@ class ConversationCrew(PolycodeCrewMixin):
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
+    agents_md_map: dict[str, str] | None = None
 
     @agent
     def spec_elicitor(self) -> Agent:
+        tools: List[BaseTool] = [FileReadTool(), FileWriterTool()]
+        if self.agents_md_map:
+            tools.append(AgentsMDLoaderTool(agents_md_map=self.agents_md_map))
         return Agent(  # ty:ignore
             config=self.agents_config["spec_elicitor"],  # type: ignore[index]
-            verbose=False,
-        )
-
-    @agent
-    def story_planner(self) -> Agent:
-        return Agent(  # ty:ignore
-            config=self.agents_config["story_planner"],  # type: ignore[index]
             verbose=False,
         )
 
@@ -41,17 +41,9 @@ class ConversationCrew(PolycodeCrewMixin):
             output_pydantic=SpecOutput,
         )
 
-    @task
-    def story_breakdown_task(self) -> Task:
-        return Task(  # ty:ignore
-            config=self.tasks_config["story_breakdown_task"],  # type: ignore[index]
-            output_pydantic=List[SpecOutput],  # ty:ignore
-            context=[self.spec_elicitation_task()],  # pyright: ignore
-        )
-
     @crew
-    def crew(self) -> Crew:
-        """Creates the Conversation Crew."""
+    def crew(self, agents_md_map: dict[str, str] | None = None) -> Crew:
+        self.agents_md_map = agents_md_map or {}
         return Crew(
             agents=self.agents,
             tasks=self.tasks,

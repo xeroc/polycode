@@ -70,6 +70,10 @@ class ProjectManagerHooks:
             self._handle_flow_started(state, pm)
         elif event == FlowEvent.STORIES_PLANNED:
             self._handle_planning_comment(state, pm)
+        elif event == FlowEvent.COMMENT:
+            self._handle_comment(state, pm, result)
+        elif event == FlowEvent.ADD_LABEL:
+            self._handle_add_label(state, pm, result)
         elif event == FlowEvent.STORY_COMPLETED:
             self._handle_story_completed(state, pm, result)
         elif event == FlowEvent.FLOW_FINISHED:
@@ -191,6 +195,35 @@ class ProjectManagerHooks:
             log.info(f"🏹 Updated issue #{issue_id} status to Done")
         except Exception as e:
             log.info(f"🚨 Failed to update project status to Done: {e}")
+
+    def _handle_add_label(self, state: Any, pm: "ProjectManager", labels: Any | None) -> None:
+        """Add a label to an issue"""
+        if not isinstance(labels, list):
+            log.error(f"Labels was not of type list[string], but {type(labels)}")
+            return
+
+        issue_id = getattr(state, "issue_id", 0)
+        if not issue_id:
+            log.warning("No issue_id in state, cannot add labels")
+            return
+
+        pm.add_labels(issue_id, labels)
+
+    def _handle_comment(self, state: Any, pm: "ProjectManager", comment: Any | None) -> None:
+        """Post a comment to an issue
+
+        Args:
+            state: Flow state (mutated with planning_comment_id)
+            pm: Project manager instance
+            comment: the comment to post
+        """
+        if not isinstance(comment, str):
+            log.error(f"Comment was not of type string, but {type(comment)}")
+            return
+        issue_id = getattr(state, "issue_id", 0)
+        if not issue_id:
+            return
+        pm.add_comment(issue_id, comment)
 
     def _handle_planning_comment(self, state: Any, pm: "ProjectManager") -> None:
         """Post planning checklist to issue.
