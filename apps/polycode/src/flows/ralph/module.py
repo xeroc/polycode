@@ -1,6 +1,6 @@
 """Ralph flow module for the polycode system."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from ..protocol import FlowDef
 
@@ -13,17 +13,25 @@ if TYPE_CHECKING:
 class RalphModule:
     """Module providing the Ralph flow."""
 
-    name = "ralph"
-    version = "1.0.0"
-    dependencies: list[str] = []
+    name: ClassVar[str] = "ralph"
+    version: ClassVar[str] = "1.0.0"
+    dependencies: ClassVar[list[str]] = []
 
     @classmethod
     def on_load(cls, context: "ModuleContext") -> None:
         pass
 
     @classmethod
-    def register_hooks(cls, pm: "pluggy.PluginManager") -> None:
+    def register_hooks(cls, hook_manager: "pluggy.PluginManager") -> None:
         pass
+
+    @classmethod
+    def get_models(cls) -> list[type]:
+        return []
+
+    @classmethod
+    def get_tasks(cls) -> list[dict[str, Any]]:
+        return []
 
     @classmethod
     def get_flows(cls) -> list[FlowDef]:
