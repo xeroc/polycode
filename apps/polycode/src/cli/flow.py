@@ -33,13 +33,9 @@ def flow_list(
 
         cli.utils.setup_logging("DEBUG")
 
-    from flows.registry import get_flow_registry
-
-    from flows.specify import SpecifyModule
     from flows.ralph import RalphModule
+    from flows.specify import SpecifyModule
     from modules.registry import ModuleRegistry
-
-    from bootstrap import init_plugins
 
     module_registry = ModuleRegistry()
     module_registry.discover()
@@ -47,12 +43,9 @@ def flow_list(
     module_registry.register_builtin(RalphModule)
     module_registry.register_builtin(SpecifyModule)
 
-    registry = get_flow_registry()
-    registry.collect_from_modules(module_registry.modules)
-
     init_plugins()
 
-    flow_names = registry.list_flows()
+    flow_names = module_registry.flow_registry.list_flows()
 
     table = Table(title="Available Flows", box=box.ROUNDED)
     table.add_column("Name", style="cyan", header_style="bold")
@@ -61,7 +54,7 @@ def flow_list(
     table.add_column("Priority", style="dim", justify="right")
 
     for name in sorted(flow_names):
-        flow_def = registry.get_flow(name)
+        flow_def = module_registry.flow_registry.get_flow(name)
         if flow_def:
             labels = ", ".join(flow_def.supported_labels) if flow_def.supported_labels else "-"
             table.add_row(

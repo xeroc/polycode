@@ -77,45 +77,28 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     model_count = len(ModelRegistry.all_models())
     log.info(f"🚀 Bootstrap complete: {module_count} modules, {model_count} tables")
 
-    from flows.base import FlowIssueManagement
-
-    FlowIssueManagement.configure_hooks(module_registry.pm)
-
     return context
 
 
 def init_plugins() -> pluggy.PluginManager:
     """Lightweight plugin initialization for CLI/Celery entry points.
 
-    Registers the channels module and triggers channel self-registration
-    by importing channel implementations.
-
     This is a minimal bootstrap that doesn't require database setup.
     Use bootstrap() for full application initialization.
 
     Returns:
-        Configured plugin manager with channels hooks registered.
+        Configured plugin manager ready for use.
 
     Example:
 
         from bootstrap import init_plugins
         pm = init_plugins()
-        # Now channel notifications will work during flow execution
+        # Use for lightweight initialization
     """
     from modules.hooks import get_plugin_manager
 
     pm = get_plugin_manager()
 
-    # Import channel implementations to trigger self-registration
-    import channels.redis  # noqa: F401
-
-    # Register channels module (this registers ChannelHooks)
-    from channels import ChannelsPolycodeModule
-    from flows.base import FlowIssueManagement
-
-    ChannelsPolycodeModule.register_hooks(pm)
-    FlowIssueManagement.configure_hooks(pm)
-
-    log.info("🔌 Plugin system initialized (channels active)")
+    log.info("🔌 Plugin system initialized")
 
     return pm

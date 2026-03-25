@@ -1,6 +1,6 @@
 """Protocol for polycode modules."""
 
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from flows.protocol import FlowDef
@@ -10,7 +10,6 @@ if TYPE_CHECKING:
     import pluggy
 
 
-@runtime_checkable
 class PolycodeModule(Protocol):
     """Protocol that all modules (built-in and external) must satisfy.
 
@@ -27,9 +26,9 @@ class PolycodeModule(Protocol):
     External modules are discovered via entry_points["polycode.modules"].
     """
 
-    name: ClassVar[str]
-    version: ClassVar[str] = "0.0.0"
-    dependencies: ClassVar[list[str]] = []
+    name: str
+    version: str
+    dependencies: list[str]
 
     @classmethod
     def on_load(cls, context: "ModuleContext") -> None:
@@ -81,12 +80,11 @@ class PolycodeModule(Protocol):
         """Return flow definitions provided by this module.
 
         Each flow can declare which labels it handles via supported_labels.
-        Labels are matched against the FLOW_LABEL_PREFIX (default: "polycode:").
+        Labels are matched against FLOW_LABEL_PREFIX (default: "polycode:").
 
         Returns:
             List of FlowDef instances. Empty list if module provides no flows.
         """
         if TYPE_CHECKING:
             pass
-
         return []
