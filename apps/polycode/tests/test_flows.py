@@ -1,8 +1,9 @@
 """Tests for flow system."""
 
+from modules.registry import FlowRegistry, get_flow_registry
+
 from flows.base import KickoffIssue
 from flows.protocol import FlowDef
-from flows.registry import FlowRegistry, get_flow_registry
 
 
 def dummy_kickoff_func(issue: KickoffIssue):

@@ -2,7 +2,7 @@
 
 import logging
 
-from crewai.flow.flow import router, listen, start
+from crewai.flow.flow import listen, router, start
 from crewai.flow.persistence import persist
 
 from crews.conversation_crew import ConversationCrew, SpecOutput

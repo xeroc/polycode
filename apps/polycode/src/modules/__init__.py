@@ -10,8 +10,7 @@ from modules.hooks import (
     hookspec,
 )
 from modules.protocol import PolycodeModule
-from modules.registry import ModuleRegistry
-from modules.tasks import TaskRegistry, get_task_registry, reset_task_registry
+from modules.registry import ModuleRegistry, get_flow_registry, get_task_registry
 
 __all__ = [
     "ModuleContext",
@@ -23,7 +22,6 @@ __all__ = [
     "hookspec",
     "PolycodeModule",
     "ModuleRegistry",
-    "TaskRegistry",
+    "get_flow_registry",
     "get_task_registry",
-    "reset_task_registry",
 ]

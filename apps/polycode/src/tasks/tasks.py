@@ -5,12 +5,12 @@ import uuid
 from typing import Any
 
 from celery import current_task
+from modules.registry import get_flow_registry
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from bootstrap import init_plugins
 from flows.base import KickoffIssue, KickoffRepo
-from flows.registry import get_flow_registry
 from persistence.postgres import Base
 from persistence.tasks import CeleryTaskTracker
 from project_manager.github import GitHubProjectManager
