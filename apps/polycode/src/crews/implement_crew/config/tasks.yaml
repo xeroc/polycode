@@ -36,6 +36,10 @@ implement_task:
       * DirectoryReadTool
       * ExecTool
       * AgentsMDLoaderTool: Load AGENTS.md files from subdirectories (use when needed)
+      * semantic_code_search: Search codebase by meaning (Context+)
+      * get_blast_radius: Find all usages of a symbol before changes (Context+)
+      * get_context_tree: View project structure with symbols (Context+)
+      * semantic_navigate: Browse related code clusters (Context+)
 
     NOTES:
     * Stick with the existing architecture as much as possible

@@ -6,8 +6,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
-from flows.base import BaseFlowModel
 from crews.plan_crew.types import Story
+from flows.base import BaseFlowModel
 
 
 class SpecifyStage(str, Enum):
