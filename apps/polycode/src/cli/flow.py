@@ -3,10 +3,10 @@
 import json
 import sys
 from typing import Any
+from uuid import NAMESPACE_DNS, uuid5
 
 import typer
 from alive_progress import alive_bar
-from uuid import NAMESPACE_DNS, uuid5
 from rich import box
 from rich.console import Console
 from rich.table import Table

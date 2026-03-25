@@ -119,6 +119,32 @@ Required environment variables:
 - `REDIS_HOST` / `REDIS_PORT` - Redis configuration
 - `OPENAI_API_KEY` - OpenAI API key
 
+### Context+ Integration (Optional)
+
+Context+ provides semantic code intelligence via MCP. Enable by passing `project_root` to the implement crew:
+
+```bash
+# Required for Context+ (local Ollama)
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_EMBED_MODEL=nomic-embed-text
+OLLAMA_CHAT_MODEL=gemma2:27b
+```
+
+Setup:
+
+```bash
+# Install Ollama and models
+ollama serve
+ollama pull nomic-embed-text
+ollama pull gemma2:27b
+
+# Install Context+
+bun install -g contextplus
+
+# Test MCP server
+bunx contextplus skeleton .
+```
+
 ## Usage
 
 ### Running Flows

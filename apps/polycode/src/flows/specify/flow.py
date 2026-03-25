@@ -189,6 +189,7 @@ def kickoff(issue: KickoffIssue):
         - FLOW_FINISHED: After final verification
     """
     import uuid
+
     from project_manager.config import settings as project_settings
 
     flow = SpecifyFlow()
