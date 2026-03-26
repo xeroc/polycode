@@ -55,8 +55,8 @@ class PolycodeCrewMixin:
     _pm: pluggy.PluginManager | None = None
 
     @classmethod
-    def configure_hooks(cls, pm: pluggy.PluginManager) -> None:
-        """Set the plugin manager for all crew instances."""
+    def use_plugin_manager(cls, pm: pluggy.PluginManager) -> None:
+        """Inject plugin manager for all crew instances."""
         cls._pm = pm
 
     @after_kickoff

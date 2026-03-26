@@ -8,6 +8,7 @@ import pluggy
 if TYPE_CHECKING:
     from modules.context import ModuleContext
 
+from modules.hooks import get_plugin_manager
 from modules.protocol import PolycodeModule
 
 log = logging.getLogger(__name__)
@@ -215,7 +216,7 @@ class ModuleRegistry:
 
     def __init__(self) -> None:
         self._modules: dict[str, PolycodeModule] = {}
-        self._pm = pluggy.PluginManager("polycode")
+        self._pm = get_plugin_manager()
 
         self._flow_registry = FlowRegistry()
         self._task_registry = TaskRegistry()
@@ -302,10 +303,12 @@ class ModuleRegistry:
                 log.error(f"🚨 Module '{name}' on_load() failed: {e}")
                 raise
 
-            try:
+            # Only register hooks for modules that have hook implementations
+            if hasattr(module, "register_hooks"):
                 module.register_hooks(self._pm)
-            except Exception as e:
-                log.error(f"🚨 Module '{name}' register_hooks() failed: {e}")
+                log.debug(f"🔧 Registered hooks for module: {name}")
+            else:
+                log.debug(f"🚫 Module '{name}' has no register_hooks() method, skipping")
                 raise
 
             log.info(f"✅ Module loaded: {name}")

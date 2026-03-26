@@ -425,8 +425,8 @@ class FlowIssueManagement(Flow[T]):
     _pm: pluggy.PluginManager | None = None
 
     @classmethod
-    def configure_hooks(cls, pm: pluggy.PluginManager) -> None:
-        """Set the plugin manager for all flow instances."""
+    def use_plugin_manager(cls, pm: pluggy.PluginManager) -> None:
+        """Inject plugin manager for all flow instances."""
         cls._pm = pm
 
     def _emit(self, phase: FlowPhase, result: object | None = None) -> None:
@@ -807,9 +807,11 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     )
     module_registry.load_all(context)
 
-    # 7. Wire hooks into flowbase
-    from flowbase import FlowIssueManagement
-    FlowIssueManagement.configure_hooks(module_registry.pm)
+    # 7. Wire plugin manager into flow and crew base classes
+    from crews.base import PolycodeCrewMixin
+    from flows.base import FlowIssueManagement
+    FlowIssueManagement.use_plugin_manager(module_registry.pm)
+    PolycodeCrewMixin.use_plugin_manager(module_registry.pm)
 
     module_count = len(module_registry.modules)
     model_count = len(ModelRegistry.all_models())
@@ -1174,7 +1176,7 @@ def test_hook_emission():
             calls.append(phase)
 
     pm.register(TestHooks())
-    FlowIssueManagement.configure_hooks(pm)
+    FlowIssueManagement.use_plugin_manager(pm)
 
     flow = FlowIssueManagement.__new__(FlowIssueManagement)
     flow._emit(FlowPhase.PRE_COMMIT)

@@ -297,7 +297,7 @@ class GitOperations:
         worktree_path = os.path.join(worktrees_dir, ctx.branch_name)
         ctx.worktree_path = worktree_path
 
-        log.warning(f"Repo dir: {worktree_path}")
+        log.info(f"📁 Repo dir: {worktree_path}")
 
         if os.path.exists(worktree_path):
             return worktree_path

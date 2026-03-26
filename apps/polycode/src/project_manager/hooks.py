@@ -217,6 +217,7 @@ class ProjectManagerHooks:
             pm: Project manager instance
             comment: the comment to post
         """
+        log.error("handling comment hook")
         if not isinstance(comment, str):
             log.error(f"Comment was not of type string, but {type(comment)}")
             return
