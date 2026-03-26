@@ -14,7 +14,7 @@ from flows.ralph.module import RalphModule
 from flows.specify.module import SpecifyModule
 from modules.context import ModuleContext
 from modules.registry import ModuleRegistry
-from persistence.registry import ModelRegistry
+
 
 log = logging.getLogger(__name__)
 
@@ -70,14 +70,29 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     # git core last, so it gets called first! pull request require the branch is pushed!
     module_registry.register_builtin(GitcoreModule)  # type: ignore[arg-type]
 
-    ModelRegistry.create_all(engine)
-
     context = ModuleContext(
         db_engine=engine,
         db_url=db_url,
         hook_manager=module_registry.pm,
         config=cfg.get("modules", {}),
     )
+    # Collect all models from modules and create tables
+    all_models: list[type] = []
+    for module_name, module in module_registry.modules.items():
+        if hasattr(module, "get_models"):
+            try:
+                models = module.get_models()
+                all_models.extend(models)
+            except Exception as e:
+                log.error(f"🚨 Failed to get models from '{module_name}': {e}")
+
+    # Create all tables in the database
+    if all_models:
+        from persistence.postgres import Base
+
+        Base.metadata.create_all(engine)
+        log.info(f"🗄 Created {len(all_models)} tables from {len(module_registry.modules)} modules")
+
     module_registry.load_all(context)
 
     from crews.base import PolycodeCrewMixin
@@ -87,8 +102,7 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     PolycodeCrewMixin.use_plugin_manager(module_registry.pm)
 
     module_count = len(module_registry.modules)
-    model_count = len(ModelRegistry.all_models())
-    log.info(f"🚀 Bootstrap complete: {module_count} modules, {model_count} tables")
+    log.info(f"🚀 Bootstrap complete: {module_count} modules")
 
     return context
 
