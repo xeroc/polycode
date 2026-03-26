@@ -2,12 +2,14 @@
 
 import logging
 
+from crewai.flow import persist
 from crewai.flow.flow import listen, router, start
 
 from crews.conversation_crew import ConversationCrew, SpecOutput
 from crews.plan_crew.plan_crew import PlanCrew
 from crews.plan_crew.types import PlanOutput
 from flows.base import FlowIssueManagement, KickoffIssue
+from persistence.postgres import persistence
 from gitcore.operations import sanitize_branch_name
 from modules.hooks import FlowEvent
 
@@ -18,7 +20,7 @@ logger = logging.getLogger(__name__)
 COMPLETION_KEYWORDS = {"lgtm", "lfg", "looks good", "looks good to me", "ship it", "ready"}
 
 
-# @persist(persistence=persistence, verbose=False)
+@persist(persistence=persistence, verbose=False)
 class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
     """Flow for refining specifications via GitHub issue comments."""
 
@@ -31,6 +33,9 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
 
     @listen(setup)
     def generate_response(self):
+        if self.state.questions or self.state.specifications:
+            logger.info("Already have questions or specs, proceeding to planning")
+            return
         """Generate initial clarifying questions from issue."""
         logger.info(f"❓ Generating questions/specs for issue #{self.state.issue_id}")
 
@@ -73,11 +78,12 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
         comment_body: SpecOutput = result.pydantic  # type: ignore
         if comment_body.questions:
             self.state.questions = comment_body.questions
-        if comment_body.specifications:
-            # FIXME: what to do with specifications
-            pass
-
-        self.state.stage = SpecifyStage.WAITING
+            self.state.stage = SpecifyStage.WAITING
+        elif comment_body.specifications:
+            self.state.specifications = comment_body.specifications
+            self.state.assumptions = comment_body.assumptions
+            self.state.requirements = comment_body.requirements
+            self.state.stage = SpecifyStage.PROCESSING
 
         return
 
@@ -95,9 +101,9 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
         logger.info(f"📝 Posting comment to #{self.state.issue_id}: {len(self.state.questions)} questions")
         comment = """## Questions\n\n"""
         for q in self.state.questions:
-            comment += f" - [ ] {q}"
+            comment += f" - [ ] {q}\n"
 
-        self._emit(FlowEvent.COMMENT, comment)
+        self._emit(FlowEvent.COMMENT, result=comment)
         logger.info("💬 Posted comment, waiting for response")
 
     @listen("build_plan")

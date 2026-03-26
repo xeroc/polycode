@@ -44,20 +44,6 @@ class InstallationManager:
             repositories={},
         )
 
-        print("=" * 80)
-        print(
-            dict(
-                installation_id=installation_id,
-                account_id=installation_data["account"]["id"],
-                account_login=installation_data["account"]["login"],
-                account_type=installation_data["account"]["type"],
-                app_id=installation_data["app_id"],
-                permissions=installation_data.get("permissions", {}),
-                events=installation_data.get("events", []),
-                reposiutories={},
-            )
-        )
-        print("=" * 80)
         self.db_session.add(installation)
         self.db_session.commit()
 

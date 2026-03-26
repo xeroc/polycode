@@ -9,9 +9,9 @@ import os
 from typing import Any
 
 from sqlalchemy import create_engine
+
 from flows.ralph.module import RalphModule
 from flows.specify.module import SpecifyModule
-
 from modules.context import ModuleContext
 from modules.registry import ModuleRegistry
 from persistence.registry import ModelRegistry
@@ -79,6 +79,12 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
         config=cfg.get("modules", {}),
     )
     module_registry.load_all(context)
+
+    from crews.base import PolycodeCrewMixin
+    from flows.base import FlowIssueManagement
+
+    FlowIssueManagement.use_plugin_manager(module_registry.pm)
+    PolycodeCrewMixin.use_plugin_manager(module_registry.pm)
 
     module_count = len(module_registry.modules)
     model_count = len(ModelRegistry.all_models())

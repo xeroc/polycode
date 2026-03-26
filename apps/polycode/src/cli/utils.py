@@ -25,6 +25,9 @@ def setup_logging(level: int | str = logging.INFO) -> None:
     if isinstance(level, str):
         level = getattr(logging, level.upper(), logging.INFO)
 
+    # Set root logger to a high level so it ignores most messages
+    logging.getLogger().setLevel(logging.WARNING)
+
     logging.basicConfig(
         level=level,
         format="%(name)s - %(message)s",

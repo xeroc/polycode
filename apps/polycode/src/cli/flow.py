@@ -3,7 +3,7 @@
 import json
 import sys
 from typing import Any
-from uuid import NAMESPACE_DNS, uuid5
+from uuid import NAMESPACE_DNS, UUID, uuid4, uuid5
 
 import typer
 from alive_progress import alive_bar
@@ -139,10 +139,10 @@ def flow_run(
             print_error(f"Issue #{issue_number} not found")
             sys.exit(1)
 
-        print_info(f"   Title: {issue.title}")
-
+        flow_identifier = str(uuid4())
         flow_identifier = f"{flow_name}/{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
         flow_id = uuid5(NAMESPACE_DNS, flow_identifier)
+        flow_id = UUID("48c73a01-1011-57a1-bc29-2e91ff997386")
 
         comments = manager.get_comments(issue_number)
 

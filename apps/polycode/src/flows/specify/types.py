@@ -24,6 +24,10 @@ class SpecifyFlowState(BaseFlowModel):
     """State persisted between specify flow steps."""
 
     questions: Optional[list[str]] = Field(default=[], description="List of questions that help clarify uncertainties")
+    specifications: Optional[list[str]] = Field(default=[], description="Final approved specification")
+    requirements: Optional[list[str]] = Field(default=[], description="List of requirements")
+    assumptions: Optional[list[str]] = Field(default=[], description="List of assumptions")
+
     stories: Optional[list[Story]] = Field(default=[], description="Ordered user stories")
 
     # Conversation state

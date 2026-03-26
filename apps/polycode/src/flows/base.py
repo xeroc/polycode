@@ -28,8 +28,8 @@ from persistence.postgres import (
     ensure_request_exists,
     update_request_status,
 )
-from project_manager.types import IssueComment, ProjectConfig
 from project_manager.github import GitHubProjectManager
+from project_manager.types import IssueComment, ProjectConfig
 
 if TYPE_CHECKING:
     import pluggy
@@ -116,8 +116,8 @@ class FlowIssueManagement(Flow[T]):
         return self._project_manager
 
     @classmethod
-    def configure_hooks(cls, pm: "pluggy.PluginManager") -> None:
-        """Set plugin manager for all flow instances."""
+    def use_plugin_manager(cls, pm: "pluggy.PluginManager") -> None:
+        """Inject plugin manager for all flow instances."""
         cls._pm = pm
 
     def _emit(
@@ -128,6 +128,7 @@ class FlowIssueManagement(Flow[T]):
     ) -> None:
         """Emit a hook event. Safe to call even if no pm configured."""
         if not self._pm:
+            logger.warning("PluginManager not available in base flow!")
             return
         try:
             logger.info(f"🪝 Received an emit, calling hooks for {event}")
