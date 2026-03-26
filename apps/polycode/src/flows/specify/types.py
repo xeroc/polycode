@@ -1,12 +1,13 @@
 """Specify flow types."""
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from crews.plan_crew.types import Story
 from flows.base import BaseFlowModel
+from project_manager.types import IssueComment
 
 
 class SpecifyStage(str, Enum):
@@ -22,25 +23,13 @@ class SpecifyStage(str, Enum):
 class SpecifyFlowState(BaseFlowModel):
     """State persisted between specify flow steps."""
 
-    question: Optional[str] = Field(default="", description="List of questions that help clarify uncertainties")
+    questions: Optional[list[str]] = Field(default=[], description="List of questions that help clarify uncertainties")
     stories: Optional[list[Story]] = Field(default=[], description="Ordered user stories")
 
     # Conversation state
     stage: SpecifyStage = SpecifyStage.STARTING
-    conversation_history: list[dict[str, Any]] = Field(default_factory=list)
-    last_processed_comment_id: int | None = None
+    conversation_history: list[IssueComment] = Field(default_factory=list)
 
     # Specification output
     specification_complete: bool = False
     completion_keyword: str | None = None  # "LGTM", "LFG", etc.
-
-
-class SpecifyOutput(BaseModel):
-    """Output from specify flow."""
-
-    stories: list[dict[str, Any]]
-    repo_owner: str
-    repo_name: str
-    issue_id: int
-    conversation_history: list[dict[str, Any]]
-    specification_summary: str
