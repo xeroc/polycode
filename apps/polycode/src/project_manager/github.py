@@ -9,7 +9,7 @@ from github.Repository import Repository
 from .base import ProjectManager
 from .config import settings
 from .github_projects_client import GitHubProjectsClient
-from .types import Issue, ProjectConfig, ProjectItem
+from .types import Issue, ProjectConfig, ProjectItem, IssueComment
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class GitHubProjectManager(ProjectManager):
             self._bot_username = self.github_client.get_user().login
         return self._bot_username
 
-    def get_comments(self, issue_number: int) -> list:
+    def get_comments(self, issue_number: int) -> list[IssueComment]:
         """Get all comments for an issue.
 
         Args:
@@ -70,7 +70,7 @@ class GitHubProjectManager(ProjectManager):
         """
         try:
             issue = self.repo.get_issue(issue_number)
-            return list(issue.get_comments())
+            return [IssueComment(id=x.id, username=x.user.login, body=issue.body) for x in list(issue.get_comments())]
         except Exception as e:
             log.error(f"Failed to get comments for issue #{issue_number}: {e}")
             return []
@@ -88,7 +88,7 @@ class GitHubProjectManager(ProjectManager):
         try:
             comments = self.get_comments(issue_number)
             for comment in reversed(comments):
-                if comment.user and comment.user.login == username:
+                if comment.username == username:
                     return comment.id
             return None
         except Exception as e:

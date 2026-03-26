@@ -151,15 +151,7 @@ def flow_run(
             flow_id=flow_id,
             title=issue.title,
             body=issue.body or "",
-            comments=[
-                {
-                    "id": c.id,
-                    "user": c.user.login if c.user else None,
-                    "body": c.body,
-                    "created_at": c.created_at.isoformat() if c.created_at else None,
-                }
-                for c in comments
-            ],
+            comments=comments,
             memory_prefix=f"{manager.config.repo_owner}/{manager.config.repo_name}",
             repository=KickoffRepo(
                 owner=manager.config.repo_owner,

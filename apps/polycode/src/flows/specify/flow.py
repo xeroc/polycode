@@ -3,7 +3,6 @@
 import logging
 
 from crewai.flow.flow import listen, router, start
-from crewai.flow.persistence import persist
 
 from crews.conversation_crew import ConversationCrew, SpecOutput
 from crews.plan_crew.plan_crew import PlanCrew
@@ -11,7 +10,6 @@ from crews.plan_crew.types import PlanOutput
 from flows.base import FlowIssueManagement, KickoffIssue
 from gitcore.operations import sanitize_branch_name
 from modules.hooks import FlowEvent
-from persistence.postgres import persistence
 
 from .types import SpecifyFlowState, SpecifyStage
 
@@ -20,40 +18,32 @@ logger = logging.getLogger(__name__)
 COMPLETION_KEYWORDS = {"lgtm", "lfg", "looks good", "looks good to me", "ship it", "ready"}
 
 
-@persist(persistence=persistence, verbose=False)
+# @persist(persistence=persistence, verbose=False)
 class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
     """Flow for refining specifications via GitHub issue comments."""
 
     @start()
     def setup(self):
         """Initialize flow and emit FLOW_STARTED event."""
-        logger.info("🚀 Ralph Loop starting...")
-        self._emit(FlowEvent.FLOW_STARTED, label="ralph")
+        logger.info("🚀 Specify Loop starting...")
+        self._emit(FlowEvent.FLOW_STARTED, label="specify")
         self._setup()
 
     @listen(setup)
     def generate_response(self):
         """Generate initial clarifying questions from issue."""
-        logger.info(f"❓ Generating initial questions for issue #{self.state.issue_id}")
+        logger.info(f"❓ Generating questions/specs for issue #{self.state.issue_id}")
 
-        comments = self._fetch_comments(self.state)
-
-        if not comments:
+        if not self.state.conversation_history:
             logger.info("📭 No comments, returning")
             self.state.stage = SpecifyStage.WAITING
             return
 
-        # Add comments to history
-        for comment in comments:
-            self.state.conversation_history.append(
-                {"body": comment["body"], "id": comment["id"], "author": comment["login"]}
-            )
-            self.state.last_processed_comment_id = comment["id"]
-
         # Check for completion keywords
-        if comment and self._contains_completion_keyword(comment["body"]):  # pyright:ignore (last comment)
-            logger.info(f"✅ Completion keyword detected: {comment['body']}")
-            self.state.completion_keyword = comment["body"].strip()
+        last_comment = self.state.conversation_history[-1]
+        if last_comment and self._contains_completion_keyword(last_comment.body):  # pyright:ignore (last last_comment)
+            logger.info(f"✅ Completion keyword detected: {last_comment.body}")
+            self.state.completion_keyword = last_comment.body.strip()
             logger.info(f"🏁 Completing specify flow for issue #{self.state.issue_id}")
             self.state.specification_complete = True
             self.state.stage = SpecifyStage.COMPLETED
@@ -72,32 +62,42 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
                     branch=self.state.branch,
                     agents_md=self._root_agents_md,
                     file_in_repos=self.git_operations.list_tree(),
-                    conversation_history=self.state.conversation_history,
+                    issue_id=self.state.issue_id,
+                    task=self.state.task,
+                    conversation_history=[x.model_dump() for x in self.state.conversation_history],
                 )
             )
         )
 
         # Post comment to issue
-        comment_body: SpecOutput = result.pydantic  # pyright:ignore
+        comment_body: SpecOutput = result.pydantic  # type: ignore
+        if comment_body.questions:
+            self.state.questions = comment_body.questions
+        if comment_body.specifications:
+            # FIXME: what to do with specifications
+            pass
 
-        self.state.conversation_history.append({"role": "assistant", "content": comment_body, "source": "flow"})
         self.state.stage = SpecifyStage.WAITING
 
         return
 
     @router(generate_response)
     def have_questions(self):
-        if self.state.question:
+        if self.state.questions:
             return "post_question"
         else:
             return "build_plan"
 
     @listen("post_question")
-    def post_question(self):
-        if not self.state.question:
+    def post_questions(self):
+        if not self.state.questions:
             return
-        logger.info(f"📝 Posting comment to #{self.state.issue_id}: {self.state.question[:100]}...")
-        self._emit(FlowEvent.COMMENT, self.state.question)
+        logger.info(f"📝 Posting comment to #{self.state.issue_id}: {len(self.state.questions)} questions")
+        comment = """## Questions\n\n"""
+        for q in self.state.questions:
+            comment += f" - [ ] {q}"
+
+        self._emit(FlowEvent.COMMENT, comment)
         logger.info("💬 Posted comment, waiting for response")
 
     @listen("build_plan")
@@ -173,7 +173,7 @@ def kickoff(issue: KickoffIssue):
         issue_author=issue.repository.owner,  # TODO: Get actual author from issue
         issue_title=issue.title,
         stage=SpecifyStage.STARTING,
-        conversation_history=[{"role": "user", "content": issue.body, "source": "issue_body"}],
         project_config=issue.project_config.model_dump() if issue.project_config else {},
+        conversation_history=issue.comments,
     )
     flow.kickoff(inputs=inputs)

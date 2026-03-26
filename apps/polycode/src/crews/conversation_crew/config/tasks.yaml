@@ -1,14 +1,11 @@
-spec_elicitation_task:
-  description: |
-    ## Requirements Clarification
+setup_task:
+  description: >
+    Prepare the development environment for this feature.
 
-    ### CURRENT CONTEXT:
-    - Issue: {issue_id}
-    - Tas: {task}
-    - Conversation History:
-    {% for c in conversation_history %}
-    - {{c.author}}: {{c.body}}
-    {% endfor %}
+    TASK:
+    ```
+    {task}
+    ```
 
     REPO: {repo}
     BRANCH: {branch}
@@ -24,8 +21,38 @@ spec_elicitation_task:
     ```
 
     TOOLS:
+    - DirectoryReadTool: Read the directory structure
     - FileReadTool: Read the content of a file
     - AgentsMDLoaderTool: Load AGENTS.md files from subdirectories (use when needed)
+
+    !CRUCIAL!:
+    * Do not run DirectoryReadTool outside the repositories path. There's nothing of interest there!
+    * Do not attempt to read or write any file outside the repositories path!
+
+    Instructions:
+    1. cd into the repo
+    2. Read configuration files (package.json, pyproject, etc..), CI config, test config to understand the build/test setup
+    3. Ensure .gitignore exists — if missing, create one appropriate for detected stack (must include .env, node_modules/, *.key, *.pem at minimum)
+    4. Run the build to establish a baseline
+    5. Run the tests to establish a baseline
+    6. Report what you found and what can be reused
+    7. Understand the stack, conventions, and patterns
+
+  expected_output: >
+    Structured information about build_cmd, test_cmd, ci notes, baseline, findings, purpose, tech stack, architecture, entry points, configuration, documentation,
+  agent: setup
+
+spec_elicitation_task:
+  description: |
+    ## Requirements Clarification
+
+    ### CURRENT CONTEXT:
+    - Issue: {issue_id}
+    - Tas: {task}
+    - Conversation History:
+    {% for c in conversation_history %}
+    - {{c.username}}: {{c.body}}
+    {% endfor %}
 
     ### TASK:
     Based on the current conversation context, either:
@@ -33,22 +60,15 @@ spec_elicitation_task:
     2. Propose a final specification if requirements are clear
 
     ### GUIDELINES:
-    - Ask ONE question at a time
+    - Ask up to 5 questions at a time
     - Focus on edge cases, constraints, and acceptance criteria
     - When proposing a spec, summarize all requirements clearly
     - Use markdown formatting for readability
     - Ask human to thumbs up (👍) to approve the specification
-
-    ### OUTPUT:
-    If asking question: A clear, specific question
-    If proposing spec: A complete specification document with:
-    - Feature overview
-    - Detailed requirements
-    - Acceptance criteria
-    - Assumptions (if any)
+    - response must be valid JSON
   expected_output: |
-    Either:
-    1. List of questions that help clarify uncertainties
-    2. A complete document ready for approval, includin specifications, requirements and assumptions
-    Pick an option, leave the unpicked option undefined in your structured response.
+    Structured list of questions, structured specifications, requirements and assumption
+    If no questions, return an empty list for questions.
   agent: spec_elicitor
+  context:
+    - setup_task

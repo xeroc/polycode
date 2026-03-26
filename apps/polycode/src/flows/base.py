@@ -28,7 +28,8 @@ from persistence.postgres import (
     ensure_request_exists,
     update_request_status,
 )
-from project_manager.types import ProjectConfig
+from project_manager.types import IssueComment, ProjectConfig
+from project_manager.github import GitHubProjectManager
 
 if TYPE_CHECKING:
     import pluggy
@@ -48,7 +49,7 @@ class KickoffIssue(BaseModel):
     flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of flow that will run")
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
-    comments: list[dict] = Field(default_factory=list, description="Issue comments")
+    comments: list[IssueComment] = Field(default_factory=list, description="Issue comments")
     memory_prefix: str = Field(description="prefix for memory")
     repository: KickoffRepo
     project_config: ProjectConfig
@@ -89,6 +90,7 @@ class FlowIssueManagement(Flow[T]):
     _agents_md_map: dict[str, str] = {}
     _root_agents_md: str = ""
     _git_ops: GitOperations | None = None
+    _project_manager: GitHubProjectManager | None = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -104,6 +106,14 @@ class FlowIssueManagement(Flow[T]):
         )
         logger.info("💾 Memory:")
         logger.info(self.memory.tree())
+
+    def get_project_manager(self) -> "GitHubProjectManager":
+        """Get project manager instance for this flow."""
+        if not self._project_manager:
+            if not self.state.project_config:
+                raise Exception("Project config not provided, cannot use project manager!")
+            self._project_manager = GitHubProjectManager(self.state.project_config)
+        return self._project_manager
 
     @classmethod
     def configure_hooks(cls, pm: "pluggy.PluginManager") -> None:

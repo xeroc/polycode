@@ -77,3 +77,9 @@ class ProjectConfig(BaseModel):
     status_mapping: StatusMapping = StatusMapping()
     token: str | None = None
     extra: dict[str, Any] = {}
+
+
+class IssueComment(BaseModel):
+    username: str
+    body: str
+    id: int
