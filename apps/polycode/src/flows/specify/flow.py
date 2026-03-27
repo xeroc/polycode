@@ -2,14 +2,12 @@
 
 import logging
 
-from crewai.flow import persist
 from crewai.flow.flow import listen, router, start
 
 from crews.conversation_crew import ConversationCrew, SpecOutput
 from crews.plan_crew.plan_crew import PlanCrew
 from crews.plan_crew.types import PlanOutput
 from flows.base import FlowIssueManagement, KickoffIssue
-from persistence.postgres import persistence
 from gitcore.operations import sanitize_branch_name
 from modules.hooks import FlowEvent
 
@@ -20,7 +18,7 @@ logger = logging.getLogger(__name__)
 COMPLETION_KEYWORDS = {"lgtm", "lfg", "looks good", "looks good to me", "ship it", "ready"}
 
 
-@persist(persistence=persistence, verbose=False)
+# @persist(persistence=persistence, verbose=False)
 class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
     """Flow for refining specifications via GitHub issue comments."""
 
@@ -100,8 +98,8 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
             return
         logger.info(f"📝 Posting comment to #{self.state.issue_id}: {len(self.state.questions)} questions")
         comment = """## Questions\n\n"""
-        for q in self.state.questions:
-            comment += f" - [ ] {q}\n"
+        for index, question in enumerate(self.state.questions):
+            comment += f"{index}. {question}\n"
 
         self._emit(FlowEvent.COMMENT, result=comment)
         logger.info("💬 Posted comment, waiting for response")

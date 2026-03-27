@@ -139,13 +139,12 @@ def flow_run(
             print_error(f"Issue #{issue_number} not found")
             sys.exit(1)
 
+        comments = manager.get_comments(issue_number)
+
         flow_identifier = str(uuid4())
         flow_identifier = f"{flow_name}/{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
         flow_id = uuid5(NAMESPACE_DNS, flow_identifier)
         flow_id = UUID("48c73a01-1011-57a1-bc29-2e91ff997386")
-
-        comments = manager.get_comments(issue_number)
-
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=flow_id,

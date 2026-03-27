@@ -9,7 +9,7 @@ Modules register hook implementations via @hookimpl decorator.
 """
 
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pluggy
 
@@ -81,9 +81,9 @@ class FlowHookSpec:
         self,
         event: FlowEvent,
         flow_id: str,
-        state: object,
-        result: object | None = None,
-        label: str = "",
+        state: Any,
+        result: Any,
+        label: str,
     ) -> None:
         """Called at each flow lifecycle event.
 
