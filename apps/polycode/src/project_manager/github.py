@@ -70,7 +70,7 @@ class GitHubProjectManager(ProjectManager):
         """
         try:
             issue = self.repo.get_issue(issue_number)
-            return [IssueComment(id=x.id, username=x.user.login, body=issue.body) for x in list(issue.get_comments())]
+            return [IssueComment(id=x.id, username=x.user.login, body=x.body) for x in list(issue.get_comments())]
         except Exception as e:
             log.error(f"Failed to get comments for issue #{issue_number}: {e}")
             return []

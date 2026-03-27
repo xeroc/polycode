@@ -45,8 +45,8 @@ class ProjectManagerHooks:
         event: FlowEvent,
         flow_id: str,
         state: Any,
-        result: Any | None = None,
-        label: str = "",
+        result: Any,
+        label: str,
     ) -> None:
         """Handle flow orchestration events for project management operations.
 
@@ -217,7 +217,6 @@ class ProjectManagerHooks:
             pm: Project manager instance
             comment: the comment to post
         """
-        log.error("handling comment hook")
         if not isinstance(comment, str):
             log.error(f"Comment was not of type string, but {type(comment)}")
             return
