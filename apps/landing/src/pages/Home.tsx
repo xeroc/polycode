@@ -124,11 +124,120 @@ const extensibility = [
 ];
 
 const comparison = [
-  { feature: "Hosting", devin: "SaaS only", polycode: "Self-hosted" },
-  { feature: "Workflows", devin: "Black box", polycode: "Fully customizable" },
-  { feature: "Interface", devin: "Chat / Slack", polycode: "GitHub-native" },
-  { feature: "Data", devin: "Vendor owns", polycode: "You own" },
-  { feature: "Price", devin: "$500/mo", polycode: "Open source (MIT)" },
+  {
+    feature: "Core Model",
+    polycode: "Workflow automation system",
+    devin: "Autonomous AI engineer",
+    openhands: "Agent runtime / chat",
+  },
+  {
+    feature: "Trigger",
+    polycode: "GitHub label on issue",
+    devin: "Chat prompt / ticket",
+    openhands: "Chat / session",
+  },
+  {
+    feature: "Interface",
+    polycode: "GitHub-native",
+    devin: "Proprietary IDE + chat",
+    openhands: "Web UI / API",
+  },
+  {
+    feature: "Hosting",
+    polycode: "Self-hosted",
+    devin: "SaaS only",
+    openhands: "Self-hosted possible",
+  },
+  {
+    feature: "Data Privacy",
+    polycode: "Code stays on your infra",
+    devin: "Vendor processes code",
+    openhands: "Depends on deployment",
+  },
+  {
+    feature: "Workflows",
+    polycode: "Deterministic, pluggable flows",
+    devin: "Black box autonomy",
+    openhands: "Open-ended exploration",
+  },
+  {
+    feature: "Extensibility",
+    polycode: "Plugin architecture + hooks",
+    devin: "Closed system",
+    openhands: "Tool-based, extensible",
+  },
+  {
+    feature: "Auditability",
+    polycode: "Per-story commits, full trail",
+    devin: "Opaque reasoning",
+    openhands: "Session logs",
+  },
+  {
+    feature: "Control",
+    polycode: "Bounded retries, lifecycle hooks",
+    devin: "Full autonomy, less predictable",
+    openhands: "Freeform exploration",
+  },
+  {
+    feature: "Target User",
+    polycode: "Engineering teams, DevOps",
+    devin: "Individual developers",
+    openhands: "Developers + researchers",
+  },
+  {
+    feature: "License",
+    polycode: "MIT (open source)",
+    devin: "Proprietary ($500/mo)",
+    openhands: "Open source",
+  },
+  {
+    feature: "Best For",
+    polycode: "Structured, repeatable work",
+    devin: "Novel, undefined problems",
+    openhands: "Experimentation + research",
+  },
+];
+
+const positioningCards = [
+  {
+    title: "Polycode",
+    subtitle: "The Factory System",
+    description:
+      "Label an issue → agents plan, implement, test, and PR. Deterministic pipelines your team trusts. Extensible with plugins and hooks.",
+    checks: [
+      "GitHub-native triggers",
+      "Deterministic lifecycle",
+      "Plugin architecture",
+      "Full audit trail",
+      "Self-hosted, MIT licensed",
+    ],
+  },
+  {
+    title: "Devin",
+    subtitle: "The AI Employee",
+    description:
+      "Give it a task, it explores, improvises, and iterates. Powerful for undefined problems, but unpredictable and closed-source.",
+    checks: [
+      "Full IDE + browser access",
+      "Zero setup UX",
+      "Can tackle novel problems",
+      "Proprietary, SaaS only",
+      "Black-box decisions",
+    ],
+  },
+  {
+    title: "OpenHands",
+    subtitle: "The Agent Sandbox",
+    description:
+      "General-purpose agent runtime for experimentation and research. Flexible but less opinionated about process.",
+    checks: [
+      "Open-ended agent sessions",
+      "Extensible tool system",
+      "Research-oriented",
+      "Community-driven",
+      "Less structured flows",
+    ],
+  },
 ];
 
 export default function App() {
@@ -455,35 +564,134 @@ export default function App() {
 
       {/* Comparison Section */}
       <section className="py-20" id="comparison">
-        <h2 className="text-2xl font-bold mb-8">Why Polycode?</h2>
-        <div className="overflow-x-auto">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-medium uppercase tracking-widest text-primary">
+            Compare
+          </span>
+        </div>
+        <h2 className="text-2xl font-bold mb-2">
+          Same wave, different philosophy
+        </h2>
+        <p className="text-muted-foreground mb-12 max-w-2xl">
+          Polycode, Devin, and OpenHands all use AI agents to perform software
+          engineering tasks. But they're built on fundamentally different
+          assumptions about how work should get done.
+        </p>
+
+        {/* Positioning Cards */}
+        <div className="grid gap-4 md:grid-cols-3 mb-16">
+          {positioningCards.map((card, index) => (
+            <motion.div
+              key={card.title}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className={`bg-card border-border border p-6 space-y-4 ${
+                card.title === "Polycode"
+                  ? "ring-1 ring-primary/30 bg-primary/[0.03]"
+                  : ""
+              }`}
+            >
+              <div>
+                <span
+                  className={`text-[10px] font-medium uppercase tracking-widest ${
+                    card.title === "Polycode"
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {card.subtitle}
+                </span>
+                <h3
+                  className={`text-lg font-bold ${
+                    card.title === "Polycode" ? "text-primary" : ""
+                  }`}
+                >
+                  {card.title}
+                </h3>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {card.description}
+              </p>
+              <ul className="space-y-1.5">
+                {card.checks.map((check) => (
+                  <li
+                    key={check}
+                    className="flex items-start gap-2 text-xs text-muted-foreground"
+                  >
+                    <Check
+                      className={`h-3 w-3 mt-0.5 shrink-0 ${
+                        card.title === "Polycode"
+                          ? "text-primary"
+                          : "text-muted-foreground/50"
+                      }`}
+                    />
+                    <span>{check}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Feature Comparison Table */}
+        <h3 className="text-lg font-bold mb-6">Feature comparison</h3>
+        <div className="overflow-x-auto border border-border">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 font-medium">Feature</th>
-                <th className="text-left py-3 font-medium text-muted-foreground">
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left py-3 px-4 font-medium text-xs uppercase tracking-widest">
+                  Feature
+                </th>
+                <th className="text-left py-3 px-4 font-medium text-primary">
+                  Polycode
+                </th>
+                <th className="text-left py-3 px-4 font-medium text-muted-foreground">
                   Devin
                 </th>
-                <th className="text-left py-3 font-medium text-primary">
-                  Polycode
+                <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                  OpenHands
                 </th>
               </tr>
             </thead>
             <tbody>
-              {comparison.map((row) => (
-                <tr key={row.feature} className="border-b border-border/50">
-                  <td className="py-3 font-medium">{row.feature}</td>
-                  <td className="py-3 text-muted-foreground">{row.devin}</td>
-                  <td className="py-3 text-primary">{row.polycode}</td>
+              {comparison.map((row, i) => (
+                <tr
+                  key={row.feature}
+                  className={`border-b border-border/50 ${
+                    i % 2 === 0 ? "bg-muted/10" : ""
+                  }`}
+                >
+                  <td className="py-3 px-4 font-medium text-xs">
+                    {row.feature}
+                  </td>
+                  <td className="py-3 px-4 text-primary text-xs font-medium">
+                    {row.polycode}
+                  </td>
+                  <td className="py-3 px-4 text-muted-foreground text-xs">
+                    {row.devin}
+                  </td>
+                  <td className="py-3 px-4 text-muted-foreground text-xs">
+                    {row.openhands}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="text-muted-foreground text-sm mt-6">
-          Devin is built for demos. Polycode is built for teams that want
-          automation they can trust, inspect, and extend.
-        </p>
+
+        {/* Bottom Line */}
+        <div className="mt-8 border-l-2 border-primary/30 pl-4">
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-foreground">Bottom line:</strong> Devin is
+            an AI employee you chat with. OpenHands is an agent sandbox for
+            experimentation. Polycode is{" "}
+            <span className="text-primary font-medium">
+              CI/CD for AI-driven development workflows
+            </span>{" "}
+            — deterministic, auditable, and built for engineering teams.
+          </p>
+        </div>
       </section>
 
       <div
