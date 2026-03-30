@@ -4,42 +4,123 @@ import {
   Github,
   ArrowRight,
   Check,
-  Zap,
   CheckCircle2,
   ChevronRight,
   Puzzle,
   Lock,
-  GitBranch,
-  Layers,
   Target,
   Route,
   Cpu,
   MessageSquare,
   ListChecks,
+  GitPullRequest,
+  Shield,
+  PlayCircle,
+  Network,
+  FileCheck2,
+  Repeat,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { addToWaitlist } from "../lib/n8n";
 
-const features = [
+const pillars = [
   {
-    icon: Zap,
-    title: "Label-Driven Workflows",
+    icon: GitPullRequest,
+    title: "PR-First System",
+    badge: "Core Differentiator",
     description:
-      "Add a GitHub label like 'polycode:implement' and AI agents automatically plan, code, test, and create a PR.",
+      "Every PR feels like a top-tier engineer wrote it. Clean atomic commits, rich descriptions with what changed, why, and how. Git notes attach decision metadata without polluting history.",
+    details: [
+      "Structured PR descriptions: what, why, how",
+      "Git notes for decision reasoning and rejected approaches",
+      "Linked issues with checklist sync",
+    ],
+  },
+  {
+    icon: Repeat,
+    title: "Reproducible Workflows",
+    badge: null,
+    description:
+      "Bounded, inspectable behavior. Fixed flow stages, retry limits, structured I/O between crews. Re-run any flow with the same config and get comparable results.",
+    details: [
+      "Flow versioning in every run",
+      "Structured inputs/outputs between stages",
+      "Re-run with identical configuration",
+    ],
+  },
+  // {
+  //   icon: Puzzle,
+  //   title: "Flow Marketplace",
+  //   badge: "Platform Play",
+  //   description:
+  //     "Import flows from any GitHub repo. Version-pin with @v1. Share workflows across your org or the community. Browse, discover, and compose.",
+  //   details: [
+  //     "GitHub-based imports (github:org/repo)",
+  //     "Version pinning per flow",
+  //     "Community sharing and discoverability",
+  //   ],
+  // },
+  {
+    icon: Shield,
+    title: "Policy Engine",
+    badge: null,
+    description:
+      "Don't ask the AI to follow rules — enforce them. Python validators run as pre-commit, post-story, and pre-PR checks. AI that follows your engineering rules by construction.",
+    details: [
+      "Test coverage enforcement",
+      "Forbidden file protection",
+      "Dependency rule validation",
+    ],
   },
   {
     icon: Puzzle,
     title: "Plugin Architecture",
+    badge: null,
     description:
-      "Extend with Python modules. Import flows from any GitHub repo. Build custom workflows for your team's process.",
+      "Polycode is designed for extensibility. Write custom flows in Python, register hooks for lifecycle events, and share workflows across your organization or with the community.",
+    details: [
+      "Write Custom Flow",
+      "Custom Plugin Hooks and Events",
+      "Any project management system",
+    ],
   },
   {
-    icon: Lock,
-    title: "Self-Hosted & Open Source",
+    icon: Network,
+    title: "Multi-Issue Awareness",
+    badge: "Early Differentiator",
     description:
-      "MIT licensed core. Your code stays on your infrastructure. Full audit trail with per-story commits.",
+      "During planning, scan other open issues for overlap, shared files, and dependencies. Suggest batch execution and detect conflicts before they happen.",
+    details: [
+      "Detect overlapping issues",
+      "Shared file conflict detection",
+      "Dependency graph awareness",
+    ],
   },
+  {
+    icon: FileCheck2,
+    title: "GitHub Projects Engine",
+    badge: null,
+    description:
+      "Issue enters 'Ready' → start flow. Labeled 'blocked' → spawn debugging flow. PR merged → auto-trigger follow-ups. Zapier for GitHub Projects.",
+    details: [
+      "Project status → flow triggers",
+      "Automated follow-up workflows",
+      "Custom automation rules",
+    ],
+  },
+  // {
+  //   icon: Lock,
+  //   title: "Self-Hosted & Open Source",
+  //   badge: "MIT Licensed",
+  //   description:
+  //     "Your code stays on your infrastructure. Full audit trail with per-story commits. No vendor lock-in, no code leaving your network.",
+  //   details: [
+  //     "MIT licensed core",
+  //     "Full audit trail",
+  //     "Infrastructure you control",
+  //   ],
+  // },
 ];
 
 const approachComparison = [
@@ -93,33 +174,6 @@ const workflows = [
     cmd: "polycode flow list",
     branch: "Available flows",
     description: "Browse built-in and custom flows from your plugins",
-  },
-];
-
-const tech = [
-  "Python 3.13",
-  "CrewAI",
-  "FastAPI",
-  "Celery",
-  "Redis",
-  "PostgreSQL",
-];
-
-const extensibility = [
-  {
-    title: "Write Custom Flows",
-    description: "Python-based flows with full access to tools and state",
-    icon: GitBranch,
-  },
-  {
-    title: "Plugin Hooks",
-    description: "5 lifecycle events for commit, push, PR, merge, cleanup",
-    icon: Layers,
-  },
-  {
-    title: "Import from GitHub",
-    description: "Share flows across your org or the community",
-    icon: Github,
   },
 ];
 
@@ -434,86 +488,73 @@ export default function App() {
           </div>
         </div>
 
-        {/* WHAT */}
-        <div>
+        {/* Features Section */}
+        <div id="features">
           <div className="flex items-center gap-2 mb-3">
             <Cpu className="h-4 w-4 text-primary" />
             <span className="text-xs font-medium uppercase tracking-widest text-primary">
               What
             </span>
           </div>
-          <h2 className="text-2xl font-bold mb-8">
-            Self-hosted AI agent automation
+          <h2 className="text-2xl font-bold mb-2">
+            GitHub-native automation engine
           </h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {features.map((feature, index) => (
+          <p className="text-muted-foreground mb-10 max-w-2xl">
+            GitHub is the interface. PRs are the output. Flows are the product.
+            Everything Polycode does reinforces this loop.
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {pillars.map((pillar, index) => (
               <motion.div
-                key={feature.title}
+                key={pillar.title}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="bg-card border-border border p-4 space-y-2"
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className="bg-card border-border border p-5 space-y-3"
               >
-                <feature.icon className="h-5 w-5 text-primary" />
-                <h3 className="font-medium text-sm">{feature.title}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {feature.description}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <pillar.icon className="h-4 w-4 text-primary shrink-0" />
+                    <h3 className="font-medium text-sm">{pillar.title}</h3>
+                  </div>
+                  {pillar.badge && (
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 border border-primary/20">
+                      {pillar.badge}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {pillar.description}
                 </p>
+                <ul className="space-y-1">
+                  {pillar.details.map((detail) => (
+                    <li
+                      key={detail}
+                      className="flex items-start gap-2 text-xs text-muted-foreground"
+                    >
+                      <Check className="h-3 w-3 mt-0.5 shrink-0 text-primary/60" />
+                      <span>{detail}</span>
+                    </li>
+                  ))}
+                </ul>
               </motion.div>
             ))}
           </div>
-        </div>
-      </section>
-
-      <div
-        className="font-mono text-sm text-muted-foreground/30 select-none"
-        aria-hidden="true"
-      >
-        //
-      </div>
-
-      {/* Extensibility Section */}
-      <section className="py-20" id="plugins">
-        <div className="flex items-center gap-3 mb-8">
-          <Puzzle className="h-5 w-5 text-primary" />
-          <h2 className="text-2xl font-bold">Plugin Architecture</h2>
-        </div>
-        <p className="text-muted-foreground mb-8 max-w-2xl">
-          Polycode is designed for extensibility. Write custom flows in Python,
-          register hooks for lifecycle events, and share workflows across your
-          organization or with the community.
-        </p>
-        <div className="grid gap-4 md:grid-cols-3">
-          {extensibility.map((item, index) => (
-            <motion.div
-              key={item.title}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="bg-card border-border rounded-lg border p-4 space-y-2"
-            >
-              <item.icon className="h-5 w-5 text-primary" />
-              <h3 className="font-medium text-sm">{item.title}</h3>
-              <p className="text-xs text-muted-foreground">
-                {item.description}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-        <div className="mt-6 bg-muted/30 border-border rounded-lg border p-4">
-          <p className="text-xs font-mono text-muted-foreground mb-2">
-            # .polycode/polycode.yml
-          </p>
-          <pre className="text-xs text-foreground overflow-x-auto">
-            {`flows:
-  ralph:
-    label: implement
-    source: polycode/ralph  # built-in
-
-  deploy-check:
-    label: deploy-check
-    source: github:acme-org/polycode-flows/deploy  # from GitHub`}
-          </pre>
+          {/*         <div className="mt-8 bg-muted/30 border-border border p-4"> */}
+          {/*           <p className="text-xs font-mono text-muted-foreground mb-2"> */}
+          {/*             # .polycode/polycode.yml */}
+          {/*           </p> */}
+          {/*           <pre className="text-xs text-foreground overflow-x-auto"> */}
+          {/*             {`flows: */}
+          {/* ralph: */}
+          {/*   label: implement */}
+          {/*   source: polycode/ralph  # built-in */}
+          {/**/}
+          {/* deploy-check: */}
+          {/*   label: deploy-check */}
+          {/*   source: github:acme-org/polycode-flows/deploy@v1  # versioned, from GitHub`} */}
+          {/*           </pre> */}
+          {/*         </div> */}
         </div>
       </section>
 
@@ -702,69 +743,45 @@ export default function App() {
       </div>
 
       {/* Waitlist Section */}
-      <section id="waitlist" className="mb-24">
-        <div className="border border-border/50 p-12">
-          <h2 className="text-2xl font-bold mb-4">Join Early Access</h2>
-          <p className="text-lg text-muted-foreground mb-6">
-            Get notified when we launch beta. Early adopters get free access to
-            premium features.
-          </p>
-          {!isSubmitted ? (
-            <form onSubmit={handleSubmit} className="max-w-md">
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-input/30 border-input placeholder:text-muted-foreground/50 h-11 w-full border px-4 text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                <button
-                  type="submit"
-                  className="bg-primary text-primary-foreground shadow-2xs hover:bg-primary/90 inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-none font-medium text-sm outline-hidden transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 h-11 px-6"
-                  disabled={loading || !email}
-                >
-                  Join Waitlist
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-              </div>
-            </form>
-          ) : (
-            <div className="flex items-center gap-2 text-primary">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="font-medium">
-                You're on the list! We'll be in touch soon.
-              </span>
+      <section className="py-20" id="waitlist">
+        <h2 className="text-2xl font-bold mb-4">Join Early Access</h2>
+        <p className="text-lg text-muted-foreground mb-6">
+          Get notified when we launch beta. Early adopters get free access to
+          premium features.
+        </p>
+        {!isSubmitted ? (
+          <form onSubmit={handleSubmit} className="max-w-md">
+            <div className="flex gap-2">
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-input/30 border-input placeholder:text-muted-foreground/50 h-11 w-full border px-4 text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                className="bg-primary text-primary-foreground shadow-2xs hover:bg-primary/90 inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-none font-medium text-sm outline-hidden transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 h-11 px-6"
+                disabled={loading || !email}
+              >
+                Join Waitlist
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
-          )}
-          <p className="text-xs text-muted-foreground mt-4">
-            No spam, ever. Unsubscribe anytime.
-          </p>
-        </div>
-      </section>
-
-      <div
-        className="font-mono text-sm text-muted-foreground/30 select-none"
-        aria-hidden="true"
-      >
-        //
-      </div>
-
-      {/* Tech Stack Section */}
-      <section className="py-20" id="tech">
-        <h2 className="text-2xl font-bold mb-8">Built With</h2>
-        <div className="flex flex-wrap gap-2">
-          {tech.map((item) => (
-            <span
-              key={item}
-              className="border-border bg-muted/20 text-muted-foreground px-3 py-1.5 text-sm border"
-            >
-              {item}
+          </form>
+        ) : (
+          <div className="flex items-center gap-2 text-primary">
+            <CheckCircle2 className="h-5 w-5" />
+            <span className="font-medium">
+              You're on the list! We'll be in touch soon.
             </span>
-          ))}
-        </div>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground mt-4">
+          No spam, ever. Unsubscribe anytime.
+        </p>
       </section>
     </main>
   );
