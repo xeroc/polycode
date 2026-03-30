@@ -3,6 +3,7 @@ import { ThemeToggle } from "./ThemeToggle";
 const navItems = [
   { label: "Features", href: "#features" },
   { label: "How It Works", href: "#how-it-works" },
+  { label: "Compare", href: "#comparison" },
   { label: "Tech", href: "#tech" },
 ];
 
