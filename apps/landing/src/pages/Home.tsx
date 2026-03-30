@@ -11,6 +11,14 @@ import {
   Lock,
   GitBranch,
   Layers,
+  Brain,
+  ScrollText,
+  ShieldCheck,
+  Tag,
+  GitMerge,
+  Target,
+  Route,
+  Cpu,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -34,6 +42,48 @@ const features = [
     title: "Self-Hosted & Open Source",
     description:
       "MIT licensed core. Your code stays on your infrastructure. Full audit trail with per-story commits.",
+  },
+];
+
+const whyReasons = [
+  {
+    icon: Brain,
+    title: "Deliberate, Not Reactive",
+    description:
+      "Issues force context and clarity before code is written. Structure beats speed when the stakes are real.",
+  },
+  {
+    icon: ScrollText,
+    title: "Decisions That Last",
+    description:
+      "Every action leaves a traceable, auditable record. Answer why something was built a certain way months later.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Clear Ownership",
+    description:
+      "Explicit assignees, statuses, and accountability. No ambiguity about who is responsible for what.",
+  },
+];
+
+const howApproach = [
+  {
+    icon: Github,
+    title: "Issues as Source of Truth",
+    description:
+      "Workflows start and end in GitHub issues. Full context, full history, zero information loss.",
+  },
+  {
+    icon: Tag,
+    title: "Labels Trigger Action",
+    description:
+      "Add a label and agents execute structured workflows. No ad-hoc chat commands, no guesswork.",
+  },
+  {
+    icon: GitMerge,
+    title: "PRs Close the Loop",
+    description:
+      "Pull requests link back to issues with complete context. Reviewable, mergeable, auditable.",
   },
 ];
 
@@ -152,10 +202,10 @@ export default function App() {
                 View on GitHub
               </a>
               <a
-                href="#how-it-works"
+                href="#why"
                 className="border bg-background hover:bg-accent hover:text-accent-foreground inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-none font-medium text-sm outline-hidden transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 h-11 px-6"
               >
-                See How It Works
+                Why Polycode
                 <ArrowRight className="h-4 w-4" />
               </a>
             </div>
@@ -194,26 +244,109 @@ export default function App() {
         //
       </div>
 
-      {/* Features Section */}
-      <section className="py-20" id="features">
-        <div className="grid gap-8 md:grid-cols-3">
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="space-y-2"
-            >
-              <div className="text-primary">
-                <feature.icon className="h-6 w-6" />
-              </div>
-              <h3 className="font-medium text-sm">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                {feature.description}
-              </p>
-            </motion.div>
-          ))}
+      {/* Golden Circle: Why → How → What */}
+      <section className="py-20" id="why">
+        {/* WHY */}
+        <div className="mb-20">
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="h-4 w-4 text-primary" />
+            <span className="text-xs font-medium uppercase tracking-widest text-primary">
+              Why
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold mb-3">
+            We believe structure beats speed
+          </h2>
+          <p className="text-muted-foreground mb-8 max-w-2xl">
+            Chat-based AI agents are fast but forgetful. They encourage rapid
+            iteration at the cost of clarity, accountability, and durability.
+            The best engineering teams run on structured workflows, not
+            ephemeral conversations.
+          </p>
+          <div className="grid gap-4 md:grid-cols-3">
+            {whyReasons.map((item, index) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="bg-card border-border rounded-lg border p-4 space-y-2"
+              >
+                <item.icon className="h-5 w-5 text-primary" />
+                <h3 className="font-medium text-sm">{item.title}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {item.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* HOW */}
+        <div className="mb-20">
+          <div className="flex items-center gap-2 mb-3">
+            <Route className="h-4 w-4 text-primary" />
+            <span className="text-xs font-medium uppercase tracking-widest text-primary">
+              How
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold mb-3">
+            GitHub as the coordination layer
+          </h2>
+          <p className="text-muted-foreground mb-8 max-w-2xl">
+            Instead of building another chat interface, we use GitHub's existing
+            structure -- issues, labels, branches, and pull requests -- as the
+            backbone for AI agent workflows.
+          </p>
+          <div className="grid gap-4 md:grid-cols-3">
+            {howApproach.map((item, index) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="bg-card border-border rounded-lg border p-4 space-y-2"
+              >
+                <item.icon className="h-5 w-5 text-primary" />
+                <h3 className="font-medium text-sm">{item.title}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {item.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* WHAT */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Cpu className="h-4 w-4 text-primary" />
+            <span className="text-xs font-medium uppercase tracking-widest text-primary">
+              What
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold mb-3">
+            Self-hosted AI agent automation
+          </h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            {features.map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="space-y-2"
+              >
+                <div className="text-primary">
+                  <feature.icon className="h-6 w-6" />
+                </div>
+                <h3 className="font-medium text-sm">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
