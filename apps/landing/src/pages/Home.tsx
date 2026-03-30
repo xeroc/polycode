@@ -11,14 +11,11 @@ import {
   Lock,
   GitBranch,
   Layers,
-  Brain,
-  ScrollText,
-  ShieldCheck,
-  Tag,
-  GitMerge,
   Target,
   Route,
   Cpu,
+  MessageSquare,
+  ListChecks,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -45,45 +42,39 @@ const features = [
   },
 ];
 
-const whyReasons = [
+const approachComparison = [
   {
-    icon: Brain,
-    title: "Deliberate, Not Reactive",
-    description:
-      "Issues force context and clarity before code is written. Structure beats speed when the stakes are real.",
+    aspect: "Thinking",
+    chat: "Reactive, fast",
+    issue: "Deliberate, structured",
   },
-  {
-    icon: ScrollText,
-    title: "Decisions That Last",
-    description:
-      "Every action leaves a traceable, auditable record. Answer why something was built a certain way months later.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Clear Ownership",
-    description:
-      "Explicit assignees, statuses, and accountability. No ambiguity about who is responsible for what.",
-  },
+  { aspect: "Decisions", chat: "Lost in threads", issue: "Auditable trail" },
+  { aspect: "Ownership", chat: "Ambiguous", issue: "Explicit assignees" },
+  { aspect: "Context", chat: "Noisy, drifting", issue: "Scoped, clear" },
+  { aspect: "At scale", chat: "Falls apart", issue: "Dependencies visible" },
+  { aspect: "Over time", chat: "Ephemeral", issue: "Persistent" },
 ];
 
-const howApproach = [
+const howSteps = [
   {
-    icon: Github,
-    title: "Issues as Source of Truth",
-    description:
-      "Workflows start and end in GitHub issues. Full context, full history, zero information loss.",
+    step: "01",
+    title: "Create an issue",
+    description: "Define scope, context, and acceptance criteria",
   },
   {
-    icon: Tag,
-    title: "Labels Trigger Action",
-    description:
-      "Add a label and agents execute structured workflows. No ad-hoc chat commands, no guesswork.",
+    step: "02",
+    title: "Add a label",
+    description: "Trigger a structured AI workflow",
   },
   {
-    icon: GitMerge,
-    title: "PRs Close the Loop",
-    description:
-      "Pull requests link back to issues with complete context. Reviewable, mergeable, auditable.",
+    step: "03",
+    title: "Agent executes",
+    description: "Plans, implements, tests autonomously",
+  },
+  {
+    step: "04",
+    title: "PR closes the loop",
+    description: "Full audit trail linked to the issue",
   },
 ];
 
@@ -247,67 +238,84 @@ export default function App() {
       {/* Golden Circle: Why → How → What */}
       <section className="py-20" id="why">
         {/* WHY */}
-        <div className="mb-20">
+        <div className="mb-24">
           <div className="flex items-center gap-2 mb-3">
             <Target className="h-4 w-4 text-primary" />
             <span className="text-xs font-medium uppercase tracking-widest text-primary">
               Why
             </span>
           </div>
-          <h2 className="text-2xl font-bold mb-3">
-            We believe structure beats speed
-          </h2>
-          <p className="text-muted-foreground mb-8 max-w-2xl">
-            Chat-based AI agents are fast but forgetful. They encourage rapid
-            iteration at the cost of clarity, accountability, and durability.
-            The best engineering teams run on structured workflows, not
-            ephemeral conversations.
+          <h2 className="text-2xl font-bold mb-2">Structure beats speed</h2>
+          <p className="text-muted-foreground mb-8 max-w-xl">
+            Chat-based AI agents are fast but forgetful. We built for teams that
+            value clarity, accountability, and durability.
           </p>
-          <div className="grid gap-4 md:grid-cols-3">
-            {whyReasons.map((item, index) => (
-              <motion.div
-                key={item.title}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="bg-card border-border rounded-lg border p-4 space-y-2"
+          <div className="border border-border rounded-lg overflow-hidden">
+            <div className="grid grid-cols-[150px_1fr_1fr]">
+              <div className="bg-muted/30 px-4 py-2.5 border-b border-r border-border/50">
+                <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  &nbsp;
+                </span>
+              </div>
+              <div className="bg-muted/30 px-4 py-2.5 border-b border-r border-border/50 flex items-center gap-1.5">
+                <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                  Chat-based
+                </span>
+              </div>
+              <div className="bg-primary/5 px-4 py-2.5 border-b border-border/50 flex items-center gap-1.5">
+                <ListChecks className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-medium uppercase tracking-widest text-primary">
+                  Issue-driven
+                </span>
+              </div>
+            </div>
+            {approachComparison.map((row) => (
+              <div
+                key={row.aspect}
+                className={`grid grid-cols-[150px_1fr_1fr]`}
               >
-                <item.icon className="h-5 w-5 text-primary" />
-                <h3 className="font-medium text-sm">{item.title}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {item.description}
-                </p>
-              </motion.div>
+                <div className="px-4 py-2.5 border-r border-border/50">
+                  <span className="text-xs font-medium">{row.aspect}</span>
+                </div>
+                <div className="px-4 py-2.5 border-r border-border/50">
+                  <span className="text-xs text-muted-foreground">
+                    {row.chat}
+                  </span>
+                </div>
+                <div className="px-4 py-2.5">
+                  <span className="text-xs text-primary font-medium">
+                    {row.issue}
+                  </span>
+                </div>
+              </div>
             ))}
           </div>
         </div>
 
         {/* HOW */}
-        <div className="mb-20">
+        <div className="mb-24">
           <div className="flex items-center gap-2 mb-3">
             <Route className="h-4 w-4 text-primary" />
             <span className="text-xs font-medium uppercase tracking-widest text-primary">
               How
             </span>
           </div>
-          <h2 className="text-2xl font-bold mb-3">
+          <h2 className="text-2xl font-bold mb-8">
             GitHub as the coordination layer
           </h2>
-          <p className="text-muted-foreground mb-8 max-w-2xl">
-            Instead of building another chat interface, we use GitHub's existing
-            structure -- issues, labels, branches, and pull requests -- as the
-            backbone for AI agent workflows.
-          </p>
-          <div className="grid gap-4 md:grid-cols-3">
-            {howApproach.map((item, index) => (
+          <div className="grid gap-4 md:grid-cols-4">
+            {howSteps.map((item, index) => (
               <motion.div
-                key={item.title}
+                key={item.step}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="bg-card border-border rounded-lg border p-4 space-y-2"
+                className="bg-card border-border border p-4 space-y-1"
               >
-                <item.icon className="h-5 w-5 text-primary" />
+                <span className="text-2xl font-bold text-primary/15 font-mono">
+                  {item.step}
+                </span>
                 <h3 className="font-medium text-sm">{item.title}</h3>
                 <p className="text-xs text-muted-foreground">
                   {item.description}
@@ -325,23 +333,21 @@ export default function App() {
               What
             </span>
           </div>
-          <h2 className="text-2xl font-bold mb-3">
+          <h2 className="text-2xl font-bold mb-8">
             Self-hosted AI agent automation
           </h2>
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="space-y-2"
+                className="bg-card border-border border p-4 space-y-2"
               >
-                <div className="text-primary">
-                  <feature.icon className="h-6 w-6" />
-                </div>
+                <feature.icon className="h-5 w-5 text-primary" />
                 <h3 className="font-medium text-sm">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {feature.description}
                 </p>
               </motion.div>
