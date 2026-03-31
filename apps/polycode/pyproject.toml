@@ -84,10 +84,10 @@ statistics = true
 # pythonpath = ["src"]
 pythonpath = ["./src"]
 addopts = [
-    "-v",                      # verbose output
-    "--strict-markers",        # strict markers
-    "--tb=short",              # shorter tracebacks
-    "--maxfail=1",             # stop after first failure
+    "-v",               # verbose output
+    "--strict-markers", # strict markers
+    "--tb=short",       # shorter tracebacks
+    #"--maxfail=1",             # stop after first failure
     "-ra",                     # show summary of all tests
     "--import-mode=importlib",
 ]

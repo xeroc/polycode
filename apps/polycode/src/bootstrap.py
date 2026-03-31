@@ -15,7 +15,6 @@ from flows.specify.module import SpecifyModule
 from modules.context import ModuleContext
 from modules.registry import ModuleRegistry
 
-
 log = logging.getLogger(__name__)
 
 _module_registry: ModuleRegistry | None = None

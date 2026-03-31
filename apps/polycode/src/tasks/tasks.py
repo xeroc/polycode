@@ -5,10 +5,10 @@ import uuid
 from typing import Any
 
 from celery import current_task
-from bootstrap import bootstrap, get_module_registry
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from bootstrap import bootstrap, get_module_registry
 from flows.base import KickoffIssue, KickoffRepo
 from persistence.postgres import Base
 from persistence.tasks import CeleryTaskTracker

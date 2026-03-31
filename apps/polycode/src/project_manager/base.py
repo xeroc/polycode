@@ -68,6 +68,17 @@ class ProjectManager(ABC):
         """
 
     @abstractmethod
+    def get_issue(self, issue_number: int) -> Issue:
+        """Get a specific issue by number.
+
+        Args:
+            issue_number: Issue number
+
+        Returns:
+            Issue object
+        """
+
+    @abstractmethod
     def get_project_items(self) -> list[ProjectItem]:
         """Get all items in the project.
 
@@ -177,6 +188,49 @@ class ProjectManager(ABC):
     def bot_username(self) -> str:
         """Get the authenticated bot username."""
         ...
+
+    @abstractmethod
+    def close_issue(self, issue_number: int) -> bool:
+        """Close an issue.
+
+        Args:
+            issue_number: Issue number
+
+        Returns:
+            True if successful, False otherwise
+        """
+
+    @abstractmethod
+    def assign_issue(self, issue_number: int, username: str) -> bool:
+        """Assign an issue to a user.
+
+        Args:
+            issue_number: Issue number
+            username: Username to assign to
+
+        Returns:
+            True if successful, False otherwise
+        """
+
+    @abstractmethod
+    def get_labels(self) -> list[str]:
+        """Get all repository labels.
+
+        Returns:
+            List of label names
+        """
+
+    @abstractmethod
+    def remove_label(self, issue_number: int, label_name: str) -> bool:
+        """Remove a label from an issue/PR.
+
+        Args:
+            issue_number: Issue or PR number
+            label_name: Name of the label to remove
+
+        Returns:
+            True if successful, False otherwise
+        """
 
     def find_project_item(self, issue_number: int) -> ProjectItem | None:
         """Find a project item by issue number.

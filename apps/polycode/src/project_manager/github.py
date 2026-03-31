@@ -9,7 +9,7 @@ from github.Repository import Repository
 from .base import ProjectManager
 from .config import settings
 from .github_projects_client import GitHubProjectsClient
-from .types import Issue, ProjectConfig, ProjectItem, IssueComment
+from .types import Issue, IssueComment, ProjectConfig, ProjectItem
 
 log = logging.getLogger(__name__)
 
@@ -386,4 +386,74 @@ class GitHubProjectManager(ProjectManager):
 
         except Exception as e:
             log.error(f"Failed to merge pull request #{pr_number}: {e}")
+            return False
+
+    def close_issue(self, issue_number: int) -> bool:
+        """Close an issue.
+
+        Args:
+            issue_number: Issue number
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            issue = self.repo.get_issue(issue_number)
+            issue.edit(state="closed")
+            log.info(f"Closed issue #{issue_number}")
+            return True
+        except Exception as e:
+            log.error(f"Failed to close issue #{issue_number}: {e}")
+            return False
+
+    def assign_issue(self, issue_number: int, username: str) -> bool:
+        """Assign an issue to a user.
+
+        Args:
+            issue_number: Issue number
+            username: GitHub username to assign to
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            issue = self.repo.get_issue(issue_number)
+            issue.add_to_assignees(username)
+            log.info(f"Assigned issue #{issue_number} to {username}")
+            return True
+        except Exception as e:
+            log.error(f"Failed to assign issue #{issue_number} to {username}: {e}")
+            return False
+
+    def get_labels(self) -> list[str]:
+        """Get all repository labels.
+
+        Returns:
+            List of label names
+        """
+        try:
+            labels = [label.name for label in self.repo.get_labels()]
+            log.info(f"Retrieved {len(labels)} labels")
+            return labels
+        except Exception as e:
+            log.error(f"Failed to get labels: {e}")
+            return []
+
+    def remove_label(self, issue_number: int, label_name: str) -> bool:
+        """Remove a label from an issue/PR.
+
+        Args:
+            issue_number: Issue or PR number
+            label_name: Name of the label to remove
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            issue = self.repo.get_issue(issue_number)
+            issue.remove_from_labels(label_name)
+            log.info(f"Removed label '{label_name}' from issue #{issue_number}")
+            return True
+        except Exception as e:
+            log.error(f"Failed to remove label '{label_name}' from issue #{issue_number}: {e}")
             return False
