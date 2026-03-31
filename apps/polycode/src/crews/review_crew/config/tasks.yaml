@@ -1,23 +1,145 @@
-review_task:
+review_coordination:
   description: >
-    Review the pull request.
+    Coordinate a comprehensive multi-perspective code review.
 
     TASK: {task}
     CHANGES: {changes}
 
-    Review for:
-    - Code quality and clarity
-    - Potential bugs or issues
-    - Test coverage
-    - Follows project conventions
-
-    If changes needed, add comments to the PR explaining what needs to change.
-
-    The complete 3-dot diff to develop is:
+    The complete 3-dot diff to review is:
 
     {diff}
 
+    Delegate review to each specialist, collect their feedback,
+    and produce a unified decision. If any reviewer suggests doc
+    improvements, include those in the final output.
   expected_output: >
-    Review decision (approved or changes requested) with feedback.
-    Structured review result with status, decision, and optional feedback.
-  agent: reviewer
+    Aggregated review decision with feedback from all specialist
+    reviewers. Includes overall_decision (approved/changes_requested/blocked),
+    individual reviewer feedback, required changes, and doc improvements.
+  agent: review_manager
+
+design_review:
+  description: >
+    Review the pull request from a design and UX perspective.
+
+    TASK: {task}
+    CHANGES: {changes}
+
+    Check for:
+    - UX/UI quality and consistency
+    - Accessibility compliance (WCAG standards)
+    - Visual design pattern adherence
+    - Responsive design correctness
+    - Design system compliance
+
+    If the design documentation is missing guidance that would have
+    prevented issues you found, suggest specific doc improvements.
+  expected_output: >
+    Design review decision with feedback items and optional doc
+    improvement suggestions for design_guidelines.md.
+  agent: design_reviewer
+
+architecture_review:
+  description: >
+    Review the pull request from an architectural perspective.
+
+    TASK: {task}
+    CHANGES: {changes}
+
+    Check for:
+    - Structural soundness and separation of concerns
+    - Appropriate abstraction levels
+    - Dependency management and coupling
+    - Scalability implications
+    - Design pattern adherence
+
+    If architectural patterns are undocumented or unclear,
+    suggest specific doc improvements.
+  expected_output: >
+    Architecture review decision with feedback items and optional
+    doc improvement suggestions for architecture_principles.md.
+  agent: architect_reviewer
+
+domain_review:
+  description: >
+    Review the pull request for business logic correctness.
+
+    TASK: {task}
+    CHANGES: {changes}
+
+    Check for:
+    - Business logic correctness
+    - Edge case handling
+    - Domain rule compliance
+    - Data validation completeness
+    - Error scenario coverage
+
+    If domain rules are undocumented or ambiguous,
+    suggest specific doc improvements.
+  expected_output: >
+    Domain review decision with feedback items and optional
+    doc improvement suggestions for domain_knowledge.md.
+  agent: domain_expert_reviewer
+
+code_review:
+  description: >
+    Review the pull request for code quality and standards.
+
+    TASK: {task}
+    CHANGES: {changes}
+
+    Check for:
+    - Code quality and clarity
+    - Style consistency and naming conventions
+    - Test coverage and test quality
+    - Error handling patterns
+    - Code duplication
+
+    If code standards are unclear or missing,
+    suggest specific doc improvements.
+  expected_output: >
+    Code quality review decision with feedback items and optional
+    doc improvement suggestions for code_standards.md.
+  agent: code_expert_reviewer
+
+performance_review:
+  description: >
+    Review the pull request for performance implications.
+
+    TASK: {task}
+    CHANGES: {changes}
+
+    Check for:
+    - Performance bottlenecks
+    - Resource usage efficiency
+    - Memory allocation patterns
+    - Database query efficiency (N+1, missing indexes)
+    - Caching strategy correctness
+
+    If performance guidelines are missing or unclear,
+    suggest specific doc improvements.
+  expected_output: >
+    Performance review decision with feedback items and optional
+    doc improvement suggestions for performance_guidelines.md.
+  agent: performance_expert_reviewer
+
+human_advocacy_review:
+  description: >
+    Review the pull request from a human maintainability perspective.
+
+    TASK: {task}
+    CHANGES: {changes}
+
+    Check for:
+    - Code readability and clarity
+    - Appropriate documentation
+    - Reasonable complexity levels
+    - Onboarding-friendliness
+    - Long-term maintainability
+
+    If code is technically correct but hard for humans,
+    suggest specific doc improvements for ux_requirements.md.
+  expected_output: >
+    Human advocacy review decision with feedback items and optional
+    doc improvement suggestions for ux_requirements.md.
+  agent: human_advocate_reviewer

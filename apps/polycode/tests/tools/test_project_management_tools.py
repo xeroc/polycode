@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock
 
 from project_manager.base import ProjectManager
-
 from tools.project_management.issues import GetIssueTool
 
 

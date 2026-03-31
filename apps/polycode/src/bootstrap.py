@@ -95,10 +95,14 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     module_registry.load_all(context)
 
     from crews.base import PolycodeCrewMixin
+    from crews.review_crew.postmortem import PostmortemHooks
     from flows.base import FlowIssueManagement
 
     FlowIssueManagement.use_plugin_manager(module_registry.pm)
     PolycodeCrewMixin.use_plugin_manager(module_registry.pm)
+
+    module_registry.pm.register(PostmortemHooks(), name="postmortem")
+    log.info("📋 Registered postmortem hooks")
 
     module_count = len(module_registry.modules)
     log.info(f"🚀 Bootstrap complete: {module_count} modules")
