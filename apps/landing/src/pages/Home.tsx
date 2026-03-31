@@ -15,10 +15,19 @@ import {
   ListChecks,
   GitPullRequest,
   Shield,
-  PlayCircle,
   Network,
   FileCheck2,
   Repeat,
+  Rocket,
+  GitBranch,
+  Zap,
+  Brain,
+  Eye,
+  AlertTriangle,
+  GitMerge,
+  Timer,
+  BarChart3,
+  Package,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -49,18 +58,6 @@ const pillars = [
       "Re-run with identical configuration",
     ],
   },
-  // {
-  //   icon: Puzzle,
-  //   title: "Flow Marketplace",
-  //   badge: "Platform Play",
-  //   description:
-  //     "Import flows from any GitHub repo. Version-pin with @v1. Share workflows across your org or the community. Browse, discover, and compose.",
-  //   details: [
-  //     "GitHub-based imports (github:org/repo)",
-  //     "Version pinning per flow",
-  //     "Community sharing and discoverability",
-  //   ],
-  // },
   {
     icon: Shield,
     title: "Policy Engine",
@@ -83,6 +80,18 @@ const pillars = [
       "Write Custom Flow",
       "Custom Plugin Hooks and Events",
       "Any project management system",
+    ],
+  },
+  {
+    icon: Package,
+    title: "Flow Marketplace",
+    badge: "Coming Soon",
+    description:
+      "Import flows from any GitHub repo. Version-pin with @v1. Share workflows across your org or the community. Browse, discover, and compose.",
+    details: [
+      "GitHub-based imports (github:org/repo)",
+      "Version pinning per flow",
+      "Community sharing and discoverability",
     ],
   },
   {
@@ -109,18 +118,42 @@ const pillars = [
       "Custom automation rules",
     ],
   },
-  // {
-  //   icon: Lock,
-  //   title: "Self-Hosted & Open Source",
-  //   badge: "MIT Licensed",
-  //   description:
-  //     "Your code stays on your infrastructure. Full audit trail with per-story commits. No vendor lock-in, no code leaving your network.",
-  //   details: [
-  //     "MIT licensed core",
-  //     "Full audit trail",
-  //     "Infrastructure you control",
-  //   ],
-  // },
+  {
+    icon: Zap,
+    title: "Heartbeat Mode",
+    badge: "Coming Soon",
+    description:
+      "Proactive workspace intelligence on a schedule. Triages issues, detects stale PRs, and surfaces conflicts — without being asked.",
+    details: [
+      "Automatic issue triage and categorization",
+      "Stale PR and issue detection",
+      "Conflict surfacing across open issues",
+    ],
+  },
+  {
+    icon: Brain,
+    title: "Retro Agent",
+    badge: "Planned",
+    description:
+      "Learns from every flow run. Accumulates project-specific knowledge in git notes. The longer you use Polycode, the smarter it gets.",
+    details: [
+      "Lesson extraction after every flow",
+      "Hotspot file detection",
+      "Planning context injection",
+    ],
+  },
+  {
+    icon: Lock,
+    title: "Self-Hosted & Open Source",
+    badge: "MIT Licensed",
+    description:
+      "Your code stays on your infrastructure. Full audit trail with per-story commits. No vendor lock-in, no code leaving your network.",
+    details: [
+      "MIT licensed core",
+      "Full audit trail",
+      "Infrastructure you control",
+    ],
+  },
 ];
 
 const approachComparison = [
@@ -290,6 +323,146 @@ const positioningCards = [
       "Research-oriented",
       "Community-driven",
       "Less structured flows",
+    ],
+  },
+];
+
+const roadmapStatusStyles: Record<
+  string,
+  { label: string; className: string }
+> = {
+  shipped: {
+    label: "Shipped",
+    className: "bg-green-500/10 text-green-600 border-green-500/20",
+  },
+  in_progress: {
+    label: "In Progress",
+    className: "bg-primary/10 text-primary border-primary/20",
+  },
+  coming_soon: {
+    label: "Coming Soon",
+    className: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  },
+  planned: {
+    label: "Planned",
+    className: "bg-muted text-muted-foreground border-border",
+  },
+};
+
+const roadmapPhases = [
+  {
+    phase: "01",
+    title: "Nail the Core",
+    timeline: "Now — Next 4 weeks",
+    active: true,
+    items: [
+      {
+        icon: FileCheck2,
+        title: "Elite PR Generation",
+        description:
+          "PRs so good they're merge-ready without edits. Structured sections, atomic commits, linked issues.",
+        status: "in_progress",
+      },
+      {
+        icon: GitBranch,
+        title: "Git Notes",
+        description:
+          "Attach decision metadata to every commit. Inspect any AI choice after the fact.",
+        status: "in_progress",
+      },
+      {
+        icon: GitMerge,
+        title: "Semantic Merge via Weave",
+        description:
+          "Entity-level merging. Parallel agents never block on false conflicts — only real collisions surface.",
+        status: "coming_soon",
+      },
+      {
+        icon: Timer,
+        title: "Resume & Cancel Flows",
+        description:
+          "Stop, resume, or replay any flow from any point. Most agentic tools can't do this.",
+        status: "in_progress",
+      },
+      {
+        icon: Shield,
+        title: "Policy Engine",
+        description:
+          "Enforce rules in code, not prompts. Tests must pass. Coverage must not drop. No exceptions.",
+        status: "in_progress",
+      },
+      {
+        icon: AlertTriangle,
+        title: "Structured Failures",
+        description:
+          "Failure reports that build trust. What happened, why, and exactly what to do next.",
+        status: "in_progress",
+      },
+    ],
+  },
+  {
+    phase: "02",
+    title: "Systemize",
+    timeline: "1–2 Months",
+    active: false,
+    items: [
+      {
+        icon: Zap,
+        title: "Heartbeat Mode",
+        description:
+          "Proactive workspace monitoring. Triages issues, detects stale PRs, surfaces conflicts — without being asked.",
+        status: "coming_soon",
+      },
+      {
+        icon: Eye,
+        title: "Multi-Issue Awareness",
+        description:
+          "Detect entity-level overlap between parallel flows. Catch real conflicts before any code is written.",
+        status: "coming_soon",
+      },
+      {
+        icon: BarChart3,
+        title: "Projects Automation",
+        description:
+          "Turn GitHub Projects into a trigger system. Status changes kick off workflows automatically.",
+        status: "planned",
+      },
+      {
+        icon: Repeat,
+        title: "Flow Versioning",
+        description:
+          "Every run tied to a versioned flow definition. Reproducible by design, inspectable by default.",
+        status: "planned",
+      },
+    ],
+  },
+  {
+    phase: "03",
+    title: "Expand",
+    timeline: "Later",
+    active: false,
+    items: [
+      {
+        icon: Brain,
+        title: "Retro Agent",
+        description:
+          "Learns from every run. Accumulates project-specific knowledge in git notes. Gets smarter over time.",
+        status: "planned",
+      },
+      {
+        icon: Package,
+        title: "Flow Marketplace",
+        description:
+          "Discover, share, and version-pin community workflows from any GitHub repo.",
+        status: "planned",
+      },
+      {
+        icon: Network,
+        title: "Advanced Integrations",
+        description:
+          "GitLab, Jira, chained workflows, issue batching, dependency graphs.",
+        status: "planned",
+      },
     ],
   },
 ];
@@ -518,7 +691,15 @@ export default function App() {
                     <h3 className="font-medium text-sm">{pillar.title}</h3>
                   </div>
                   {pillar.badge && (
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 border border-primary/20">
+                    <span
+                      className={`text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 border ${
+                        pillar.badge === "Coming Soon"
+                          ? "text-amber-600 bg-amber-500/10 border-amber-500/20"
+                          : pillar.badge === "Planned"
+                            ? "text-muted-foreground bg-muted border-border"
+                            : "text-primary bg-primary/10 border-primary/20"
+                      }`}
+                    >
                       {pillar.badge}
                     </span>
                   )}
@@ -732,6 +913,108 @@ export default function App() {
             </span>{" "}
             — deterministic, auditable, and built for engineering teams.
           </p>
+        </div>
+      </section>
+
+      <div
+        className="font-mono text-sm text-muted-foreground/30 select-none"
+        aria-hidden="true"
+      >
+        //
+      </div>
+
+      {/* Roadmap Section */}
+      <section className="py-20" id="roadmap">
+        <div className="flex items-center gap-2 mb-3">
+          <Rocket className="h-4 w-4 text-primary" />
+          <span className="text-xs font-medium uppercase tracking-widest text-primary">
+            Roadmap
+          </span>
+        </div>
+        <h2 className="text-2xl font-bold mb-2">What we&apos;re building</h2>
+        <p className="text-muted-foreground mb-16 max-w-2xl">
+          We&apos;re building toward a fully autonomous GitHub workspace.
+          Transparent, versioned, and shaped by early adopters like you.
+        </p>
+
+        <div className="space-y-20">
+          {roadmapPhases.map((phase, phaseIndex) => (
+            <div key={phase.phase}>
+              <div className="flex items-start gap-5 mb-8">
+                <div
+                  className={`flex items-center justify-center w-12 h-12 text-sm font-bold font-mono shrink-0 ${
+                    phase.active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-primary/10 text-primary border border-primary/20"
+                  }`}
+                >
+                  {phase.phase}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">{phase.title}</h3>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {phase.timeline}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {phase.items.map((item, index) => {
+                  const statusStyle =
+                    roadmapStatusStyles[item.status] ??
+                    roadmapStatusStyles.planned;
+                  return (
+                    <motion.div
+                      key={item.title}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.3,
+                        delay: phaseIndex * 0.1 + index * 0.05,
+                      }}
+                      className="bg-card border-border border p-4 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <item.icon className="h-4 w-4 text-primary shrink-0" />
+                          <span className="text-sm font-medium truncate">
+                            {item.title}
+                          </span>
+                        </div>
+                        <span
+                          className={`flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 border shrink-0 ${statusStyle.className}`}
+                        >
+                          {item.status === "in_progress" && (
+                            <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                          )}
+                          {statusStyle.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {item.description}
+                      </p>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-16 bg-primary/[0.03] border border-primary/20 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h3 className="font-bold mb-1">Want to shape the roadmap?</h3>
+            <p className="text-sm text-muted-foreground">
+              Join early access. Tell us what matters. Ship features faster.
+            </p>
+          </div>
+          <a
+            href="#waitlist"
+            className="bg-primary text-primary-foreground shadow-2xs hover:bg-primary/90 inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap font-medium text-sm h-11 px-6 shrink-0"
+          >
+            Join the Waitlist
+            <ChevronRight className="h-4 w-4" />
+          </a>
         </div>
       </section>
 
