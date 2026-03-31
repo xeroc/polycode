@@ -190,7 +190,8 @@ Configure the following variables (see [Environment Variables](#environment-vari
 
 ```bash
 # Required
-GITHUB_TOKEN=ghp_your_token_here
+GITHUB_APP_ID=12345
+GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n..."
 DATABASE_URL=postgresql://user:password@localhost:5432/polycode
 REDIS_HOST=localhost
 REDIS_PORT=6379
@@ -401,13 +402,14 @@ payments
 
 #### Required
 
-| Variable         | Description                  | Example                                          |
-| ---------------- | ---------------------------- | ------------------------------------------------ |
-| `GITHUB_TOKEN`   | GitHub personal access token | `ghp_xxx`                                        |
-| `DATABASE_URL`   | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/polycode` |
-| `REDIS_HOST`     | Redis hostname               | `localhost`                                      |
-| `REDIS_PORT`     | Redis port                   | `6379`                                           |
-| `OPENAI_API_KEY` | OpenAI API key for LLM calls | `sk-xxx`                                         |
+| Variable                 | Description                  | Example                                          |
+| ------------------------ | ---------------------------- | ------------------------------------------------ |
+| `GITHUB_APP_ID`          | GitHub App ID                | `12345`                                          |
+| `GITHUB_APP_PRIVATE_KEY` | GitHub App private key (PEM) | `-----BEGIN RSA PRIVATE KEY-----\n...`           |
+| `DATABASE_URL`           | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/polycode` |
+| `REDIS_HOST`             | Redis hostname               | `localhost`                                      |
+| `REDIS_PORT`             | Redis port                   | `6379`                                           |
+| `OPENAI_API_KEY`         | OpenAI API key for LLM calls | `sk-xxx`                                         |
 
 #### Optional
 
@@ -588,7 +590,8 @@ docker push ghcr.io/xeroc/polycode:$(date +%Y%m%d%H%M)
 docker run -p 5000:5000 \
   -e DATABASE_URL=postgresql://... \
   -e REDIS_HOST=redis \
-  -e GITHUB_TOKEN=ghp_... \
+  -e GITHUB_APP_ID=12345 \
+  -e GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----..." \
   -e OPENAI_API_KEY=sk-... \
   ghcr.io/xeroc/polycode:latest api
 
@@ -596,6 +599,8 @@ docker run -p 5000:5000 \
 docker run \
   -e DATABASE_URL=postgresql://... \
   -e REDIS_HOST=redis \
+  -e GITHUB_APP_ID=12345 \
+  -e GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----..." \
   -e SSH_KEY="$(cat ~/.ssh/id_rsa)" \
   ghcr.io/xeroc/polycode:latest worker
 
@@ -633,7 +638,8 @@ services:
     environment:
       DATABASE_URL: postgresql://polycode:polycode@postgres:5432/polycode
       REDIS_HOST: redis
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
     depends_on:
       - postgres
@@ -645,7 +651,8 @@ services:
     environment:
       DATABASE_URL: postgresql://polycode:polycode@postgres:5432/polycode
       REDIS_HOST: redis
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       SSH_KEY: ${SSH_KEY}
     depends_on:
@@ -697,8 +704,8 @@ volumes:
 
 **Solution:**
 
-1. Verify `GITHUB_TOKEN` is valid and not expired
-2. Check token has required scopes: `repo`, `write:issues`, `read:org`
+1. Verify `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` are correctly set
+2. Ensure the private key is properly formatted (including newlines)
 3. For GitHub Apps, ensure app is installed on target repository
 
 ### Import Errors (Module Not Found)

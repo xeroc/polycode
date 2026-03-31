@@ -89,10 +89,10 @@ export PROJECT_PROVIDER=github
 export REPO_OWNER=xeroc
 export REPO_NAME=demo
 export PROJECT_IDENTIFIER=1
-export GITHUB_TOKEN=ghp_xxx
+export INSTALLATION_ID=12345
 
 # Webhook (optional)
-export GITHUB_WEBHOOK_SECRET=your-secret
+export GITHUB_APP_WEBHOOK_SECRET=your-secret
 
 # Optional: Custom status mappings
 export STATUS_TODO="Todo"
@@ -278,8 +278,8 @@ Command-line tools for project management.
 export REPO_OWNER=xeroc
 export REPO_NAME=demo
 export PROJECT_IDENTIFIER=1
-export GITHUB_TOKEN=ghp_xxx
-export GITHUB_WEBHOOK_SECRET=mysecret
+export INSTALLATION_ID=12345
+export GITHUB_APP_WEBHOOK_SECRET=mysecret
 
 python -m project_manager.cli webhook --verbose
 
@@ -475,7 +475,7 @@ export PROJECT_PROVIDER=github
 export REPO_OWNER=xeroc
 export REPO_NAME=demo
 export PROJECT_IDENTIFIER=1
-export GITHUB_TOKEN=ghp_xxx
+export INSTALLATION_ID=12345
 
 # Optional: Custom status mappings
 export STATUS_TODO="Todo"

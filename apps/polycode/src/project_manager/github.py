@@ -7,11 +7,42 @@ import github
 from github.Repository import Repository
 
 from .base import ProjectManager
-from .config import settings
 from .github_projects_client import GitHubProjectsClient
 from .types import Issue, IssueComment, ProjectConfig, ProjectItem
 
 log = logging.getLogger(__name__)
+
+
+def _resolve_installation_token(installation_id: int) -> str:
+    """Resolve a GitHub App installation token.
+
+    Args:
+        installation_id: GitHub App installation ID
+
+    Returns:
+        Installation access token
+
+    Raises:
+        ValueError: If GitHub App credentials are not configured
+        RuntimeError: If token retrieval fails
+    """
+    from github_app.auth import GitHubAppAuth
+    from github_app.config import settings as github_app_settings
+
+    if not github_app_settings.GITHUB_APP_ID or not github_app_settings.GITHUB_APP_PRIVATE_KEY:
+        raise ValueError(
+            "GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY must be configured "
+            "when using installation_id without an explicit token"
+        )
+
+    auth = GitHubAppAuth(
+        app_id=github_app_settings.GITHUB_APP_ID,
+        private_key=github_app_settings.GITHUB_APP_PRIVATE_KEY.replace("\\n", "\n"),
+    )
+    token = auth.get_installation_token(installation_id)
+    if not token:
+        raise RuntimeError(f"Failed to obtain installation token for installation {installation_id}")
+    return token
 
 
 class GitHubProjectManager(ProjectManager):
@@ -26,17 +57,27 @@ class GitHubProjectManager(ProjectManager):
     def __init__(self, config: ProjectConfig) -> None:
         """Initialize GitHub project manager.
 
+        Token resolution order:
+        1. Explicit token in config.token
+        2. GitHub App installation token via config.installation_id
+
         Args:
             config: Project configuration
 
         Raises:
-            ValueError: If token is not provided
+            ValueError: If no token source is available
         """
         super().__init__(config)
 
-        token = config.token or settings.GITHUB_TOKEN
-        if not token:
-            raise ValueError("GitHub token must be provided via config or GITHUB_TOKEN env var")
+        if config.token:
+            token = config.token
+        elif config.installation_id:
+            token = _resolve_installation_token(config.installation_id)
+        else:
+            raise ValueError(
+                "Either config.token or config.installation_id must be provided. "
+                "Set installation_id to use GitHub App authentication."
+            )
 
         self.token = token
         self.github_client = github.Github(auth=github.Auth.Token(token))

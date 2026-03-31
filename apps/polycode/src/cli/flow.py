@@ -67,7 +67,10 @@ def flow_run(
     issue_number: int = typer.Option(None, "--issue-number", "-i", help="Issue number to process (required)"),
     project_id: str | None = typer.Option(None, "--project-id", "-p", help="GitHub project ID/number"),
     provider: str = typer.Option("github", "--provider", help="Provider type (default: github)"),
-    token: str | None = typer.Option(None, "--token", "-t", help="GitHub token (or use GITHUB_TOKEN env var)"),
+    token: str | None = typer.Option(None, "--token", "-t", help="GitHub token (overrides installation_id)"),
+    installation_id: int | None = typer.Option(
+        None, "--installation-id", help="GitHub App installation ID (uses GitHub App auth)"
+    ),
     status_mapping: str | None = typer.Option(None, "--status-mapping", help="Custom status mapping as JSON"),
     plugins: list[str] = typer.Option([], "--plugin", help="Load additional plugins (repeatable)"),
     extra: str | None = typer.Option(None, "--extra", help="Extra configuration as JSON (for communications, etc.)"),
@@ -128,6 +131,7 @@ def flow_run(
             repo_name=repo_name,
             project_identifier=project_id,
             token=token,
+            installation_id=installation_id,
             status_mapping=status_map,
             extra=extra_data,
         )

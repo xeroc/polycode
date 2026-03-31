@@ -152,7 +152,7 @@ def project_id(self) -> str:
 # Raise specific exceptions with helpful messages
 if not token:
     raise ValueError(
-        "GitHub token must be provided via config or GITHUB_TOKEN env var"
+        "Either config.token or config.installation_id must be provided"
     )
 
 # Handle exceptions gracefully, return sensible defaults
@@ -277,7 +277,8 @@ Run manually: `pre-commit run --all-files`
 Required in `.env`:
 
 ```
-GITHUB_TOKEN=ghp_...
+GITHUB_APP_ID=12345
+GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n..."
 DATABASE_URL=postgresql://...
 REDIS_HOST=localhost
 REDIS_PORT=6379

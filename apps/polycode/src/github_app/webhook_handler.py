@@ -1,7 +1,5 @@
 """GitHub App webhook handler - integrates with FlowRunner and existing system."""
 
-from project_manager.config import settings
-
 import hashlib
 import hmac
 import json
@@ -13,6 +11,7 @@ from fastapi import HTTPException, Request
 from github_app.auth import GitHubAppAuth
 from github_app.installation_manager import InstallationManager
 from github_app.label_mapper import LabelFlowMapper
+from project_manager.config import settings
 from project_manager.flow_runner import FlowRunner
 from project_manager.github import GitHubProjectManager
 from project_manager.types import ProjectConfig, StatusMapping
