@@ -9,7 +9,6 @@ class ListLabelsSchema(BaseModel):
     """Input schema for list_labels tool."""
 
 
-
 class ListLabelsTool(ProjectManagementToolBase):
     """Fetch all repo labels."""
 

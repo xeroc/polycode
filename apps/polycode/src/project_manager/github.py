@@ -126,7 +126,7 @@ class GitHubProjectManager(ProjectManager):
             return None
 
         if self._project_id is None:
-            project_number = int(self.config.project_identifier)
+            project_number = int(self.config.project_identifier) if self.config.project_identifier else None
             self._project_id = self.projects_client.get_project_id(self.config.repo_owner, project_number)
         return self._project_id
 

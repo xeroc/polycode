@@ -27,7 +27,6 @@ class ListIssuesSchema(BaseModel):
     """Input schema for list_issues tool."""
 
 
-
 class ListIssuesTool(ProjectManagementToolBase):
     """List all open issues from repository."""
 
