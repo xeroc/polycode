@@ -137,13 +137,6 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
         text_lower = text.lower().strip()
         return any(kw in text_lower for kw in COMPLETION_KEYWORDS)
 
-    def _fetch_comments(self, state: SpecifyFlowState) -> list[dict]:
-        """Fetch new comments from issue author."""
-        # TODO: Implement with GitHubProjectManager
-        # Filter by: author == state.issue_author
-        # Filter by: id > state.last_processed_comment_id
-        return []
-
 
 def kickoff(issue: KickoffIssue):
     """Run Ralph Loop with event-driven architecture.
@@ -179,5 +172,6 @@ def kickoff(issue: KickoffIssue):
         stage=SpecifyStage.STARTING,
         project_config=issue.project_config.model_dump() if issue.project_config else {},
         conversation_history=issue.comments,
+        flow_name="specify",
     )
     flow.kickoff(inputs=inputs)

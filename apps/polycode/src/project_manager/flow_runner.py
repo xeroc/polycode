@@ -62,7 +62,7 @@ class FlowRunner:
 
         return None
 
-    def trigger_flow(self, issue_number: int | None = None) -> bool | str:
+    def trigger_flow(self, issue_number: int | None = None, flow_name: str | None = None) -> bool | str:
         """Trigger a flow for an issue.
 
         If issue_number is provided, processes that specific issue.
@@ -73,65 +73,56 @@ class FlowRunner:
 
         Args:
             issue_number: Optional specific issue to process
-            None for finding next ready issue
+            flow_name: Optional flow name resolved from label mapping
 
         Returns:
             True/task_id if flow was triggered, False if already running or no issue found
         """
-        if not self.manager.has_project:
-            log.warning("trigger_flow called without project configuration")
-            return False
-
-        if self.is_flow_running():
-            current = self.get_running_flow()
-            if current:
-                log.info(f"Flow already running for issue #{current.issue_number}")
-                return False
-
         if issue_number:
-            return self._process_specific_issue(issue_number)
+            return self._process_specific_issue(issue_number, flow_name=flow_name)
         else:
             return self._process_next_ready_issue()
 
-    def _process_specific_issue(self, issue_number: int) -> bool | str:
+    def _process_specific_issue(self, issue_number: int, flow_name: str | None = None) -> bool | str:
         """Process a specific issue.
 
         Args:
             issue_number: Issue number to process
+            flow_name: Optional flow name resolved from label mapping
 
         Returns:
             True/task_id if flow was triggered, False otherwise
         """
         item = self.manager.find_project_item(issue_number)
-        if not item:
+        if item:
+            ready_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.READY)
+            in_progress_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
+
+            if item.status != ready_status:
+                log.info(f"Issue #{issue_number} not ready (status: {item.status}), skipping")
+                return False
+
+            success = self.manager.update_issue_status(issue_number, in_progress_status)
+            if not success:
+                log.error(f"Failed to move issue #{issue_number} to {in_progress_status}")
+                return False
+
+        else:
             log.warning(f"Issue #{issue_number} not found in project")
-            return False
 
-        ready_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.READY)
-        in_progress_status = self.manager.config.status_mapping.to_provider_status(IssueStatus.IN_PROGRESS)
-
-        if item.status != ready_status:
-            log.info(f"Issue #{issue_number} not ready (status: {item.status}), skipping")
-            return False
-
-        success = self.manager.update_issue_status(issue_number, in_progress_status)
-        if not success:
-            log.error(f"Failed to move issue #{issue_number} to {in_progress_status}")
-            return False
-
-        log.info(f"Started flow for issue #{issue_number}: {item.title}")
+        log.info(f"Started flow '{flow_name or 'default'}' for issue #{issue_number}: {issue_number}")
 
         try:
             from tasks.tasks import kickoff_task
 
-            task_result = kickoff_task.apply_async(args=[self.manager.config.model_dump(), issue_number])  # type: ignore
-            log.info(f"Queued Celery task for issue #{issue_number}: {task_result.id}")
+            task_result = kickoff_task.apply_async(args=[self.manager.config.model_dump(), issue_number, flow_name])  # type: ignore
+            log.info(f"Queued Celery task for issue #{issue_number} (flow: {flow_name}): {task_result.id}")
             return task_result.id
         except Exception as e:
             log.error(f"Failed to queue Celery task: {e}")
             log.warning("Falling back to synchronous processing")
 
-        if self.on_issue_ready:
+        if item and self.on_issue_ready:
             try:
                 self.on_issue_ready(item)
             except Exception as e:

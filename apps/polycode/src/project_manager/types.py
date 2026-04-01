@@ -76,6 +76,7 @@ class ProjectConfig(BaseModel):
     project_identifier: Optional[str] = None
     status_mapping: StatusMapping = StatusMapping()
     token: str | None = None
+    installation_id: int | None = None
     extra: dict[str, Any] = {}
 
 

@@ -5,16 +5,13 @@ After bootstrap, modules are loaded and hooks are active.
 """
 
 import logging
-import os
 from typing import Any
-
-from sqlalchemy import create_engine
 
 from flows.ralph.module import RalphModule
 from flows.specify.module import SpecifyModule
 from modules.context import ModuleContext
 from modules.registry import ModuleRegistry
-
+from persistence.postgres import DATABASE_URL, engine
 
 log = logging.getLogger(__name__)
 
@@ -48,14 +45,6 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     """
     cfg = config or {}
 
-    db_url = cfg.get("db_url") or os.getenv(
-        "DATABASE_URL",
-        "postgresql://user:password@localhost:5432/polycode",
-    )
-    engine = create_engine(db_url)
-
-    import persistence.postgres  # noqa: F401
-
     global _module_registry
     module_registry = ModuleRegistry()
     _module_registry = module_registry
@@ -72,7 +61,7 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
 
     context = ModuleContext(
         db_engine=engine,
-        db_url=db_url,
+        db_url=DATABASE_URL,
         hook_manager=module_registry.pm,
         config=cfg.get("modules", {}),
     )
@@ -96,10 +85,14 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     module_registry.load_all(context)
 
     from crews.base import PolycodeCrewMixin
+    from crews.review_crew.postmortem import PostmortemHooks
     from flows.base import FlowIssueManagement
 
     FlowIssueManagement.use_plugin_manager(module_registry.pm)
     PolycodeCrewMixin.use_plugin_manager(module_registry.pm)
+
+    module_registry.pm.register(PostmortemHooks(), name="postmortem")
+    log.info("📋 Registered postmortem hooks")
 
     module_count = len(module_registry.modules)
     log.info(f"🚀 Bootstrap complete: {module_count} modules")

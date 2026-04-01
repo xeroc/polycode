@@ -7,7 +7,7 @@ from typing import Any, Optional
 from crewai.flow.async_feedback.types import PendingFeedbackContext
 from crewai.flow.persistence import FlowPersistence, SQLiteFlowPersistence
 from pydantic import BaseModel
-from sqlalchemy import Index, create_engine
+from sqlalchemy import Index, Text, create_engine
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -48,12 +48,12 @@ class Payments(Base):
     __tablename__ = "payments"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    issue_number: Mapped[int] = mapped_column()
-    payment_id: Mapped[str] = mapped_column()
+    issue_number: Mapped[int] = mapped_column(unique=True)
+    payment_id: Mapped[str] = mapped_column(String(64))
     amount: Mapped[int] = mapped_column()
-    currency: Mapped[str] = mapped_column()
-    payment_method: Mapped[str] = mapped_column()
-    status: Mapped[str] = mapped_column()
+    currency: Mapped[str] = mapped_column(String(8))
+    payment_method: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(String(32))
     created_at: Mapped[datetime | None] = mapped_column(server_default=text("CURRENT_TIMESTAMP"))
     verified_at: Mapped[datetime | None] = mapped_column(default=None)
 
@@ -65,9 +65,9 @@ class Requests(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     issue_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    request_text: Mapped[str] = mapped_column(String, nullable=False)
-    status: Mapped[str] = mapped_column(String, nullable=False)
-    commit: Mapped[str] = mapped_column(String, nullable=True)
+    request_text: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(64), nullable=False)
+    commit: Mapped[str] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -141,6 +141,10 @@ class FlowState(Base):
     method_name: Mapped[str] = mapped_column(String(255), nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
+
+    repo_owner: Mapped[str] = mapped_column(String(64), nullable=False, server_default="")
+    repo_name: Mapped[str] = mapped_column(String(64), nullable=False, server_default="")
+    flow_name: Mapped[str] = mapped_column(String(64), nullable=False, server_default="")
 
     __table_args__ = (Index("idx_flow_states_uuid", "flow_uuid"),)
 
@@ -228,6 +232,9 @@ class PostgresFlowPersistence(FlowPersistence):
                 method_name=method_name,
                 timestamp=datetime.now(timezone.utc),
                 state_json=state_dict,
+                repo_owner=state_dict.get("repo_owner", ""),
+                repo_name=state_dict.get("repo_name", ""),
+                flow_name=state_dict.get("repo_name", ""),
             )
             session.add(state)
             session.commit()

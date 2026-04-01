@@ -28,7 +28,8 @@ from persistence.postgres import (
     ensure_request_exists,
     update_request_status,
 )
-from project_manager.github import GitHubProjectManager
+from project_manager.base import ProjectManager
+from project_manager.factory import ProjectManagerFactory
 from project_manager.types import IssueComment, ProjectConfig
 
 if TYPE_CHECKING:
@@ -47,6 +48,7 @@ class KickoffRepo(BaseModel):
 class KickoffIssue(BaseModel):
     id: int = Field(description="Issue ID")
     flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of flow that will run")
+    flow_name: str = Field(description="Name of the flow running (e.g. ralph, sepcify,...)")
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
     comments: list[IssueComment] = Field(default_factory=list, description="Issue comments")
@@ -64,6 +66,7 @@ class BaseFlowModel(BaseModel):
 
     repo_owner: Optional[str] = Field(default=None, description="Repository owner")
     repo_name: Optional[str] = Field(default=None, description="Repository name")
+    flow_name: Optional[str] = Field(default=None, description="Name of the flow running (e.g. ralph, sepcify,...)")
 
     pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")
@@ -90,7 +93,7 @@ class FlowIssueManagement(Flow[T]):
     _agents_md_map: dict[str, str] = {}
     _root_agents_md: str = ""
     _git_ops: GitOperations | None = None
-    _project_manager: GitHubProjectManager | None = None
+    _project_manager: ProjectManager | None = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -107,12 +110,12 @@ class FlowIssueManagement(Flow[T]):
         logger.info("💾 Memory:")
         logger.info(self.memory.tree())
 
-    def get_project_manager(self) -> "GitHubProjectManager":
+    def get_project_manager(self) -> ProjectManager:
         """Get project manager instance for this flow."""
         if not self._project_manager:
             if not self.state.project_config:
                 raise Exception("Project config not provided, cannot use project manager!")
-            self._project_manager = GitHubProjectManager(self.state.project_config)
+            self._project_manager = ProjectManagerFactory.create(self.state.project_config)
         return self._project_manager
 
     @classmethod

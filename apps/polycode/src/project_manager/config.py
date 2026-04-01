@@ -7,7 +7,7 @@ class ProjectManagerSettings(BaseSettings):
     DATA_PATH: str = "/data"
 
     GITHUB_APP_ID: Optional[str] = None
-    GITHUB_TOKEN: str
+    GITHUB_TOKEN: Optional[str] = None
 
     # Redis Configuration
     REDIS_URL: str = "redis://localhost:6379/0"

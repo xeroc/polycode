@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class PersistenceSettings(BaseSettings):
-
     # Database Configuration
     DATABASE_URL: str = "sqlite:///polycode.db"
 

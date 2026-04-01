@@ -13,6 +13,7 @@ fi
 
 git config --global user.email "no-reply@chaoscraft.dev"
 git config --global user.name "Chris Cross"
+uv run alembic upgrade head
 
 case "$COMMAND" in
 worker)

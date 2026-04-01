@@ -11,6 +11,7 @@ from fastapi import HTTPException, Request
 from github_app.auth import GitHubAppAuth
 from github_app.installation_manager import InstallationManager
 from github_app.label_mapper import LabelFlowMapper
+from project_manager.config import settings
 from project_manager.flow_runner import FlowRunner
 from project_manager.github import GitHubProjectManager
 from project_manager.types import ProjectConfig, StatusMapping
@@ -23,7 +24,7 @@ class GitHubAppWebhookHandler:
 
     Integrates with existing system:
     - Uses FlowRunner for concurrent flow management
-    - Delegates to existing Celery tasks (process_github_webhook_task, kickoff_task)
+    - Delegates to existing Celery tasks (kickoff_task)
     - Triggers CrewAI flows (ralph, etc.)
     - Works with existing GitHubProjectManager
     """
@@ -128,19 +129,58 @@ class GitHubAppWebhookHandler:
 
         return {"status": "processed", "action": action}
 
+    def _resolve_flow_name(self, installation_id: int, labels: list[dict], repo_slug: str) -> str | None:
+        """Resolve flow_name from issue labels using LabelFlowMapper.
+
+        Checks each label against the label_flow_mappings table for the
+        installation, ordered by priority. Returns the first match.
+
+        Args:
+            installation_id: GitHub App installation ID
+            labels: List of label dicts from the issue payload
+            repo_slug: Full repo slug (owner/repo) for pattern matching
+
+        Returns:
+            flow_name if a mapping is found, None otherwise
+        """
+        for label in labels:
+            label_name = label.get("name", "")
+            mapping = self.label_mapper.get_flow_for_label(installation_id, label_name, repo_slug)
+            if mapping:
+                logger.info(
+                    f"Resolved label '{label_name}' -> flow '{mapping.flow_name}' "
+                    f"for {repo_slug} (installation: {installation_id})"
+                )
+                return mapping.flow_name
+
+        logger.warning(
+            f"No label->flow mapping found for {repo_slug} "
+            f"(installation: {installation_id}, labels: {[lbl.get('name') for lbl in labels]})"
+        )
+        label_names = [lbl.get("name") for lbl in labels]
+
+        # FIXME: default labels should be dealt with differently
+        if f"{settings.FLOW_LABEL_PREFIX}specify".lower() in label_names:
+            return "specify"
+        if f"{settings.FLOW_LABEL_PREFIX}implement".lower() in label_names:
+            return "ralph"
+        return None
+
     async def _handle_issue_event(self, installation_id: int, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle issue events - uses FlowRunner for concurrent flow management.
 
         This method:
         1. Gets installation token and creates per-repo GitHubProjectManager
-        2. Creates FlowRunner to check if flow is already running
-        3. Delegates to existing process_github_webhook_task if flow can start
+        2. Resolves flow_name from issue labels via LabelFlowMapper
+        3. Creates FlowRunner to check if flow is already running
+        4. Delegates to kickoff_task with the resolved flow_name
         """
         action = payload.get("action")
         issue = payload.get("issue", {})
         repo = payload.get("repository", {})
         repo_slug = repo.get("full_name")
         issue_number = issue.get("number")
+        labels = issue.get("labels", [])
 
         logger.info(f"Processing issue event: {action} on {repo_slug}#{issue_number} (installation: {installation_id})")
 
@@ -150,6 +190,8 @@ class GitHubAppWebhookHandler:
                 "reason": f"action '{action}' not handled",
                 "issue": issue_number,
             }
+
+        flow_name = self._resolve_flow_name(installation_id, labels, repo_slug)
 
         # Get installation token
         token = self.installation_manager.get_installation_token(installation_id)
@@ -174,44 +216,19 @@ class GitHubAppWebhookHandler:
 
             manager = GitHubProjectManager(config)
             flow_runner = FlowRunner(manager=manager)
+            task_id = flow_runner.trigger_flow(issue_number, flow_name=flow_name)
 
-            # Check if flow is already running for this repo
-            if flow_runner.is_flow_running():
-                current = flow_runner.get_running_flow()
-                return {
-                    "status": "already_running",
-                    "message": (
-                        f"Flow already running for issue #{current.issue_number}" if current else "Flow already running"
-                    ),
-                    "repo": repo_slug,
-                    "issue": issue_number,
-                }
+            return {
+                "status": "queued",
+                "task_id": task_id,
+                "installation_id": installation_id,
+            }
 
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
             logger.error(f"Failed to create project manager for {repo_slug}: {e}")
-            # Fall back to delegating without flow runner check
-            return await self._delegate_to_celery(payload, installation_id)
 
-        # Delegate to existing Celery task which handles all the logic
-        return await self._delegate_to_celery(payload, installation_id)
-
-    async def _delegate_to_celery(self, payload: Dict[str, Any], installation_id: int) -> Dict[str, Any]:
-        """Delegate to existing process_github_webhook_task."""
-        from tasks.tasks import process_github_webhook_task
-
-        # Add installation context to payload
-        payload["installation_id"] = installation_id
-
-        # Use existing webhook processing task
-        result = process_github_webhook_task.delay(payload)  # type: ignore
-
-        logger.info(f"Delegated to process_github_webhook_task: {result.id}")
-
-        return {
-            "status": "queued",
-            "task_id": result.id,
-            "installation_id": installation_id,
-        }
+            return {
+                "status": "failed",
+                "task_id": None,
+                "installation_id": installation_id,
+            }

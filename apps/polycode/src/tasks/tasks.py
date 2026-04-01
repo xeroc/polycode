@@ -5,10 +5,10 @@ import uuid
 from typing import Any
 
 from celery import current_task
-from bootstrap import bootstrap, get_module_registry
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from bootstrap import bootstrap, get_module_registry
 from flows.base import KickoffIssue, KickoffRepo
 from persistence.postgres import Base
 from persistence.tasks import CeleryTaskTracker
@@ -90,15 +90,6 @@ def kickoff_task(
 
         manager = GitHubProjectManager(config)
         issue = manager.get_issue(issue_number)
-
-        project_item = manager.find_project_item(issue_number)
-        if not project_item:
-            log.warning(f"Issue #{issue_number} not found in project")
-            return {
-                "status": "error",
-                "message": f"Issue #{issue_number} not found in project",
-            }
-
         flow_identifier = f"{flow_name}/{manager.config.repo_owner}/{manager.config.repo_name}/{issue_number}"
         flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, flow_identifier)
 
@@ -107,6 +98,7 @@ def kickoff_task(
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=flow_id,
+            flow_name=flow_name,
             title=issue.title,
             body=issue.body or "",
             comments=comments,
@@ -139,17 +131,3 @@ def kickoff_task(
         }
 
     return {"status": "success"}
-
-
-@app.task(bind=True)
-def process_github_webhook_task(self, payload: dict) -> dict:
-    """Process GitHub webhook events.
-
-    Args:
-        payload: GitHub webhook payload
-
-    Returns:
-        Dict with status
-    """
-    log.info(f"Processing webhook: {payload.get('event_type', 'unknown')}")
-    return {"status": "processed"}

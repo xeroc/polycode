@@ -19,6 +19,8 @@ project_app = typer.Typer(help="GitHub project management commands")
 def create_manager_from_env():
     """Create project manager from environment variables.
 
+    Uses GitHub App authentication via installation_id when available.
+
     Returns:
         Configured project manager
     """
@@ -31,6 +33,7 @@ def create_manager_from_env():
     repo_owner = settings.REPO_OWNER or os.getenv("REPO_OWNER")
     repo_name = settings.REPO_NAME or os.getenv("REPO_NAME")
     project_identifier = settings.PROJECT_IDENTIFIER or os.getenv("PROJECT_IDENTIFIER")
+    installation_id = os.getenv("INSTALLATION_ID")
 
     status_mapping = StatusMapping(
         todo=os.getenv("STATUS_TODO", "Todo"),
@@ -46,6 +49,7 @@ def create_manager_from_env():
         repo_owner=repo_owner or "",
         repo_name=repo_name or "",
         project_identifier=project_identifier,
+        installation_id=int(installation_id) if installation_id else None,
         status_mapping=status_mapping,
     )
 

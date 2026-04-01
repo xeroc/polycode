@@ -496,7 +496,7 @@ export default function App() {
   return (
     <main className="mx-auto max-w-5xl px-4">
       {/* Hero Section */}
-      <section className="py-20">
+      <section className="py-10 md:py-20">
         <div className="flex items-center gap-2 mb-6">
           <span className="bg-green-500/10 text-green-600 border-green-500/20 text-xs font-medium px-2.5 py-1 border">
             MIT Licensed
@@ -514,11 +514,11 @@ export default function App() {
                 Ship a feature.
               </span>
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-base md:text-lg text-muted-foreground">
               Self-hosted GitHub automation with AI agents. Extensible plugin
               architecture. Your code, your infrastructure, your workflows.
             </p>
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-wrap gap-3 pt-2">
               <a
                 href="https://github.com/xeroc/polycode"
                 target="_blank"
@@ -538,10 +538,10 @@ export default function App() {
             </div>
           </div>
           <div className="flex flex-col justify-center gap-4">
-            <div className="bg-card border-border rounded-lg border p-4 space-y-3">
+            <div className="bg-card border-border rounded-lg border p-4 space-y-3 overflow-x-auto">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">$</span>
-                <span className="text-foreground text-xs">
+                <span className="text-foreground text-xs font-mono whitespace-nowrap">
                   polycode flow run ralph --issue 42
                 </span>
               </div>
@@ -572,9 +572,9 @@ export default function App() {
       </div>
 
       {/* Golden Circle: Why → How → What */}
-      <section className="py-20" id="why">
+      <section className="py-10 md:py-20" id="why">
         {/* WHY */}
-        <div className="mb-24">
+        <div className="mb-12 md:mb-24">
           <div className="flex items-center gap-2 mb-3">
             <Target className="h-4 w-4 text-primary" />
             <span className="text-xs font-medium uppercase tracking-widest text-primary">
@@ -586,51 +586,53 @@ export default function App() {
             Chat-based AI agents are fast but forgetful. We built for teams that
             value clarity, accountability, and durability.
           </p>
-          <div className="border border-border rounded-lg overflow-hidden">
-            <div className="grid grid-cols-[150px_1fr_1fr]">
-              <div className="bg-muted/30 px-4 py-2.5 border-b border-r border-border/50">
-                <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                  &nbsp;
-                </span>
+          <div className="border border-border rounded-lg overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="min-w-[420px]">
+              <div className="grid grid-cols-[120px_1fr_1fr] md:grid-cols-[150px_1fr_1fr]">
+                <div className="bg-muted/30 px-3 py-2.5 border-b border-r border-border/50">
+                  <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                    &nbsp;
+                  </span>
+                </div>
+                <div className="bg-muted/30 px-3 md:px-4 py-2.5 border-b border-r border-border/50 flex items-center gap-1.5">
+                  <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                    Chat-based
+                  </span>
+                </div>
+                <div className="bg-primary/5 px-3 md:px-4 py-2.5 border-b border-border/50 flex items-center gap-1.5">
+                  <ListChecks className="h-3 w-3 text-primary" />
+                  <span className="text-[10px] font-medium uppercase tracking-widest text-primary">
+                    Issue-driven
+                  </span>
+                </div>
               </div>
-              <div className="bg-muted/30 px-4 py-2.5 border-b border-r border-border/50 flex items-center gap-1.5">
-                <MessageSquare className="h-3 w-3 text-muted-foreground" />
-                <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                  Chat-based
-                </span>
-              </div>
-              <div className="bg-primary/5 px-4 py-2.5 border-b border-border/50 flex items-center gap-1.5">
-                <ListChecks className="h-3 w-3 text-primary" />
-                <span className="text-[10px] font-medium uppercase tracking-widest text-primary">
-                  Issue-driven
-                </span>
-              </div>
+              {approachComparison.map((row) => (
+                <div
+                  key={row.aspect}
+                  className="grid grid-cols-[120px_1fr_1fr] md:grid-cols-[150px_1fr_1fr]"
+                >
+                  <div className="px-3 py-2.5 border-r border-border/50">
+                    <span className="text-xs font-medium">{row.aspect}</span>
+                  </div>
+                  <div className="px-3 md:px-4 py-2.5 border-r border-border/50">
+                    <span className="text-xs text-muted-foreground">
+                      {row.chat}
+                    </span>
+                  </div>
+                  <div className="px-3 md:px-4 py-2.5">
+                    <span className="text-xs text-primary font-medium">
+                      {row.issue}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-            {approachComparison.map((row) => (
-              <div
-                key={row.aspect}
-                className={`grid grid-cols-[150px_1fr_1fr]`}
-              >
-                <div className="px-4 py-2.5 border-r border-border/50">
-                  <span className="text-xs font-medium">{row.aspect}</span>
-                </div>
-                <div className="px-4 py-2.5 border-r border-border/50">
-                  <span className="text-xs text-muted-foreground">
-                    {row.chat}
-                  </span>
-                </div>
-                <div className="px-4 py-2.5">
-                  <span className="text-xs text-primary font-medium">
-                    {row.issue}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
         {/* HOW */}
-        <div className="mb-24">
+        <div className="mb-12 md:mb-24">
           <div className="flex items-center gap-2 mb-3">
             <Route className="h-4 w-4 text-primary" />
             <span className="text-xs font-medium uppercase tracking-widest text-primary">
@@ -676,7 +678,7 @@ export default function App() {
             GitHub is the interface. PRs are the output. Flows are the product.
             Everything Polycode does reinforces this loop.
           </p>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2">
             {pillars.map((pillar, index) => (
               <motion.div
                 key={pillar.title}
@@ -747,20 +749,20 @@ export default function App() {
       </div>
 
       {/* How It Works Section */}
-      <section className="py-20" id="how-it-works">
+      <section className="py-10 md:py-20" id="how-it-works">
         <h2 className="text-2xl font-bold mb-8">How It Works</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           {workflows.map((workflow, index) => (
             <motion.div
               key={workflow.cmd}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="bg-card border-border rounded-lg border p-4 space-y-3"
+              className="bg-card border-border rounded-lg border p-4 space-y-3 w-full max-w-sm justify-self-center sm:max-w-none sm:justify-self-auto"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">$</span>
-                <span className="text-foreground text-sm font-mono">
+              <div className="flex items-center gap-2 overflow-x-auto">
+                <span className="text-muted-foreground shrink-0">$</span>
+                <span className="text-foreground text-sm font-mono whitespace-nowrap">
                   {workflow.cmd}
                 </span>
               </div>
@@ -785,7 +787,7 @@ export default function App() {
       </div>
 
       {/* Comparison Section */}
-      <section className="py-20" id="comparison">
+      <section className="py-10 md:py-20" id="comparison">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs font-medium uppercase tracking-widest text-primary">
             Compare
@@ -794,14 +796,14 @@ export default function App() {
         <h2 className="text-2xl font-bold mb-2">
           Same wave, different philosophy
         </h2>
-        <p className="text-muted-foreground mb-12 max-w-2xl">
+        <p className="text-muted-foreground mb-8 md:mb-12 max-w-2xl">
           Polycode, Devin, and OpenHands all use AI agents to perform software
           engineering tasks. But they're built on fundamentally different
           assumptions about how work should get done.
         </p>
 
         {/* Positioning Cards */}
-        <div className="grid gap-4 md:grid-cols-3 mb-16">
+        <div className="grid gap-4 md:grid-cols-3 mb-8 md:mb-16">
           {positioningCards.map((card, index) => (
             <motion.div
               key={card.title}
@@ -858,8 +860,8 @@ export default function App() {
 
         {/* Feature Comparison Table */}
         <h3 className="text-lg font-bold mb-6">Feature comparison</h3>
-        <div className="overflow-x-auto border border-border">
-          <table className="w-full text-sm">
+        <div className="hidden md:block overflow-x-auto border border-border">
+          <table className="w-full min-w-[500px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left py-3 px-4 font-medium text-xs uppercase tracking-widest">
@@ -901,6 +903,40 @@ export default function App() {
             </tbody>
           </table>
         </div>
+        <div className="md:hidden space-y-3">
+          {comparison.map((row) => (
+            <div
+              key={row.feature}
+              className="bg-card border-border border p-4 space-y-2"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {row.feature}
+              </span>
+              <div className="space-y-1">
+                <div className="flex items-start gap-2 text-xs">
+                  <span className="text-primary font-semibold shrink-0 w-20">
+                    Polycode
+                  </span>
+                  <span className="text-primary font-medium">
+                    {row.polycode}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2 text-xs">
+                  <span className="text-muted-foreground shrink-0 w-20">
+                    Devin
+                  </span>
+                  <span className="text-muted-foreground">{row.devin}</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs">
+                  <span className="text-muted-foreground shrink-0 w-20">
+                    OpenHands
+                  </span>
+                  <span className="text-muted-foreground">{row.openhands}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* Bottom Line */}
         <div className="mt-8 border-l-2 border-primary/30 pl-4">
@@ -924,7 +960,7 @@ export default function App() {
       </div>
 
       {/* Roadmap Section */}
-      <section className="py-20" id="roadmap">
+      <section className="py-10 md:py-20" id="roadmap">
         <div className="flex items-center gap-2 mb-3">
           <Rocket className="h-4 w-4 text-primary" />
           <span className="text-xs font-medium uppercase tracking-widest text-primary">
@@ -932,12 +968,12 @@ export default function App() {
           </span>
         </div>
         <h2 className="text-2xl font-bold mb-2">What we&apos;re building</h2>
-        <p className="text-muted-foreground mb-16 max-w-2xl">
+        <p className="text-muted-foreground mb-8 md:mb-16 max-w-2xl">
           We&apos;re building toward a fully autonomous GitHub workspace.
           Transparent, versioned, and shaped by early adopters like you.
         </p>
 
-        <div className="space-y-20">
+        <div className="space-y-12 md:space-y-20">
           {roadmapPhases.map((phase, phaseIndex) => (
             <div key={phase.phase}>
               <div className="flex items-start gap-5 mb-8">
@@ -958,7 +994,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {phase.items.map((item, index) => {
                   const statusStyle =
                     roadmapStatusStyles[item.status] ??
@@ -1026,15 +1062,15 @@ export default function App() {
       </div>
 
       {/* Waitlist Section */}
-      <section className="py-20" id="waitlist">
+      <section className="py-10 md:py-20" id="waitlist">
         <h2 className="text-2xl font-bold mb-4">Join Early Access</h2>
-        <p className="text-lg text-muted-foreground mb-6">
+        <p className="text-base md:text-lg text-muted-foreground mb-6">
           Get notified when we launch beta. Early adopters get free access to
           premium features.
         </p>
         {!isSubmitted ? (
           <form onSubmit={handleSubmit} className="max-w-md">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="email"
                 placeholder="your@email.com"
@@ -1045,14 +1081,14 @@ export default function App() {
               />
               <button
                 type="submit"
-                className="bg-primary text-primary-foreground shadow-2xs hover:bg-primary/90 inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-none font-medium text-sm outline-hidden transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 h-11 px-6"
+                className="bg-primary text-primary-foreground shadow-2xs hover:bg-primary/90 inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-none font-medium text-sm outline-hidden transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 h-11 px-6 shrink-0"
                 disabled={loading || !email}
               >
                 Join Waitlist
                 <ChevronRight className="h-4 w-4" />
               </button>
-              {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
+            {error && <p className="text-sm text-destructive mt-2">{error}</p>}
           </form>
         ) : (
           <div className="flex items-center gap-2 text-primary">

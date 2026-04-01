@@ -1,10 +1,9 @@
 """Tests for flow system."""
 
 from bootstrap import get_module_registry
-from modules.registry import FlowRegistry
-
 from flows.base import KickoffIssue
 from flows.protocol import FlowDef
+from modules.registry import FlowRegistry
 
 
 def dummy_kickoff_func(issue: KickoffIssue):
@@ -29,16 +28,16 @@ def test_get_flow_for_label():
     registry = get_module_registry().flow_registry
     registry.register(
         FlowDef(
-            name="test-flow",
+            name="test-flow-2",
             kickoff_func=dummy_kickoff_func,
             description="Test flow",
-            supported_labels=["implement"],
+            supported_labels=["implement2"],
         )
     )
 
-    flow = registry.get_flow_for_label("polycode:implement")
+    flow = registry.get_flow_for_label("polycode:implement2")
     assert flow is not None
-    assert flow.name == "test-flow"
+    assert flow.name == "test-flow-2"
 
 
 def test_get_flow_for_label_priority():

@@ -25,9 +25,8 @@ def webhook_server(
 ) -> None:
     """Start webhook server for GitHub events.
 
-    Uses unified GitHub App webhook server.
-    For GitHub App webhooks (multi-repo), set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY.
-    For legacy webhooks (single repo), set GITHUB_TOKEN and repo env vars.
+    Uses GitHub App webhook server.
+    Set GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY for GitHub App authentication.
     """
     if verbose:
         import cli.utils
