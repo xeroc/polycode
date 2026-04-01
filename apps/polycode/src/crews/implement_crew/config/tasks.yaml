@@ -15,11 +15,8 @@ implement_task:
     BUILD_CMD: {build_cmd}
     TEST_CMD: {test_cmd}
 
-    {% for key, value in injected %}
-    # {{key}}
-
-    {{value}}
-    {% endfor %}
+    CREWAI REFERENCE GUIDE (AGENTS.md):
+    {agents_md}
 
     CURRENT STORY:
     {current_story}
@@ -32,6 +29,8 @@ implement_task:
 
     CONFIGURATION:
     {configuration}
+
+    {retro_context}
 
     TOOLS:
       * FileReadTool

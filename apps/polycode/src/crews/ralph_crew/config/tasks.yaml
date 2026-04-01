@@ -16,11 +16,10 @@ implement_task:
     ### PREVIOUS ERRORS (from earlier stories):
     {previous_errors}
 
-    {% for key, value in injected %}
-    # {{key}}
+    ### AGENTS.md REFERENCE:
+    {agents_md}
 
-    {{value}}
-    {% endfor %}
+    {retro_context}
 
     ### AVAILABLE TOOLS:
     - FileReadTool: Read file contents

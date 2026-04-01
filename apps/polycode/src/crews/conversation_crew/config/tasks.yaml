@@ -15,11 +15,12 @@ setup_task:
     {file_in_repos}
     ```
 
-    {% for key, value in injected %}
-    # {{key}}
+    AGENTS.md:
+    ```
+    {agents_md}
+    ```
 
-    {{value}}
-    {% endfor %}
+    {retro_context}
 
     TOOLS:
     - DirectoryReadTool: Read the directory structure

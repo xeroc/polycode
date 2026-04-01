@@ -50,9 +50,9 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     _module_registry = module_registry
     module_registry.discover()
 
+    from agentsmd import AgentsMDPolycodeModule
     from gitcore import GitcoreModule
     from project_manager import ProjectManagerModule
-    from agentsmd import AgentsMDPolycodeModule
 
     module_registry.register_builtin(RalphModule)  # type: ignore[arg-type]
     module_registry.register_builtin(SpecifyModule)  # type: ignore[arg-type]

@@ -5,7 +5,9 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-now = lambda: datetime.now(UTC)
+
+def _now() -> datetime:
+    return datetime.now(UTC)
 
 
 class ActionableItem(BaseModel):
@@ -34,7 +36,7 @@ class RetroEntry(BaseModel):
     repo_owner: str = Field(description="GitHub repository owner")
     repo_name: str = Field(description="GitHub repository name")
 
-    timestamp: datetime = Field(default_factory=now, description="When retro was generated")
+    timestamp: datetime = Field(default_factory=_now, description="When retro was generated")
 
     retro_type: str = Field(description="Type: success, failure, partial, anomaly")
 
