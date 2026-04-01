@@ -2,8 +2,9 @@ import logging
 from logging.config import fileConfig
 
 from alembic import context
-from persistence.postgres import Base, engine
+
 from bootstrap import bootstrap
+from persistence.postgres import Base, engine
 
 logging.basicConfig(level=logging.INFO)
 from github_app import models as githun_app_models

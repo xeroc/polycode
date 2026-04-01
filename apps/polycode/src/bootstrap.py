@@ -6,12 +6,12 @@ After bootstrap, modules are loaded and hooks are active.
 
 import logging
 from typing import Any
-from persistence.postgres import engine, DATABASE_URL
 
 from flows.ralph.module import RalphModule
 from flows.specify.module import SpecifyModule
 from modules.context import ModuleContext
 from modules.registry import ModuleRegistry
+from persistence.postgres import DATABASE_URL, engine
 
 log = logging.getLogger(__name__)
 
