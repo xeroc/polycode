@@ -60,6 +60,10 @@ class AgentsMDPolycodeModule:
         return []
 
     @classmethod
+    def get_tasks(cls) -> list[dict[str, Any]]:
+        return []
+
+    @classmethod
     def get_flows(cls) -> list["FlowDef"]:
         return []
 

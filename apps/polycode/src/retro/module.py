@@ -22,6 +22,14 @@ class RetroModule:
         log.info(f"📦 Retro module loaded (v{cls.version})")
 
     @classmethod
+    def get_tasks(cls) -> list[dict[str, Any]]:
+        return []
+
+    @classmethod
+    def get_flows(cls) -> list:
+        return []
+
+    @classmethod
     def register_hooks(cls, hook_manager: pluggy.PluginManager) -> None:
         from retro.hooks import RetroHooks
 
