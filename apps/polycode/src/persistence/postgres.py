@@ -234,7 +234,7 @@ class PostgresFlowPersistence(FlowPersistence):
                 state_json=state_dict,
                 repo_owner=state_dict.get("repo_owner", ""),
                 repo_name=state_dict.get("repo_name", ""),
-                flow_name=state_dict.get("repo_name", ""),
+                flow_name=state_dict.get("flow_name", ""),
             )
             session.add(state)
             session.commit()
