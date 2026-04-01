@@ -7,11 +7,12 @@
 
 Modular plugin system for Polycode enabling internal modules (`src/`) and external third-party packages to extend flow lifecycle, database schema, and application behavior.
 
-Three pillars:
+Three pillars (+ context injection):
 
 1. **ORM Model Registry** — auto-registration of SQLAlchemy models via `__init_subclass__`
 2. **Flow Lifecycle Hooks** — `pluggy`-based hook system with **5 simplified events** (reduced from 24 phases)
 3. **Module Discovery** — Python entry points for external packages, explicit registration for built-in modules
+4. **Context Collectors** — modules contribute named callables that inject values into crew inputs
 
 ### Recent Changes (2026-03-19)
 
@@ -37,9 +38,10 @@ Three pillars:
                    │              │              │
                    ▼              ▼              ▼
             ┌──────────────────────────────────────────┐
-            │           ModelRegistry                   │
-            │  (all ORM models across all modules)      │
-            │  METADATA.create_all(engine)              │
+            │           ModuleRegistry                   │
+            │  ┌─────────────────────────────────────┐  │
+            │  │ FlowRegistry │ TaskRegistry │ CtxReg │  │
+            │  └─────────────────────────────────────┘  │
             └──────────────────────────────────────────┘
                                    │
                                    ▼
@@ -50,8 +52,8 @@ Three pillars:
                                    │
                     ┌──────────────┼──────────────┐
                     ▼              ▼              ▼
-             module.on_load  module.register   module.register
-                            _hooks              _models
+             module.on_load  module.register   module.get_
+                             _hooks            context_collectors
                     │              │              │
                     ▼              ▼              ▼
             ┌──────────────────────────────────────────┐
@@ -488,10 +490,16 @@ class FlowIssueManagement(Flow[T]):
 ```python
 """Protocol for polycode modules."""
 
-from typing import Protocol, ClassVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    from flows.protocol import FlowDef
+    from modules.context import ModuleContext
+
+if TYPE_CHECKING:
+    import pluggy
 
 
-@runtime_checkable
 class PolycodeModule(Protocol):
     """Protocol that all modules (built-in and external) must satisfy.
 
@@ -508,9 +516,9 @@ class PolycodeModule(Protocol):
     External modules are discovered via entry_points["polycode.modules"].
     """
 
-    name: ClassVar[str]
-    version: ClassVar[str] = "0.0.0"
-    dependencies: ClassVar[list[str]] = []
+    name: str
+    version: str
+    dependencies: list[str]
 
     @classmethod
     def on_load(cls, context: "ModuleContext") -> None:
@@ -534,6 +542,28 @@ class PolycodeModule(Protocol):
 
         Optional — models are auto-registered via RegisteredBase.
         This method is for explicit listing when needed (docs, introspection).
+        """
+        return []
+
+    @classmethod
+    def get_tasks(cls) -> list[dict[str, Any]]:
+        """Return Celery task definitions from this module."""
+        return []
+
+    @classmethod
+    def get_flows(cls) -> list["FlowDef"]:
+        """Return flow definitions provided by this module."""
+        return []
+
+    @classmethod
+    def get_context_collectors(cls) -> list[tuple[str, Any]]:
+        """Return context collectors as (name, callable) pairs.
+
+        Each callable takes a flow state and returns dict[str, Any]
+        to merge into crew kickoff inputs. Called before each crew kickoff.
+
+        Returns:
+            List of (name, collect_fn) tuples.
         """
         return []
 ```
@@ -577,16 +607,131 @@ class ModuleContext:
 
 ### `src/modules/registry.py`
 
-```python
-"""Module discovery and lifecycle management."""
+````python
+"""Central registry for all resources (modules, flows, tasks, context)."""
 
-import importlib
 import logging
-from typing import Type
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import pluggy
 
-from modules.hooks import FlowHookSpec, get_plugin_manager
+if TYPE_CHECKING:
+    from modules.context import ModuleContext
+
+from modules.hooks import get_plugin_manager
+from modules.protocol import PolycodeModule
+
+log = logging.getLogger(__name__)
+
+
+class FlowRegistry:
+    """Registry for flow definitions contributed by modules."""
+    # ... (see full source)
+
+
+class TaskRegistry:
+    """Registry for Celery tasks contributed by modules."""
+    # ... (see full source)
+
+
+class ContextRegistry:
+    """Registry for context collectors contributed by modules.
+
+    Modules contribute named callables via get_context_collectors().
+    Each callable takes a flow state and returns a dict to merge into
+    crew kickoff inputs.
+    """
+
+    def __init__(self) -> None:
+        self._collectors: dict[str, Callable[[Any], dict[str, Any]]] = {}
+
+    def register(self, name: str, collect_fn: Callable[[Any], dict[str, Any]]) -> None:
+        """Register a named context collector."""
+        if name in self._collectors:
+            log.warning(f"⚠️ Context collector '{name}' already registered, overwriting")
+        self._collectors[name] = collect_fn
+        log.info(f"💉 Registered context collector: {name}")
+
+    def collect_all(self, state: Any) -> dict[str, Any]:
+        """Run all collectors and merge results.
+
+        Failures are logged and skipped. Key collisions log warnings.
+        """
+        result: dict[str, Any] = {}
+        for name, fn in self._collectors.items():
+            try:
+                collected = fn(state)
+                overlap = set(result.keys()) & set(collected.keys())
+                if overlap:
+                    log.warning(f"⚠️ Collector '{name}' overwrites keys: {overlap}")
+                result.update(collected)
+            except Exception as e:
+                log.warning(f"⚠️ Collector '{name}' failed: {e}")
+        return result
+
+    def collect_from_modules(self, modules: dict[str, Any]) -> int:
+        """Collect context collectors from all modules.
+
+        Iterates modules, calls get_context_collectors() if present,
+        registers returned (name, callable) tuples.
+
+        Returns:
+            Number of collectors registered.
+        """
+        count = 0
+        for module_name, module in modules.items():
+            if not hasattr(module, "get_context_collectors"):
+                continue
+            try:
+                collectors = module.get_context_collectors()
+                for name, fn in collectors:
+                    self.register(name, fn)
+                    count += 1
+            except Exception as e:
+                log.error(
+                    f"🚨 Module '{module_name}' get_context_collectors() failed: {e}"
+                )
+        log.info(f"💉 Collected {count} context collectors from modules")
+        return count
+
+
+class ModuleRegistry:
+    """Central registry for modules, flows, tasks, and context."""
+
+    def __init__(self) -> None:
+        self._modules: dict[str, PolycodeModule] = {}
+        self._pm = get_plugin_manager()
+
+        self._flow_registry = FlowRegistry()
+        self._task_registry = TaskRegistry()
+        self._context_registry = ContextRegistry()
+
+    @property
+    def pm(self) -> pluggy.PluginManager:
+        """The shared plugin manager."""
+        return self._pm
+
+    @property
+    def modules(self) -> dict[str, PolycodeModule]:
+        """All registered modules."""
+        return dict(self._modules)
+
+    @property
+    def flow_registry(self) -> FlowRegistry:
+        return self._flow_registry
+
+    @property
+    def task_registry(self) -> TaskRegistry:
+        return self._task_registry
+
+    @property
+    def context_registry(self) -> ContextRegistry:
+        return self._context_registry
+
+    # ... discover(), register_builtin(), load_all(), _topological_sort()
+    # ... (see full source)
+```, get_plugin_manager
 from modules.protocol import PolycodeModule
 
 log = logging.getLogger(__name__)
@@ -717,7 +862,7 @@ class ModuleRegistry:
             raise RuntimeError(f"Circular dependency detected among modules: {remaining}")
 
         return result
-```
+````
 
 ---
 
