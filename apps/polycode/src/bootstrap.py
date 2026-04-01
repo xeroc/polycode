@@ -5,10 +5,8 @@ After bootstrap, modules are loaded and hooks are active.
 """
 
 import logging
-import os
 from typing import Any
-
-from sqlalchemy import create_engine
+from persistence.postgres import engine, DATABASE_URL
 
 from flows.ralph.module import RalphModule
 from flows.specify.module import SpecifyModule
@@ -47,14 +45,6 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     """
     cfg = config or {}
 
-    db_url = cfg.get("db_url") or os.getenv(
-        "DATABASE_URL",
-        "postgresql://user:password@localhost:5432/polycode",
-    )
-    engine = create_engine(db_url)
-
-    import persistence.postgres  # noqa: F401
-
     global _module_registry
     module_registry = ModuleRegistry()
     _module_registry = module_registry
@@ -71,7 +61,7 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
 
     context = ModuleContext(
         db_engine=engine,
-        db_url=db_url,
+        db_url=DATABASE_URL,
         hook_manager=module_registry.pm,
         config=cfg.get("modules", {}),
     )

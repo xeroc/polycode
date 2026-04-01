@@ -39,6 +39,7 @@ dependencies = [
     "tqdm>=4.67.3",
     "alive-progress==3.3.0",
     "pyright>=1.1.408",
+    "alembic>=1.18.4",
 ]
 
 [project.scripts]
