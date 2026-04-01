@@ -15,8 +15,11 @@ implement_task:
     BUILD_CMD: {build_cmd}
     TEST_CMD: {test_cmd}
 
-    CREWAI REFERENCE GUIDE (AGENTS.md):
-    {agents_md}
+    {% for key, value in injected %}
+    # {{key}}
+
+    {{value}}
+    {% endfor %}
 
     CURRENT STORY:
     {current_story}

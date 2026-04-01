@@ -1,12 +1,12 @@
 """GitHub-specific project manager implementation."""
 
-from project_manager.config import settings
-
 import logging
 from typing import cast
 
 import github
 from github.Repository import Repository
+
+from project_manager.config import settings
 
 from .base import ProjectManager
 from .github_projects_client import GitHubProjectsClient

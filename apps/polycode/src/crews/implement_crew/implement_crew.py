@@ -6,6 +6,7 @@ import yaml
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
+from crewai.tools import BaseTool
 from crewai_tools import FileWriterTool, MCPServerAdapter
 from mcp import StdioServerParameters
 
@@ -94,7 +95,7 @@ class ImplementCrew(PolycodeCrewMixin):
 
     @agent
     def developer(self) -> Agent:
-        tools = [
+        tools: list[BaseTool] = [
             FileReadTool(),
             FileWriterTool(),
             DirectoryReadTool(),
@@ -110,7 +111,7 @@ class ImplementCrew(PolycodeCrewMixin):
         return Agent(  # ty:ignore
             config=self._get_agent_config("developer"),
             verbose=False,
-            tools=tools,  # ty:ignore
+            tools=tools,
             allow_code_execution=False,
         )
 

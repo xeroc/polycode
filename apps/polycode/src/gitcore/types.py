@@ -7,6 +7,10 @@ from typing import Any
 import git
 
 
+class GitNotesError(Exception):
+    """Exception raised for git-notes operations."""
+
+
 @dataclass
 class WorktreeConfig:
     """Configuration for git worktree operations."""

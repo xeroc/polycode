@@ -88,3 +88,15 @@ class PolycodeModule(Protocol):
         if TYPE_CHECKING:
             pass
         return []
+
+    @classmethod
+    def get_context_injectors(cls) -> list[Any]:
+        """Return context injectors provided by this module.
+
+        Injectors are registered during bootstrap and called before
+        each crew kickoff to populate task template variables.
+
+        Returns:
+            List of ContextInjector instances.
+        """
+        return []

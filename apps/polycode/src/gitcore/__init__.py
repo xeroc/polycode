@@ -5,6 +5,7 @@ as a pluggable module that integrates with the Polycode plugin system.
 """
 
 from gitcore.module import GitcoreModule
+from gitcore.notes import GitNotes
 from gitcore.operations import (
     GitOperations,
     cleanup_worktree,
@@ -18,9 +19,11 @@ from gitcore.operations import (
     setup_develop_branch,
     symlink_packages,
 )
-from gitcore.types import GitContext, WorktreeConfig
+from gitcore.types import GitContext, GitNotesError, WorktreeConfig
 
 __all__ = [
+    "GitNotes",
+    "GitNotesError",
     "GitOperations",
     "GitcoreModule",
     "GitContext",

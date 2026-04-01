@@ -84,6 +84,16 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
 
     module_registry.load_all(context)
 
+    from agentsmd import AgentsMDPolycodeModule
+    from modules.context_injector import ContextRegistry
+
+    module_registry.register_builtin(AgentsMDPolycodeModule)  # type: ignore[arg-type]
+
+    for module in module_registry.modules.values():
+        if hasattr(module, "get_context_injectors"):
+            for injector in module.get_context_injectors():
+                ContextRegistry.register(injector)
+
     from crews.base import PolycodeCrewMixin
     from crews.review_crew.postmortem import PostmortemHooks
     from flows.base import FlowIssueManagement

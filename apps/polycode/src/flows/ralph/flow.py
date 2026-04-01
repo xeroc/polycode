@@ -47,17 +47,17 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
             return
 
         logger.info("📝 Planning stories from prompt...")
-
+        injected = self.injected_content()
         result = (
             PlanCrew()
-            .crew(agents_md_map=self._agents_md_map)
+            .crew(agents_md_map=injected.get("agents_md_map", {}))
             .kickoff(
                 inputs=dict(
                     task=self.state.task[:120],
                     repo=self.state.repo,
                     branch=self.state.branch,
-                    agents_md=self._root_agents_md,
                     file_in_repos=self.git_operations.list_tree(),
+                    **injected,
                 )
             )
         )
@@ -88,6 +88,8 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
         unfinished_stories = list(filter(lambda story: not story.completed, self.state.stories or []))
 
         logger.info(f"Unfinished stories: {len(unfinished_stories)}")
+        injected = self.injected_content()
+        agents_md_map = injected.pop("agents_md_map", {})
         for story in unfinished_stories:
             logger.info(f"\n📖 Story: {story.title}")
 
@@ -99,7 +101,7 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
 
             result = (
                 RalphCrew()
-                .crew(agents_md_map=self._agents_md_map)
+                .crew(agents_md_map=agents_md_map)
                 .kickoff(
                     inputs=dict(
                         task=self.state.task[:120],
@@ -108,13 +110,13 @@ class RalphLoopFlow(FlowIssueManagement[RalphLoopState]):
                         branch=self.state.branch,
                         test_cmd=self.state.test_cmd,
                         build_cmd=self.state.build_cmd,
-                        agents_md=self._root_agents_md,
+                        **injected,
                         previous_errors=error_context,
                     )
                 )
             )
 
-            output = cast(RalphOutput, result.pydantic)  # type: ignore
+            output = cast(RalphOutput, result.pydantic)  # pyright: ignore
             self.state.agent_output = output.changes
             self.state.commit_title = output.title
             self.state.commit_message = output.message

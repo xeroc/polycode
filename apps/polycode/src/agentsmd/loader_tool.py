@@ -20,13 +20,11 @@ class AgentsMDLoaderTool(BaseTool):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # We dynamically patch the relative folders of agetns.md into the
-        # description
         self.description = (
             "Load AGENTS.md content from a specific subdirectory. "
-            "Use this to access project-specific CrewAI patterns and guidelines "
-            "from subdirectories when needed. Available AGENTS.md files: " + "\n - ".join(self.agents_md_map.keys())
+            "Use this to access project-specific CrewAI patterns and "
+            "guidelines from subdirectories when needed. "
+            "Available AGENTS.md files: " + "\n - ".join(self.agents_md_map.keys())
         )
 
     def _run(self, relative_path: str) -> str:

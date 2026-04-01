@@ -1,24 +1,91 @@
-"""Retro pattern analysis and improvement suggestions."""
+"""Retro pattern analysis and improvement suggestions.
+
+Reads retrospectives from git-notes (refs/notes/retros) instead of
+a database. Uses GitNotes.list_all() + GitNotes.show() to load
+recent RetroEntry instances for pattern analysis.
+"""
 
 import logging
 from collections import Counter
+from pathlib import Path
 
-from .persistence import RetroStore
+from gitcore import GitNotes
+from gitcore.types import GitContext
+
 from .types import RetroEntry, RetroQuery
 
 logger = logging.getLogger(__name__)
 
+RETRO_NOTES_REF = "refs/notes/retros"
+
 
 class PatternAnalyzer:
-    """Analyze retrospectives to identify recurring patterns and trends."""
+    """Analyze retrospectives to identify recurring patterns and trends.
 
-    def __init__(self, store: RetroStore) -> None:
+    Reads retro data from git-notes attached to commits in the repository.
+    """
+
+    def __init__(
+        self,
+        repo_path: str | Path,
+        notes_ref: str = RETRO_NOTES_REF,
+    ) -> None:
         """Initialize pattern analyzer.
 
         Args:
-            store: RetroStore instance for querying retros
+            repo_path: Path to the git repository
+            notes_ref: Git notes ref for retros (default: refs/notes/retros)
         """
-        self.store = store
+        context = GitContext(repo_path=str(repo_path))
+        self.notes = GitNotes(context, notes_ref=notes_ref)
+
+    def _load_retros(self, limit: int = 50) -> list[RetroEntry]:
+        """Load recent retro entries from git-notes.
+
+        Args:
+            limit: Maximum number of retros to load
+
+        Returns:
+            List of RetroEntry instances, most recent first.
+        """
+        commit_shas = self.notes.list_all()
+        retros: list[RetroEntry] = []
+
+        for sha in commit_shas:
+            if len(retros) >= limit:
+                break
+            entry = self.notes.show(RetroEntry, commit_sha=sha)
+            if entry is not None:
+                retros.append(entry)
+
+        retros.sort(key=lambda r: r.timestamp, reverse=True)
+        return retros
+
+    def _load_retros_filtered(
+        self,
+        query: RetroQuery,
+    ) -> list[RetroEntry]:
+        """Load retros with optional filtering.
+
+        Args:
+            query: Filter criteria
+
+        Returns:
+            Filtered list of RetroEntry instances.
+        """
+        retros = self._load_retros(limit=query.limit)
+        filtered = retros
+
+        if query.repo_owner:
+            filtered = [r for r in filtered if r.repo_owner == query.repo_owner]
+        if query.repo_name:
+            filtered = [r for r in filtered if r.repo_name == query.repo_name]
+        if query.retro_type:
+            filtered = [r for r in filtered if r.retro_type == query.retro_type]
+        if query.since:
+            filtered = [r for r in filtered if r.timestamp >= query.since]
+
+        return filtered[: query.limit]
 
     def analyze_recent_trends(self, limit: int = 20) -> dict[str, list[str]]:
         """Analyze recent retros for emerging patterns.
@@ -29,8 +96,7 @@ class PatternAnalyzer:
         Returns:
             Dict with categories and their patterns
         """
-        params = RetroQuery(limit=limit)
-        retros = self.store.query(params)
+        retros = self._load_retros(limit=limit)
 
         trends = {
             "common_failures": self._extract_common_failures(retros),
@@ -142,7 +208,12 @@ class PatternAnalyzer:
         logger.info(f"🔨 Failure rate: {patterns['failure_rate']:.1%}")
         return patterns
 
-    def generate_context_injection(self, repo_owner: str, repo_name: str, limit: int = 5) -> str:
+    def generate_context_injection(
+        self,
+        repo_owner: str,
+        repo_name: str,
+        limit: int = 5,
+    ) -> str:
         """Generate context for next flow based on past retros.
 
         Args:
@@ -153,18 +224,18 @@ class PatternAnalyzer:
         Returns:
             Markdown formatted context string
         """
-        params = RetroQuery(
+        query = RetroQuery(
             repo_owner=repo_owner,
             repo_name=repo_name,
             limit=limit,
         )
-        retros = self.store.query(params)
+        retros = self._load_retros_filtered(query)
 
         if not retros:
             return "No previous retros for this repository."
 
         recent_failures = [r for r in retros if r.retro_type == "failure"]
-        top_issues = self.store.get_top_issues(limit=3)
+        top_issues = self._get_top_issues(retros)
 
         context = [
             f"## Previous Retrospectives ({len(retros)} total)",
@@ -183,6 +254,24 @@ class PatternAnalyzer:
                 context.append(f"- {issue} ({count}x)")
 
         return "\n".join(context)
+
+    def _get_top_issues(self, retros: list[RetroEntry], limit: int = 3) -> dict[str, int]:
+        """Extract top recurring issues from retros.
+
+        Args:
+            retros: List of retrospectives
+            limit: Number of top issues to return
+
+        Returns:
+            Dict of issue description -> occurrence count
+        """
+        all_failures: list[str] = []
+        for retro in retros:
+            all_failures.extend(retro.what_failed)
+            all_failures.extend(retro.root_causes)
+
+        counter = Counter(all_failures)
+        return dict(counter.most_common(limit))
 
     def suggest_improvements_from_patterns(self, limit: int = 10) -> list[str]:
         """Suggest improvements based on historical patterns.

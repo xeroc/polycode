@@ -1,31 +1,48 @@
-"""Git-notes integration for retrospectives."""
+"""Git-notes operations for storing structured data on commits.
+
+Provides a generic wrapper around git-notes for attaching arbitrary
+Pydantic-serializable data to commits. Used by retro and other modules
+that need commit-attached metadata.
+"""
 
 import logging
 import subprocess
 from pathlib import Path
+from typing import TypeVar
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from .types import RetroEntry
+from gitcore.types import GitContext, GitNotesError
 
 log = logging.getLogger(__name__)
 
+T = TypeVar("T", bound=BaseModel)
 
-class GitNotesError(Exception):
-    """Exception raised for git-notes operations."""
+DEFAULT_NOTES_REF = "refs/notes/commits"
 
 
 class GitNotes:
-    """Wrapper for git-notes operations with retro notes ref."""
+    """Wrapper for git-notes operations.
 
-    def __init__(self, repo_path: str, notes_ref: str = "refs/notes/retros"):
+    Stores Pydantic model instances as JSON notes on commits using
+    a configurable notes ref.
+    """
+
+    def __init__(
+        self,
+        context: GitContext,
+        notes_ref: str = DEFAULT_NOTES_REF,
+    ):
         """Initialize git-notes wrapper.
 
         Args:
-            repo_path: Path to git repository
-            notes_ref: Custom ref for retros (defaults to refs/notes/retros)
+            context: GitContext providing repo path
+            notes_ref: Custom ref for notes (defaults to refs/notes/commits)
+
+        Raises:
+            GitNotesError: If the repository path is invalid
         """
-        self.repo_path = Path(repo_path).resolve()
+        self.repo_path = Path(context.repo_path).resolve()
         self.notes_ref = notes_ref
 
         if not self.repo_path.exists():
@@ -57,65 +74,74 @@ class GitNotes:
         log.info(f"🔖 Current commit: {sha}")
         return sha
 
-    def add(self, retro: RetroEntry, force: bool = False) -> None:
-        """Add retro note to commit.
+    def add(
+        self,
+        model: BaseModel,
+        commit_sha: str | None = None,
+        force: bool = False,
+    ) -> None:
+        """Add a note to a commit.
 
         Args:
-            retro: RetroEntry to store
+            model: Pydantic model instance to store as JSON
+            commit_sha: Target commit (defaults to HEAD)
             force: Overwrite existing note if True
         """
-        if not retro.commit_sha:
-            retro.commit_sha = self._get_current_sha()
+        target = commit_sha or self._get_current_sha()
+        note_json = model.model_dump_json(indent=2)
 
-        note_json = retro.model_dump_json(indent=2)
-
-        args = ["notes", "add"]
+        args = ["notes", "--ref", self.notes_ref, "add"]
         if force:
             args.append("-f")
-        args.extend(["-m", note_json, retro.commit_sha])
+        args.extend(["-m", note_json, target])
 
         try:
             self._git(*args, check=True)
-            log.info(f"📝 Retro stored for commit {retro.commit_sha[:8]} (ref: {self.notes_ref})")
+            log.info(f"📝 Note stored for commit {target[:8]} (ref: {self.notes_ref})")
         except GitNotesError:
             if not force:
                 log.warning("⚠️ Note exists, use force=True to overwrite")
 
-    def show(self, commit_sha: str | None = None) -> RetroEntry | None:
-        """Show retro note for commit.
+    def show(
+        self,
+        model_type: type[T],
+        commit_sha: str | None = None,
+    ) -> T | None:
+        """Show note for a commit, deserialized as the given model type.
 
         Args:
-            commit_sha: Commit SHA (defaults to HEAD)
+            model_type: Pydantic model class to deserialize into
+            commit_sha: Target commit (defaults to HEAD)
 
         Returns:
-            RetroEntry or None if no note exists
+            Deserialized model instance or None if no note exists
         """
         target = commit_sha or self._get_current_sha()
         try:
-            note_content = self._git("notes", "show", target)
+            note_content = self._git("notes", "--ref", self.notes_ref, "show", target)
             try:
-                retro = RetroEntry.model_validate_json(note_content)
-                log.info(f"📖 Retrieved retro for {target[:8]}")
-                return retro
+                instance = model_type.model_validate_json(note_content)
+                log.info(f"📖 Retrieved note for {target[:8]}")
+                return instance
             except ValidationError as e:
-                log.error(f"🚨 Failed to parse retro: {e}")
+                log.error(f"🚨 Failed to parse note: {e}")
                 return None
         except subprocess.CalledProcessError as e:
             if "no note found" in e.stderr.lower():
-                log.debug(f"No retro for {target[:8]}")
+                log.debug(f"No note for {target[:8]}")
                 return None
             raise GitNotesError(f"Failed to show note: {e.stderr}") from e
 
     def list_all(self) -> list[str]:
-        """List all commit SHAs with retro notes.
+        """List all commit SHAs with notes.
 
         Returns:
-            List of commit SHAs
+            List of commit SHAs that have notes
         """
         try:
             output = self._git("notes", "--ref", self.notes_ref, "list")
             if not output.strip():
-                log.info("📭 No retros found")
+                log.info("📭 No notes found")
                 return []
 
             shas = []
@@ -124,44 +150,43 @@ class GitNotes:
                 if len(parts) >= 2:
                     shas.append(parts[-1])
 
-            log.info(f"📚 Found {len(shas)} retros")
+            log.info(f"📚 Found {len(shas)} notes")
             return shas
         except subprocess.CalledProcessError as e:
             raise GitNotesError(f"Failed to list notes: {e.stderr}") from e
 
     def remove(self, commit_sha: str) -> None:
-        """Remove retro note from commit.
+        """Remove note from a commit.
 
         Args:
             commit_sha: Commit SHA to remove note from
         """
         try:
-            self._git("notes", "remove", commit_sha, check=True)
-            log.info(f"🗑️ Removed retro for {commit_sha[:8]}")
+            self._git("notes", "--ref", self.notes_ref, "remove", commit_sha, check=True)
+            log.info(f"🗑️ Removed note for {commit_sha[:8]}")
         except GitNotesError:
-            log.warning(f"No retro to remove for {commit_sha[:8]}")
+            log.warning(f"No note to remove for {commit_sha[:8]}")
 
     def push(self, remote: str = "origin") -> None:
-        """Push retro notes to remote.
+        """Push notes to remote.
 
         Args:
             remote: Git remote name (default: origin)
         """
         try:
             self._git("push", remote, self.notes_ref, check=True)
-            log.info(f"📤 Pushed retros to {remote}/{self.notes_ref}")
+            log.info(f"📤 Pushed notes to {remote}/{self.notes_ref}")
         except GitNotesError as e:
-            log.error(f"🚨 Failed to push retros: {e}")
+            log.error(f"🚨 Failed to push notes: {e}")
 
     def pull(self, remote: str = "origin") -> None:
-        """Pull retro notes from remote.
+        """Pull notes from remote.
 
         Args:
             remote: Git remote name (default: origin)
         """
         try:
-            self._git("fetch", remote, self.notes_ref, check=True)
-            self._git("notes", "merge", f"{remote}/{self.notes_ref}", check=True)
-            log.info(f"📥 Pulled retros from {remote}/{self.notes_ref}")
+            self._git("fetch", remote, f"{self.notes_ref}:{self.notes_ref}", check=True)
+            log.info(f"📥 Pulled notes from {remote}/{self.notes_ref}")
         except GitNotesError as e:
-            log.error(f"🚨 Failed to pull retros: {e}")
+            log.error(f"🚨 Failed to pull notes: {e}")
