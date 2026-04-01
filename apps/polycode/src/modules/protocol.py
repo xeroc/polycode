@@ -90,13 +90,13 @@ class PolycodeModule(Protocol):
         return []
 
     @classmethod
-    def get_context_injectors(cls) -> list[Any]:
-        """Return context injectors provided by this module.
+    def get_context_collectors(cls) -> list[tuple[str, Any]]:
+        """Return context collectors as (name, callable) pairs.
 
-        Injectors are registered during bootstrap and called before
-        each crew kickoff to populate task template variables.
+        Each callable takes a flow state and returns a dict[str, Any]
+        to merge into crew kickoff inputs. Called before each crew kickoff.
 
         Returns:
-            List of ContextInjector instances.
+            List of (name, collect_fn) tuples.
         """
         return []

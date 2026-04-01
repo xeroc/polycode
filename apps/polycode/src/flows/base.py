@@ -22,8 +22,8 @@ from pydantic import BaseModel, Field
 
 from gitcore import GitOperations
 from glm import GLMJSONLLM
-from modules.context_injector import ContextRegistry
 from modules.hooks import FlowEvent
+from modules.registry import ContextRegistry
 from persistence.postgres import (
     SessionLocal,
     ensure_request_exists,
@@ -93,6 +93,7 @@ class FlowIssueManagement(Flow[T]):
     _pm: "pluggy.PluginManager | None" = None
     _git_ops: GitOperations | None = None
     _project_manager: ProjectManager | None = None
+    _context_registry: ContextRegistry | None = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -121,6 +122,11 @@ class FlowIssueManagement(Flow[T]):
     def use_plugin_manager(cls, pm: "pluggy.PluginManager") -> None:
         """Inject plugin manager for all flow instances."""
         cls._pm = pm
+
+    @classmethod
+    def use_context_registry(cls, registry: ContextRegistry) -> None:
+        """Inject context registry for all flow instances."""
+        cls._context_registry = registry
 
     def _emit(
         self,
@@ -228,4 +234,6 @@ class FlowIssueManagement(Flow[T]):
         logger.info(f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}...")
 
     def injected_content(self) -> dict[str, Any]:
-        return ContextRegistry.collect_all(self.state)
+        if self._context_registry is None:
+            return {}
+        return self._context_registry.collect_all(self.state)

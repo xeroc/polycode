@@ -1,6 +1,7 @@
-"""Central registry for all resources (modules, flows, tasks)."""
+"""Central registry for all resources (modules, flows, tasks, context)."""
 
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import pluggy
@@ -211,6 +212,82 @@ class TaskRegistry:
         return list(self._tasks.keys())
 
 
+class ContextRegistry:
+    """Registry for context collectors contributed by modules.
+
+    Modules contribute named callables via get_context_collectors().
+    Each callable takes a flow state and returns a dict to merge into
+    crew kickoff inputs. Called before each crew kickoff.
+
+    Follows the same collect_from_modules() pattern as FlowRegistry
+    and TaskRegistry.
+    """
+
+    def __init__(self) -> None:
+        self._collectors: dict[str, Callable[[Any], dict[str, Any]]] = {}
+
+    def register(self, name: str, collect_fn: Callable[[Any], dict[str, Any]]) -> None:
+        """Register a context collector.
+
+        Args:
+            name: Unique collector name (e.g. "agents_md").
+            collect_fn: Callable taking flow state, returning dict.
+        """
+        if name in self._collectors:
+            log.warning(f"⚠️ Context collector '{name}' already registered, overwriting")
+        self._collectors[name] = collect_fn
+        log.info(f"💉 Registered context collector: {name}")
+
+    def collect_all(self, state: Any) -> dict[str, Any]:
+        """Run all collectors and merge results.
+
+        Args:
+            state: The flow's state model.
+
+        Returns:
+            Merged dict. Later collectors overwrite earlier on collision.
+        """
+        result: dict[str, Any] = {}
+        for name, fn in self._collectors.items():
+            try:
+                collected = fn(state)
+                overlap = set(result.keys()) & set(collected.keys())
+                if overlap:
+                    log.warning(f"⚠️ Collector '{name}' overwrites keys: {overlap}")
+                result.update(collected)
+            except Exception as e:
+                log.warning(f"⚠️ Collector '{name}' failed: {e}")
+        return result
+
+    def list_collectors(self) -> list[str]:
+        """List all registered collector names."""
+        return list(self._collectors.keys())
+
+    def collect_from_modules(self, modules: dict[str, Any]) -> int:
+        """Collect context collectors from all modules.
+
+        Args:
+            modules: Dict of module_name -> module class.
+
+        Returns:
+            Number of collectors registered.
+        """
+        count = 0
+        for module_name, module in modules.items():
+            if not hasattr(module, "get_context_collectors"):
+                continue
+            try:
+                collectors = module.get_context_collectors()
+                for name, fn in collectors:
+                    self.register(name, fn)
+                    count += 1
+            except Exception as e:
+                log.error(f"🚨 Module '{module_name}' get_context_collectors() failed: {e}")
+
+        log.info(f"💉 Collected {count} context collectors from modules")
+        return count
+
+
 class ModuleRegistry:
     """Central registry for modules, flows, and tasks."""
 
@@ -220,6 +297,7 @@ class ModuleRegistry:
 
         self._flow_registry = FlowRegistry()
         self._task_registry = TaskRegistry()
+        self._context_registry = ContextRegistry()
 
     @property
     def pm(self) -> pluggy.PluginManager:
@@ -240,6 +318,11 @@ class ModuleRegistry:
     def task_registry(self) -> TaskRegistry:
         """Task registry instance."""
         return self._task_registry
+
+    @property
+    def context_registry(self) -> ContextRegistry:
+        """Context registry instance."""
+        return self._context_registry
 
     def discover(self) -> None:
         """Scan entry points for external polycode modules.
@@ -315,6 +398,7 @@ class ModuleRegistry:
 
         self._flow_registry.collect_from_modules(self._modules)
         self._task_registry.collect_from_modules(self._modules)
+        self._context_registry.collect_from_modules(self._modules)
 
     def _topological_sort(self) -> list[str]:
         """Sort modules by dependencies using Kahn's algorithm.
