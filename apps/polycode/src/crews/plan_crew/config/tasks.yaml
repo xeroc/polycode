@@ -20,6 +20,8 @@ setup_task:
     {agents_md}
     ```
 
+    {retro_context}
+
     TOOLS:
     - DirectoryReadTool: Read the directory structure
     - FileReadTool: Read the content of a file

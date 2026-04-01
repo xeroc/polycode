@@ -74,7 +74,7 @@ class PlanCrew(PolycodeCrewMixin):
 
         return Crew(
             agents=self.agents,
-            tasks=self.tasks,
+            tasks=self.tasks,  # type: ignore
             process=Process.sequential,
             verbose=False,
         )

@@ -9,7 +9,7 @@ import logging
 import subprocess
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, TypeVar
 
 from crewai import Flow
 from crewai.events.utils.console_formatter import set_suppress_console_output
@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from gitcore import GitOperations
 from glm import GLMJSONLLM
 from modules.hooks import FlowEvent
+from modules.registry import ContextRegistry
 from persistence.postgres import (
     SessionLocal,
     ensure_request_exists,
@@ -90,10 +91,9 @@ class FlowIssueManagement(Flow[T]):
     """Generic base class that passes type parameter to Flow."""
 
     _pm: "pluggy.PluginManager | None" = None
-    _agents_md_map: dict[str, str] = {}
-    _root_agents_md: str = ""
     _git_ops: GitOperations | None = None
     _project_manager: ProjectManager | None = None
+    _context_registry: ContextRegistry | None = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -122,6 +122,11 @@ class FlowIssueManagement(Flow[T]):
     def use_plugin_manager(cls, pm: "pluggy.PluginManager") -> None:
         """Inject plugin manager for all flow instances."""
         cls._pm = pm
+
+    @classmethod
+    def use_context_registry(cls, registry: ContextRegistry) -> None:
+        """Inject context registry for all flow instances."""
+        cls._context_registry = registry
 
     def _emit(
         self,
@@ -168,7 +173,6 @@ class FlowIssueManagement(Flow[T]):
         except Exception as e:
             logger.error(f"🚨 Failed to update status to inprogress: {e}")
 
-        self.discover_agents_md_files()
         self._discover_build_cmd()
 
     def recall_as_markdown_list(self, name: str, **kwargs):
@@ -176,35 +180,6 @@ class FlowIssueManagement(Flow[T]):
             kwargs.update(dict(scope=self.state.memory_prefix))
         conf_recall = self.recall(name, **kwargs)
         return "\n".join(f"- {m.record.content}" for m in conf_recall)
-
-    def discover_agents_md_files(self):
-        """Discover all AGENTS.md files in repository."""
-        repo_path = Path(self.state.repo)
-        agents_md_files = {}
-
-        for agents_file in repo_path.rglob("AGENTS.md"):
-            try:
-                relative_path = str(agents_file.relative_to(repo_path))
-                if relative_path.startswith("."):
-                    continue
-                with open(agents_file, "r", encoding="utf-8") as f:
-                    content = f.read()
-                agents_md_files[relative_path] = content
-                logger.info(f"📕 Discovered AGENTS.md: {relative_path}")
-            except Exception as e:
-                logger.error(f"🚨 Error reading {agents_file}: {e}")
-
-        self._agents_md_map = agents_md_files
-
-        if "AGENTS.md" in agents_md_files:
-            self._root_agents_md = agents_md_files["AGENTS.md"]
-        elif len(agents_md_files) > 0:
-            first_path = next(iter(agents_md_files.keys()))
-            self._root_agents_md = agents_md_files[first_path]
-            logger.info(f"📕 Using {first_path} as root AGENTS.md")
-
-        logger.info(f"📕 Total AGENTS.md files discovered: {len(agents_md_files)}")
-        return agents_md_files
 
     def _discover_build_cmd(self):
         """Discover build command from package.json."""
@@ -257,3 +232,8 @@ class FlowIssueManagement(Flow[T]):
             timeout=180,
         )
         logger.info(f"✅ Test verification passed\n{result.stdout[:200] if result.stdout else ''}...")
+
+    def injected_content(self) -> dict[str, Any]:
+        if self._context_registry is None:
+            return {}
+        return self._context_registry.collect_all(self.state)

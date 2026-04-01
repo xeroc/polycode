@@ -149,9 +149,9 @@ class ReviewCrew(PolycodeCrewMixin):
     ) -> list[str]:
         """Analyze failure and suggest doc/workflow improvements.
 
-        Night Shift pattern: when agent fails, fix docs/workflow FIRST,
-        then fix code. This method analyzes the failure context and returns
-        structured suggestions for doc improvements.
+        When agent fails, fix docs/workflow FIRST, then fix code. This method
+        analyzes the failure context and returns structured suggestions for doc
+        improvements.
 
         Args:
             error_context: The error message and surrounding context.
@@ -181,10 +181,6 @@ class ReviewCrew(PolycodeCrewMixin):
             f"Return a list of specific, actionable doc improvements that "
             f"would prevent this failure in the future."
         )
-        improvements = [
-            line.strip()
-            for line in result.raw.split("\n")  # type: ignore[union-attr]
-            if line.strip()
-        ]
+        improvements = [line.strip() for line in result.raw.split("\n") if line.strip()]  # type: ignore[union-attr]
         log.info(f"📋 Doc improvements suggested: {len(improvements)}")
         return improvements

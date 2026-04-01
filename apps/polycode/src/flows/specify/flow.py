@@ -56,6 +56,7 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
         # Generate follow-up with ConversationCrew
         self.state.stage = SpecifyStage.PROCESSING
 
+        injected = self.injected_content()
         result = (
             ConversationCrew()
             .crew()
@@ -63,7 +64,7 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
                 inputs=dict(
                     repo=self.state.repo,
                     branch=self.state.branch,
-                    agents_md=self._root_agents_md,
+                    **injected,
                     file_in_repos=self.git_operations.list_tree(),
                     issue_id=self.state.issue_id,
                     task=self.state.task,
@@ -106,15 +107,17 @@ class SpecifyFlow(FlowIssueManagement[SpecifyFlowState]):
 
     @listen("build_plan")
     def build_plan(self):
+        injected = self.injected_content()
+        agents_md_map = injected.pop("agents_md_map", {})
         result = (
             PlanCrew()
-            .crew(agents_md_map=self._agents_md_map)
+            .crew(agents_md_map=agents_md_map)
             .kickoff(
                 inputs=dict(
                     task=self.state.task[:120],
                     repo=self.state.repo,
                     branch=self.state.branch,
-                    agents_md=self._root_agents_md,
+                    **injected,
                     file_in_repos=self.git_operations.list_tree(),
                 )
             )

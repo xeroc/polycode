@@ -4,6 +4,8 @@ Call bootstrap() once at application startup (FastAPI lifespan, CLI, etc.).
 After bootstrap, modules are loaded and hooks are active.
 """
 
+from retro.module import RetroModule
+
 import logging
 from typing import Any
 
@@ -50,6 +52,7 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     _module_registry = module_registry
     module_registry.discover()
 
+    from agentsmd import AgentsMDPolycodeModule
     from gitcore import GitcoreModule
     from project_manager import ProjectManagerModule
 
@@ -58,6 +61,8 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     module_registry.register_builtin(ProjectManagerModule)  # type: ignore[arg-type]
     # git core last, so it gets called first! pull request require the branch is pushed!
     module_registry.register_builtin(GitcoreModule)  # type: ignore[arg-type]
+    module_registry.register_builtin(AgentsMDPolycodeModule)  # type: ignore[arg-type]
+    module_registry.register_builtin(RetroModule)  # type: ignore[arg-type]
 
     context = ModuleContext(
         db_engine=engine,
@@ -89,6 +94,7 @@ def bootstrap(config: dict[str, Any] | None = None) -> ModuleContext:
     from flows.base import FlowIssueManagement
 
     FlowIssueManagement.use_plugin_manager(module_registry.pm)
+    FlowIssueManagement.use_context_registry(module_registry.context_registry)
     PolycodeCrewMixin.use_plugin_manager(module_registry.pm)
 
     module_registry.pm.register(PostmortemHooks(), name="postmortem")

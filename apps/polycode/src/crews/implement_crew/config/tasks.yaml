@@ -30,6 +30,8 @@ implement_task:
     CONFIGURATION:
     {configuration}
 
+    {retro_context}
+
     TOOLS:
       * FileReadTool
       * FileWriterTool

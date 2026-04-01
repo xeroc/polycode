@@ -58,4 +58,4 @@ def create_tools(project_manager: ProjectManager) -> list:
     Returns:
         List of instantiated tool objects
     """
-    return [tool_class(project_manager) for tool_class in PROJECT_TOOLS]
+    return [tool_class(project_manager) for tool_class in PROJECT_TOOLS]  # ty:ignore

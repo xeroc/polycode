@@ -88,3 +88,15 @@ class PolycodeModule(Protocol):
         if TYPE_CHECKING:
             pass
         return []
+
+    @classmethod
+    def get_context_collectors(cls) -> list[tuple[str, Any]]:
+        """Return context collectors as (name, callable) pairs.
+
+        Each callable takes a flow state and returns a dict[str, Any]
+        to merge into crew kickoff inputs. Called before each crew kickoff.
+
+        Returns:
+            List of (name, collect_fn) tuples.
+        """
+        return []

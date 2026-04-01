@@ -19,6 +19,8 @@ implement_task:
     ### AGENTS.md REFERENCE:
     {agents_md}
 
+    {retro_context}
+
     ### AVAILABLE TOOLS:
     - FileReadTool: Read file contents
     - FileWriterTool: Write/modify files

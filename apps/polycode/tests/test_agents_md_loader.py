@@ -5,7 +5,7 @@ Test AGENTS.md discovery and loading functionality.
 import tempfile
 from pathlib import Path
 
-from tools.agents_md_loader import AgentsMDLoaderTool
+from agentsmd.loader_tool import AgentsMDLoaderTool
 
 
 def test_agents_md_loader_tool():

@@ -1,36 +1,66 @@
-"""Retro pattern analysis and improvement suggestions."""
+"""Retro pattern analysis — reads from git-notes, not postgres."""
 
 import logging
 from collections import Counter
+from pathlib import Path
+from typing import Any
 
-from .persistence import RetroStore
+from gitcore import GitNotes
+from gitcore.types import GitContext
+
 from .types import RetroEntry, RetroQuery
 
 logger = logging.getLogger(__name__)
 
+RETRO_NOTES_REF = "refs/notes/retros"
+
 
 class PatternAnalyzer:
-    """Analyze retrospectives to identify recurring patterns and trends."""
+    """Analyze retrospectives stored as git-notes."""
 
-    def __init__(self, store: RetroStore) -> None:
-        """Initialize pattern analyzer.
+    def __init__(
+        self,
+        repo_path: str | Path,
+        notes_ref: str = RETRO_NOTES_REF,
+    ) -> None:
+        context = GitContext(repo_path=str(repo_path))
+        self.notes = GitNotes(context, notes_ref=notes_ref)
 
-        Args:
-            store: RetroStore instance for querying retros
-        """
-        self.store = store
+    def _load_retros(self, limit: int = 50) -> list[RetroEntry]:
+        """Load recent retro entries from git-notes."""
+        commit_shas = self.notes.list_all()
+        retros: list[RetroEntry] = []
 
-    def analyze_recent_trends(self, limit: int = 20) -> dict[str, list[str]]:
-        """Analyze recent retros for emerging patterns.
+        for sha in commit_shas:
+            if len(retros) >= limit:
+                break
+            entry = self.notes.show(RetroEntry, commit_sha=sha)
+            if entry is not None:
+                retros.append(entry)
 
-        Args:
-            limit: Number of recent retros to analyze
+        retros.sort(key=lambda r: r.timestamp, reverse=True)
+        return retros
 
-        Returns:
-            Dict with categories and their patterns
-        """
-        params = RetroQuery(limit=limit)
-        retros = self.store.query(params)
+    def _load_retros_filtered(
+        self,
+        query: RetroQuery,
+    ) -> list[RetroEntry]:
+        retros = self._load_retros(limit=query.limit)
+        filtered = retros
+
+        if query.repo_owner:
+            filtered = [r for r in filtered if r.repo_owner == query.repo_owner]
+        if query.repo_name:
+            filtered = [r for r in filtered if r.repo_name == query.repo_name]
+        if query.retro_type:
+            filtered = [r for r in filtered if r.retro_type == query.retro_type]
+        if query.since:
+            filtered = [r for r in filtered if r.timestamp >= query.since]
+
+        return filtered[: query.limit]
+
+    def analyze_recent_trends(self, limit: int = 20) -> dict[str, Any]:
+        retros = self._load_retros(limit=limit)
 
         trends = {
             "common_failures": self._extract_common_failures(retros),
@@ -43,14 +73,6 @@ class PatternAnalyzer:
         return trends
 
     def _extract_common_failures(self, retros: list[RetroEntry]) -> list[str]:
-        """Extract most common failure patterns.
-
-        Args:
-            retros: List of retrospectives
-
-        Returns:
-            List of common failure descriptions
-        """
         all_failures: list[str] = []
         for retro in retros:
             all_failures.extend(retro.what_failed)
@@ -62,14 +84,6 @@ class PatternAnalyzer:
         return top_failures
 
     def _extract_success_factors(self, retros: list[RetroEntry]) -> list[str]:
-        """Extract factors that correlate with success.
-
-        Args:
-            retros: List of retrospectives
-
-        Returns:
-            List of success patterns
-        """
         success_retros = [r for r in retros if r.retro_type == "success"]
 
         all_successes: list[str] = []
@@ -82,25 +96,20 @@ class PatternAnalyzer:
         logger.info(f"🟢 Top success factors: {[s[:40] for s in top_successes]}")
         return top_successes
 
-    def _analyze_performance_trends(self, retros: list[RetroEntry]) -> dict:
-        """Analyze performance metrics over time.
-
-        Args:
-            retros: List of retrospectives
-
-        Returns:
-            Dict with performance metrics
-        """
+    def _analyze_performance_trends(self, retros: list[RetroEntry]) -> dict[str, Any]:
         with_duration = [r for r in retros if r.time_to_completion_seconds]
 
         if not with_duration:
             return {"message": "No duration data available"}
 
         durations = [r.time_to_completion_seconds for r in with_duration if r.time_to_completion_seconds]
+        # type: ignore[union-attr]
         avg_duration = sum(durations) / len(durations)
 
         with_retries = [r for r in retros if r.retry_count > 0]
         avg_retries = sum(r.retry_count for r in with_retries) / len(with_retries) if with_retries else 0
+
+        # type: ignore[union-attr]
 
         trends = {
             "avg_duration_seconds": avg_duration,
@@ -111,30 +120,23 @@ class PatternAnalyzer:
         }
 
         logger.info(f"⏱️ Avg duration: {avg_duration:.1f}s, Avg retries: {avg_retries:.1f}")
+        # type: ignore[union-attr]
         return trends
 
-    def _analyze_build_patterns(self, retros: list[RetroEntry]) -> dict:
-        """Analyze build success/failure patterns.
-
-        Args:
-            retros: List of retrospectives
-
-        Returns:
-            Dict with build statistics
-        """
+    def _analyze_build_patterns(self, retros: list[RetroEntry]) -> dict[str, Any]:
         failed_builds = [r for r in retros if r.retro_type == "failure"]
         success_builds = [r for r in retros if r.retro_type == "success"]
 
         with_build_times = [r for r in retros if r.build_duration_ms]
 
-        patterns = {
+        patterns: dict[str, Any] = {
             "total_failures": len(failed_builds),
             "total_successes": len(success_builds),
             "failure_rate": (len(failed_builds) / len(retros) if retros else 0),
         }
 
         if with_build_times:
-            build_times = [r.build_duration_ms for r in with_build_times if r.build_duration_ms]
+            build_times = [r.build_duration_ms for r in with_build_times if r.build_duration_ms]  # type: ignore[union-attr]
             patterns["avg_build_ms"] = sum(build_times) / len(build_times)
             patterns["max_build_ms"] = max(build_times)
             patterns["min_build_ms"] = min(build_times)
@@ -142,29 +144,25 @@ class PatternAnalyzer:
         logger.info(f"🔨 Failure rate: {patterns['failure_rate']:.1%}")
         return patterns
 
-    def generate_context_injection(self, repo_owner: str, repo_name: str, limit: int = 5) -> str:
-        """Generate context for next flow based on past retros.
-
-        Args:
-            repo_owner: Repository owner
-            repo_name: Repository name
-            limit: Number of recent retros to include
-
-        Returns:
-            Markdown formatted context string
-        """
-        params = RetroQuery(
+    def generate_context_injection(
+        self,
+        repo_owner: str = "",
+        repo_name: str = "",
+        limit: int = 5,
+    ) -> str:
+        """Generate context for next flow based on past retros."""
+        query = RetroQuery(
             repo_owner=repo_owner,
             repo_name=repo_name,
             limit=limit,
         )
-        retros = self.store.query(params)
+        retros = self._load_retros_filtered(query)
 
         if not retros:
-            return "No previous retros for this repository."
+            return ""
 
         recent_failures = [r for r in retros if r.retro_type == "failure"]
-        top_issues = self.store.get_top_issues(limit=3)
+        top_issues = self._get_top_issues(retros)
 
         context = [
             f"## Previous Retrospectives ({len(retros)} total)",
@@ -184,17 +182,19 @@ class PatternAnalyzer:
 
         return "\n".join(context)
 
+    def _get_top_issues(self, retros: list[RetroEntry], limit: int = 3) -> dict[str, int]:
+        all_failures: list[str] = []
+        for retro in retros:
+            all_failures.extend(retro.what_failed)
+            all_failures.extend(retro.root_causes)
+
+        counter = Counter(all_failures)
+        return dict(counter.most_common(limit))
+
     def suggest_improvements_from_patterns(self, limit: int = 10) -> list[str]:
-        """Suggest improvements based on historical patterns.
-
-        Args:
-            limit: Number of recent retros to analyze
-
-        Returns:
-            List of improvement suggestions
-        """
+        """Suggest improvements based on historical patterns."""
         trends = self.analyze_recent_trends(limit)
-        suggestions = []
+        suggestions: list[str] = []
 
         if trends["common_failures"]:
             suggestions.append("Implement automated testing for common failure paths")

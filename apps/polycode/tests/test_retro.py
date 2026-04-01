@@ -1,131 +1,177 @@
-"""Test retro module functionality."""
+"""Tests for retro module."""
 
 import subprocess
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from retro import GitNotes, init_db
-from retro.persistence import RetroStore
+from gitcore import GitNotes
+from gitcore.types import GitContext
+from retro.analyzer import PatternAnalyzer
+from retro.hooks import RETRO_NOTES_REF, RetroHooks
+from retro.module import RetroModule
 from retro.types import RetroEntry
 
-DATABASE_URL = "sqlite:///test_retro.db"
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-init_db(DATABASE_URL)
-store = RetroStore(SessionLocal)
-store.create_tables()
+def _init_git_repo(path: Path) -> None:
+    subprocess.run(
+        ["git", "-C", str(path), "init"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.email", "test@test.com"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.name", "Test"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
-def test_git_notes_basic():
-    """Test basic GitNotes operations."""
-    import tempfile
-    from pathlib import Path
+def _commit(path: Path, message: str = "initial commit") -> str:
+    subprocess.run(
+        ["git", "-C", str(path), "commit", "--allow-empty", "-m", message],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    result = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        test_repo = Path(tmpdir) / "test_repo"
 
-        test_repo.mkdir()
-        (test_repo / "test.txt").write_text("initial commit")
+class TestPatternAnalyzer:
+    def test_load_retros_empty_repo(self, tmp_path):
+        _init_git_repo(tmp_path)
+        _commit(tmp_path)
+        analyzer = PatternAnalyzer(repo_path=str(tmp_path))
+        retros = analyzer._load_retros(limit=10)
+        assert retros == []
 
-        subprocess.run(
-            ["git", "-C", str(test_repo), "init"],
-            check=True,
-        )
-
-        subprocess.run(
-            ["git", "-C", str(test_repo), "add", "."],
-            check=True,
-        )
-
-        subprocess.run(
-            ["git", "-C", str(test_repo), "commit", "-m", "initial"],
-            check=True,
-        )
-
-        notes = GitNotes(str(test_repo))
-
-        retro = RetroEntry(
-            commit_sha="",
-            flow_id="test-flow",
-            repo_owner="test",
-            repo_name="repo",
+    def test_load_retros_with_entries(self, tmp_path):
+        _init_git_repo(tmp_path)
+        context = GitContext(repo_path=str(tmp_path))
+        notes = GitNotes(context, notes_ref=RETRO_NOTES_REF)
+        retro1 = RetroEntry(
+            commit_sha=_commit(tmp_path, "first"),
+            flow_id="test-flow-1",
+            repo_owner="testowner",
+            repo_name="testrepo",
             retro_type="success",
-            what_worked=["Test passed"],
+            what_worked=["Tests passed"],
             what_failed=[],
-            root_causes=[],
-            actionable_improvements=[],
         )
+        notes.add(model=retro1, force=True)
+        retro2 = RetroEntry(
+            commit_sha=_commit(tmp_path, "second"),
+            flow_id="test-flow-2",
+            repo_owner="testowner",
+            repo_name="testrepo",
+            retro_type="failure",
+            what_worked=[],
+            what_failed=["Build timeout"],
+        )
+        notes.add(model=retro2, force=True)
+        analyzer = PatternAnalyzer(repo_path=str(tmp_path))
+        retros = analyzer._load_retros(limit=10)
+        assert len(retros) == 2
+        assert retros[0].retro_type == "failure"
+        assert retros[1].retro_type == "success"
 
-        notes.add(retro=retro)
-        retrieved = notes.show(commit_sha=None)
+    def test_generate_context_injection_no_retros(self, tmp_path):
+        _init_git_repo(tmp_path)
+        _commit(tmp_path)
+        analyzer = PatternAnalyzer(repo_path=str(tmp_path))
+        ctx = analyzer.generate_context_injection(
+            repo_owner="testowner",
+            repo_name="testrepo",
+        )
+        assert ctx == ""
 
-        assert retrieved is not None
-        assert retrieved.retro_type == "success"
-        assert "Test passed" in retrieved.what_worked
+    def test_generate_context_injection_with_data(self, tmp_path):
+        _init_git_repo(tmp_path)
+        context = GitContext(repo_path=str(tmp_path))
+        notes = GitNotes(context, notes_ref=RETRO_NOTES_REF)
+        retro = RetroEntry(
+            commit_sha=_commit(tmp_path, "c1"),
+            flow_id="test-flow",
+            repo_owner="testowner",
+            repo_name="testrepo",
+            retro_type="failure",
+            what_worked=[],
+            what_failed=["Build timeout"],
+        )
+        notes.add(model=retro, force=True)
+        analyzer = PatternAnalyzer(repo_path=str(tmp_path))
+        ctx = analyzer.generate_context_injection(
+            repo_owner="testowner",
+            repo_name="testrepo",
+        )
+        assert "Previous Retrospectives" in ctx
+        assert "Build timeout" in ctx
 
 
-def test_persistence_basic():
-    """Test basic RetroStore operations."""
+class TestRetroHooks:
+    def test_extract_successes_no_errors(self):
+        hooks = RetroHooks()
+        story = MagicMock()
+        story.errors = []
+        result = hooks._extract_successes(story)
+        assert result == ["All tests passed"]
 
-    retro = RetroEntry(
-        commit_sha="abc123",
-        flow_id="test-flow",
-        repo_owner="test",
-        repo_name="repo",
-        retro_type="failure",
-        what_worked=["Nothing"],
-        what_failed=["Tests failed"],
-        root_causes=["Missing dependency"],
-        actionable_improvements=[],
-    )
+    def test_extract_successes_with_errors(self):
+        hooks = RetroHooks()
+        story = MagicMock()
+        story.errors = ["some error"]
+        result = hooks._extract_successes(story)
+        assert result == []
 
-    store.store(retro=retro)
-
-    retrieved = store.get_by_commit("abc123")
-
-    assert retrieved is not None
-    assert retrieved.commit_sha == "abc123"
-    assert retrieved.retro_type == "failure"
-    assert "Tests failed" in retrieved.what_failed
+    def test_get_head_sha(self, tmp_path):
+        _init_git_repo(tmp_path)
+        _commit(tmp_path)
+        sha = RetroHooks._get_head_sha(str(tmp_path))
+        assert len(sha) == 40
+        assert all(c in "0123456789abcdef" for c in sha)
 
 
-def test_pattern_analyzer():
-    """Test PatternAnalyzer functionality."""
-    from retro.analyzer import PatternAnalyzer
+class TestRetroModule:
+    def test_module_metadata(self):
+        assert hasattr(RetroModule, "name")
+        assert RetroModule.name == "retro"
+        assert "gitcore" in RetroModule.dependencies
 
-    analyzer = PatternAnalyzer(store=store)
+    def test_collect_retro_context_no_repo(self):
+        state = MagicMock()
+        state.repo = None
+        result = RetroModule._collect_retro_context(state)
+        assert result == {"retro_context": ""}
 
-    test_retro_1 = RetroEntry(
-        commit_sha="sha1",
-        flow_id="flow-1",
-        repo_owner="test",
-        repo_name="repo",
-        retro_type="failure",
-        what_failed=["Build timeout"],
-        root_causes=["Long build process"],
-        actionable_improvements=[],
-    )
+    def test_collect_retro_context_with_repo(self, tmp_path):
+        _init_git_repo(tmp_path)
+        _commit(tmp_path)
+        state = MagicMock()
+        state.repo = str(tmp_path)
+        state.repo_owner = "testowner"
+        state.repo_name = "testrepo"
+        result = RetroModule._collect_retro_context(state)
+        assert "retro_context" in result
+        assert result["retro_context"] == ""
 
-    test_retro_2 = RetroEntry(
-        commit_sha="sha2",
-        flow_id="flow-1",
-        repo_owner="test",
-        repo_name="repo",
-        retro_type="failure",
-        what_failed=["Build timeout"],
-        root_causes=["Long build process"],
-        actionable_improvements=[],
-    )
-
-    store.store(retro=test_retro_1)
-    store.store(retro=test_retro_2)
-
-    trends = analyzer.analyze_recent_trends(limit=10)
-
-    assert "common_failures" in trends
-    assert len(trends["common_failures"]) > 0
-
-    suggestions = analyzer.suggest_improvements_from_patterns(limit=5)
-    assert len(suggestions) > 0
+    def test_collect_retro_context_failure(self, tmp_path):
+        state = MagicMock()
+        state.repo = str(tmp_path)
+        with patch(
+            "retro.analyzer.PatternAnalyzer.generate_context_injection",
+            side_effect=Exception("git error"),
+        ):
+            result = RetroModule._collect_retro_context(state)
+        assert result == {"retro_context": ""}
