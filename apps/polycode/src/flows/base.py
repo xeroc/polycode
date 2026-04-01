@@ -48,6 +48,7 @@ class KickoffRepo(BaseModel):
 class KickoffIssue(BaseModel):
     id: int = Field(description="Issue ID")
     flow_id: uuid.UUID = Field(default=uuid.uuid4(), description="UUID of flow that will run")
+    flow_name: str = Field(description="Name of the flow running (e.g. ralph, sepcify,...)")
     title: str = Field(description="Issue title")
     body: str = Field(description="Issue description")
     comments: list[IssueComment] = Field(default_factory=list, description="Issue comments")
@@ -65,6 +66,7 @@ class BaseFlowModel(BaseModel):
 
     repo_owner: Optional[str] = Field(default=None, description="Repository owner")
     repo_name: Optional[str] = Field(default=None, description="Repository name")
+    flow_name: Optional[str] = Field(default=None, description="Name of the flow running (e.g. ralph, sepcify,...)")
 
     pr_number: Optional[int] = Field(default=None, description="Pull request number")
     pr_url: Optional[str] = Field(default=None, description="Pull request URL")

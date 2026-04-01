@@ -172,5 +172,6 @@ def kickoff(issue: KickoffIssue):
         stage=SpecifyStage.STARTING,
         project_config=issue.project_config.model_dump() if issue.project_config else {},
         conversation_history=issue.comments,
+        flow_name="specify",
     )
     flow.kickoff(inputs=inputs)

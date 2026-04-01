@@ -152,6 +152,7 @@ def flow_run(
         kickoff_issue = KickoffIssue(
             id=issue_number,
             flow_id=flow_id,
+            flow_name=flow_name,
             title=issue.title,
             body=issue.body or "",
             comments=comments,

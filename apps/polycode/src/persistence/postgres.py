@@ -142,6 +142,10 @@ class FlowState(Base):
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     state_json: Mapped[dict[str, Any]] = mapped_column(JSONType, nullable=False)
 
+    repo_owner: Mapped[str] = mapped_column(String(64), nullable=False, server_default="")
+    repo_name: Mapped[str] = mapped_column(String(64), nullable=False, server_default="")
+    flow_name: Mapped[str] = mapped_column(String(64), nullable=False, server_default="")
+
     __table_args__ = (Index("idx_flow_states_uuid", "flow_uuid"),)
 
 
@@ -228,6 +232,9 @@ class PostgresFlowPersistence(FlowPersistence):
                 method_name=method_name,
                 timestamp=datetime.now(timezone.utc),
                 state_json=state_dict,
+                repo_owner=state_dict.get("repo_owner", ""),
+                repo_name=state_dict.get("repo_name", ""),
+                flow_name=state_dict.get("repo_name", ""),
             )
             session.add(state)
             session.commit()

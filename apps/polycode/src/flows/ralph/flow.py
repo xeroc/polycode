@@ -187,6 +187,7 @@ def kickoff(issue: KickoffIssue):
         repo_owner=issue.repository.owner,
         repo_name=issue.repository.repository,
         project_config=issue.project_config,
+        flow_name=issue.flow_name,
     )
     flow.kickoff(inputs=inputs)
 
@@ -222,6 +223,7 @@ def example():
             repo_owner=repo_owner,
             repo_name=repo_name,
             project_config=project_config,
+            flow_name="ralph",
         )
     )
 
