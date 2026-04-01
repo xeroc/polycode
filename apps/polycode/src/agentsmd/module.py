@@ -2,7 +2,10 @@
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from flows.protocol import FlowDef
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +54,14 @@ class AgentsMDPolycodeModule:
     @classmethod
     def register_hooks(cls, hook_manager: Any) -> None:
         pass
+
+    @classmethod
+    def get_models(cls) -> list[type]:
+        return []
+
+    @classmethod
+    def get_flows(cls) -> list["FlowDef"]:
+        return []
 
     @classmethod
     def get_context_collectors(cls) -> list[tuple[str, Any]]:
