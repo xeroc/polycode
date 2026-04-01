@@ -1,5 +1,7 @@
 """GitHub-specific project manager implementation."""
 
+from project_manager.config import settings
+
 import logging
 from typing import cast
 
@@ -60,6 +62,7 @@ class GitHubProjectManager(ProjectManager):
         Token resolution order:
         1. Explicit token in config.token
         2. GitHub App installation token via config.installation_id
+        3. GITHUB_TOKEN environment variable
 
         Args:
             config: Project configuration
@@ -73,10 +76,12 @@ class GitHubProjectManager(ProjectManager):
             token = config.token
         elif config.installation_id:
             token = _resolve_installation_token(config.installation_id)
+        elif settings.GITHUB_TOKEN:
+            token = settings.GITHUB_TOKEN
         else:
             raise ValueError(
-                "Either config.token or config.installation_id must be provided. "
-                "Set installation_id to use GitHub App authentication."
+                "No GitHub credentials found. Provide one of: "
+                "config.token, config.installation_id, or GITHUB_TOKEN env var."
             )
 
         self.token = token
