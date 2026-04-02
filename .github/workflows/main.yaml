@@ -1,12 +1,13 @@
 name: Test, build and deploy for Production
 
 on:
+  workflow_call:
+  workflow_dispatch:
   push:
-    branches:
-      - main
     paths:
       - apps/polycode/**
-  workflow_call:
+    branches:
+      - main
 
 permissions:
   contents: write
