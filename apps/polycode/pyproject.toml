@@ -103,55 +103,37 @@ build_command = "uv build"
 # Use the emoji commit parser instead of conventional
 commit_parser = "emoji"
 
-major_tags = [
-    "💥",      # Breaking change (actual emoji)
-    ":boom:", # Also keep the text version for compatibility
-]
+[tool.semantic_release.commit_parser_options]
+major_tags = ["💥"]
 
 # MINOR version bump (new features)
 minor_tags = [
-    "✨",                          # New feature (actual emoji)
-    "🎨",                          # Structure/format
-    "📱",                          # Responsive design
-    "🥚",                          # New release
-    "📈",                          # Analytics
-    ":sparkles:",                 # Text version fallback
-    ":lipstick:",
-    ":iphone:",
-    ":egg:",
-    ":chart_with_upwards_trend:",
+    "✨",
+    "🎨",
+    "📱",
+    "🥚",
+    "📈",
 ]
 
 # PATCH version bump (fixes)
 patch_tags = [
-    "🐛",            # Bug fix (actual emoji)
-    "💚",            # CI fix - you have this in your commits!
-    "🔒",            # Security fix
-    "⚡️",           # Performance
-    "🚑️",           # Critical hotfix
-    "👔",            # Business logic
-    "🩹",            # Simple fix
-    ":ambulance:",  # Text version fallback
-    ":lock:",
-    ":bug:",
-    ":zap:",
-    ":goal_net:",
-    ":alien:",
-    ":wheelchair:",
+    "🐛",
+    "💚",
+    "🔒",
+    "⚡️",
+    "🚑️",
+    "👔",
+    "🩹",
 ]
 
 # Allowed but NO version bump
 other_allowed_tags = [
-    "📝",                     # Documentation
-    "♻️",                    # Refactor
-    "🔧",                     # Configuration
-    "👷",                     # CI/CD
-    "✅",                     # Tests
-    "🎨",                     # Style
-    ":memo:",
-    ":recycle:",
-    ":construction_worker:",
-    ":white_check_mark:",
+    "📝",
+    "♻️",
+    "🔧",
+    "👷",
+    "✅",
+    "🎨",
 ]
 
 # Parser behavior
