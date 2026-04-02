@@ -12,6 +12,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 jobs:
   test:
@@ -23,57 +24,81 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     outputs:
-      new_version: ${{ steps.release.outputs.new_release_version }}
+      new_version: ${{ steps.release.outputs.version }}
+      released: ${{ steps.release.outputs.released }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: "20"
+          python-version: "3.13"
 
-      - name: Semantic Release
+      - name: Install python-semantic-release
+        run: pip install python-semantic-release
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "semantic-release@polycode.dev"
+
+      - name: Run Semantic Release
         id: release
-        uses: cycjimmy/semantic-release-action@v3
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          branch: main
-          # You can specify specifying version range for the extra plugins if you prefer.
-          # extra_plugins: |
-          #   @semantic-release/changelog@6.0.0
-          #   @semantic-release/git
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd apps/polycode
+          semantic-release version \
+            --no-commit \
+            --tag \
+            --push \
+            --vcs-release
+
+          VERSION=$(semantic-release version --print-tag 2>/dev/null || echo "")
+
+          if [ -n "$VERSION" ] && [ "$VERSION" != "0.0.0" ]; then
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "released=true" >> $GITHUB_OUTPUT
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+          fi
 
   publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: semantic-release
+    if: needs.semantic-release.outputs.released == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Publish package
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Build package
         run: |
           cd apps/polycode
-          uv version "${{ needs.semantic-release.outputs.version }}"
           uv build
-          uv publish --token $PYPI_API_TOKEN
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: apps/polycode/dist/
 
   build:
     uses: ./.github/workflows/build.yaml
     secrets: inherit
     needs: semantic-release
+    if: needs.semantic-release.outputs.released == 'true'
     with:
-      version: "${{ github.ref_name }}.${{ github.run_number }}"
+      version: "${{ needs.semantic-release.outputs.new_version }}"
       registry: ghcr.io
       image: xeroc/polycode
       package: apps/polycode
@@ -82,8 +107,9 @@ jobs:
     uses: ./.github/workflows/deploy.yaml
     secrets: inherit
     needs: build
+    if: needs.semantic-release.outputs.released == 'true'
     with:
-      version: "${{ github.ref_name }}.${{ github.run_number }}"
+      version: "${{ needs.semantic-release.outputs.new_version }}"
       version_name: polycode_image_version
       stack: polycode/polycode/prod
       env: prod

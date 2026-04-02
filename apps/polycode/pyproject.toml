@@ -62,7 +62,7 @@ packages = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=9.0.2", "ruff>=0.15.4"]
+dev = ["pytest>=9.0.2", "python-semantic-release>=10.5.3", "ruff>=0.15.4"]
 
 [tool.black]
 line-length = 120
@@ -95,6 +95,16 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+
+[tool.semantic_release]
+version_variables = ["pyproject.toml:project.version"]
+version_toml = ["pyproject.toml:project.version"]
+build_command = "uv build"
+commit_parser = "conventional"
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
 
 [tool.uv]
 exclude-newer = "7 days"
