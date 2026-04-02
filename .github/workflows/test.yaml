@@ -25,7 +25,7 @@ jobs:
 
       - name: setup git
         run: |
-          git config --global user.email "polycode@polycod.ing"
+          git config --global user.email "polycode@polycode.dev"
           git config --global user.name "Polycode pipeline"
 
       - name: Run pytest
