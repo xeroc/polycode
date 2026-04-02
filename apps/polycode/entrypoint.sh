@@ -29,7 +29,7 @@ worker)
 
 flower)
     echo "Launching Flower:"
-    exec uv run celery -A celery_tasks.worker.app flower --address=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
+    exec uv run celery -A tasks.worker.app flower --address=${APP_HOST:="0.0.0.0"} --port=${APP_PORT:=5000} $*
     ;;
 
 api)

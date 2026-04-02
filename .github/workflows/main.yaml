@@ -92,11 +92,13 @@ jobs:
   deploy:
     uses: ./.github/workflows/deploy.yaml
     secrets: inherit
-    needs: build
+    needs:
+      - build
+      - semantic-release
     if: needs.semantic-release.outputs.released == 'true'
     with:
       version: "${{ needs.semantic-release.outputs.new_version }}"
-      version_name: polycode_image_version
+      version_name: polycode/polycode_image_version
       stack: polycode/polycode/prod
       env: prod
       path: polycode/
